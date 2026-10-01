@@ -203,6 +203,8 @@ Drawings are plain JSON with one element per line, so they diff nicely in git:
 
 Block links are `frame:<frame id>`, `[[wikilink]]` or a URL. After a Google Sheets export the file also remembers the spreadsheet (`exports.googleSheet`) so the next export can update it. A file that cannot be read is shown as an error and never overwritten.
 
+If you use Obsidian Sync, turn on syncing of **other file types** in its settings so `.blockdraw` files are synced too.
+
 ## Development
 
 ```bash
