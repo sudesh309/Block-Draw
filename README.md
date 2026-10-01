@@ -245,6 +245,8 @@ Releasing a new version:
 2. Run `npm version x.y.z`. It updates `package.json`, `manifest.json` and `versions.json`, commits, and creates the tag `x.y.z` (no `v`, as Obsidian requires).
 3. Run `git push --follow-tags`. The release workflow checks that the tag matches the manifest, runs the tests, and publishes a GitHub release with `main.js`, `manifest.json`, `styles.css` and a zip of the plugin folder, using the changelog section as release notes. Obsidian and BRAT pick up new versions from these releases.
 
+Instead of pushing a tag, you can push the version commit and run the **Release** workflow from the Actions tab; it tags the commit with the version from `manifest.json`.
+
 ## License
 
 [MIT](LICENSE)

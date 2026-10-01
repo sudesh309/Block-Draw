@@ -1,12 +1,14 @@
 name: Release
 
-# Push a tag that matches the version in manifest.json (e.g. 0.1.0, without a "v") to publish a
-# GitHub release with the files Obsidian installs: main.js, manifest.json and styles.css, plus a
-# zip of the plugin folder. The release notes are the matching section of CHANGELOG.md.
+# Publishes a GitHub release with the files Obsidian installs (main.js, manifest.json and
+# styles.css) plus a zip of the plugin folder, using the matching section of CHANGELOG.md as notes.
+# Either push a tag that matches the version in manifest.json (e.g. 0.1.0, without a "v"), or run
+# this workflow from the Actions tab: it then tags the selected commit with that version.
 on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,20 +23,28 @@ jobs:
           node-version: 22
           cache: npm
       - name: Check version and release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node -e '
-            const tag = process.env.GITHUB_REF_NAME;
             const manifest = require("./manifest.json");
             const versions = require("./versions.json");
             const pkg = require("./package.json");
             const fail = (msg) => { console.log(`::error::${msg}`); process.exit(1); };
-            if (tag !== manifest.version) fail(`Tag ${tag} does not match manifest.json version ${manifest.version}`);
+            if (process.env.GITHUB_REF_TYPE === "tag" && process.env.GITHUB_REF_NAME !== manifest.version)
+              fail(`Tag ${process.env.GITHUB_REF_NAME} does not match manifest.json version ${manifest.version}`);
             if (pkg.version !== manifest.version) fail(`package.json version ${pkg.version} does not match manifest.json`);
             if (versions[manifest.version] !== manifest.minAppVersion) fail(`versions.json needs "${manifest.version}": "${manifest.minAppVersion}"`);
           '
-          awk -v v="$GITHUB_REF_NAME" '/^## /{p = ($2 == v); n = 0; next} p && (n || NF) {n = 1; print}' CHANGELOG.md > release-notes.md
+          version="$(node -p 'require("./manifest.json").version')"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if gh release view "$version" > /dev/null 2>&1; then
+            echo "::error::Release $version already exists. Bump the version with npm version first."
+            exit 1
+          fi
+          awk -v v="$version" '/^## /{p = ($2 == v); n = 0; next} p && (n || NF) {n = 1; print}' CHANGELOG.md > release-notes.md
           if ! grep -q '[^[:space:]]' release-notes.md; then
-            echo "::error::CHANGELOG.md has no section for $GITHUB_REF_NAME"
+            echo "::error::CHANGELOG.md has no section for $version"
             exit 1
           fi
       - run: npm ci
@@ -45,9 +55,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="$GITHUB_REF_NAME"
           mkdir -p dist/block-draw
           cp main.js manifest.json styles.css dist/block-draw/
-          (cd dist && zip -r "../block-draw-$tag.zip" block-draw)
-          gh release create "$tag" --title "$tag" --notes-file release-notes.md \
-            main.js manifest.json styles.css "block-draw-$tag.zip"
+          (cd dist && zip -r "../block-draw-$VERSION.zip" block-draw)
+          gh release create "$VERSION" --title "$VERSION" --target "$GITHUB_SHA" --notes-file release-notes.md \
+            main.js manifest.json styles.css "block-draw-$VERSION.zip"
