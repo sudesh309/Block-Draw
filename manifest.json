@@ -1,0 +1,10 @@
+{
+  "id": "block-draw",
+  "name": "Block Draw",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Draw block diagrams with titled blocks, connections and frames that link to each other. Export to JSON, Google Sheets (one tab per frame) or Excel.",
+  "author": "sudesh309",
+  "authorUrl": "https://github.com/sudesh309",
+  "isDesktopOnly": false
+}

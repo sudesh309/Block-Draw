@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output (attached to GitHub releases instead)
+main.js
+*.js.map
+
+# test artifacts
+tests/harness/dist/
+tests/e2e/dist/
+tests/output/
+coverage/
+
+# editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Obsidian per-vault data when testing inside a vault
+data.json

@@ -1,0 +1,437 @@
+import { shapePath } from "../../geometry/shapes";
+import type { HistoryEntry } from "../../model/history";
+import { frameLink, parseFrameLink, parseLink } from "../../model/links";
+import { updateElements } from "../../model/ops";
+import {
+	BLOCK_SHAPES,
+	isBlock,
+	isBox,
+	isConnector,
+	isFrame,
+	type ArrowHead,
+	type BlockShape,
+	type DrawElement,
+	type Routing,
+	type StrokeStyle,
+	type TextAlign,
+} from "../../model/types";
+import { FILL_SWATCHES, FRAME_FILL_SWATCHES, STROKE_SWATCHES } from "../../render/colors";
+import { activeElementOf, clearEl, el, svgEl } from "../dom";
+import type { Editor } from "../Editor";
+import { iconButton, section, segmented, swatches, textField } from "./controls";
+
+const SHAPE_LABELS: Record<BlockShape, string> = {
+	rounded: "Rounded",
+	rectangle: "Rectangle",
+	ellipse: "Ellipse",
+	diamond: "Decision",
+	parallelogram: "Input / output",
+	hexagon: "Preparation",
+	cylinder: "Database",
+	text: "Text only",
+};
+
+const FONT_SIZES: { value: number; label: string; text: string }[] = [
+	{ value: 12, label: "Small", text: "S" },
+	{ value: 16, label: "Medium", text: "M" },
+	{ value: 20, label: "Large", text: "L" },
+	{ value: 28, label: "Extra large", text: "XL" },
+];
+
+const line = (svg: SVGSVGElement, attrs: Record<string, string | number>) =>
+	svgEl("path", { fill: "none", stroke: "currentColor", "stroke-linecap": "round", "stroke-linejoin": "round", ...attrs }, svg);
+
+function drawShape(shape: BlockShape) {
+	return (svg: SVGSVGElement) => {
+		const g = svgEl("g", { transform: "translate(2,5)" }, svg);
+		svgEl(
+			"path",
+			{
+				d: shapePath(shape, 20, 14),
+				fill: "none",
+				stroke: "currentColor",
+				"stroke-width": 1.6,
+				"stroke-dasharray": shape === "text" ? "2 2" : "",
+			},
+			g,
+		);
+	};
+}
+
+function drawArrow(kind: ArrowHead, atStart: boolean) {
+	return (svg: SVGSVGElement) => {
+		const g = svgEl("g", atStart ? { transform: "translate(24,0) scale(-1,1)" } : {}, svg);
+		line(g as unknown as SVGSVGElement, { d: "M3 12 H19", "stroke-width": 1.8 });
+		if (kind === "arrow") line(g as unknown as SVGSVGElement, { d: "M15 8 L20 12 L15 16", "stroke-width": 1.8 });
+		if (kind === "triangle") svgEl("path", { d: "M14 7.5 L21 12 L14 16.5 Z", fill: "currentColor" }, g);
+		if (kind === "dot") svgEl("circle", { cx: 18.5, cy: 12, r: 3, fill: "currentColor" }, g);
+	};
+}
+
+export class PropsPanel {
+	readonly el: HTMLDivElement;
+	private readonly body: HTMLDivElement;
+	private key = "";
+	private syncers: (() => void)[] = [];
+	private textBefore: HistoryEntry | null = null;
+
+	constructor(private readonly ed: Editor) {
+		this.el = el("div", "bd-props bd-panel", ed.root);
+		this.body = el("div", "bd-props-body", this.el);
+		this.el.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
+	}
+
+	update(): void {
+		const ed = this.ed;
+		const sel = ed.selectedElements();
+		let mode: "selection" | "block" | "connector" | "frame" | null = null;
+		if (sel.length) mode = "selection";
+		else if (ed.tool === "block") mode = "block";
+		else if (ed.tool === "connector") mode = "connector";
+		else if (ed.tool === "frame") mode = "frame";
+		if (ed.options.readOnly || !mode || ed.editingId || ed.pointer.isBusy()) {
+			this.el.classList.remove("is-visible");
+			if (!ed.pointer.isBusy()) this.key = "";
+			return;
+		}
+		const key = `${mode}:${ed.tool}:${sel.map((e) => e.id).join(",")}`;
+		if (key !== this.key) {
+			this.key = key;
+			this.build(mode, sel);
+		} else {
+			for (const sync of this.syncers) sync();
+		}
+		this.el.classList.add("is-visible");
+	}
+
+	/* ------------------------------------------------------------------ */
+
+	private textHandlers(id: string, field: "description" | "label" | "title") {
+		const ed = this.ed;
+		return {
+			onFocus: () => {
+				this.textBefore = ed.snapshot();
+			},
+			onInput: (value: string) => {
+				ed.setTransient(updateElements(ed.elements, new Map([[id, { [field]: value }]])));
+			},
+			onCommit: () => {
+				const before = this.textBefore;
+				this.textBefore = null;
+				if (before) ed.commit(ed.elements, { before });
+			},
+		};
+	}
+
+	private build(mode: "selection" | "block" | "connector" | "frame", sel: DrawElement[]): void {
+		const ed = this.ed;
+		clearEl(this.body);
+		this.syncers = [];
+		const blocks = sel.filter(isBlock);
+		const connectors = sel.filter(isConnector);
+		const frames = sel.filter(isFrame);
+		const single = sel.length === 1 ? sel[0] : null;
+
+		const heading = el("div", "bd-props-heading", this.body);
+		if (mode === "block") heading.textContent = "New block";
+		else if (mode === "connector") heading.textContent = "New connector";
+		else if (mode === "frame") heading.textContent = "New frame";
+		else if (single) heading.textContent = isBlock(single) ? "Block" : isConnector(single) ? "Connector" : "Frame";
+		else heading.textContent = `${sel.length} selected`;
+
+		const blockStyle = () => ed.selectedBlocks()[0]?.style ?? ed.current.block;
+		const connector = () => ed.selectedConnectors()[0] ?? null;
+		const connStyle = () => connector()?.style ?? ed.current.connector;
+		const frameStyle = () => ed.selectedFrames()[0]?.style ?? ed.current.frame;
+
+		/* ---- frame details */
+		if (isFrame(single)) {
+			const id = single.id;
+			const s = section(this.body, "Title");
+			this.syncers.push(
+				textField(s, {
+					get: () => {
+						const f = ed.byId.get(id);
+						return isFrame(f) ? f.title : "";
+					},
+					...this.textHandlers(id, "title"),
+				}),
+			);
+			const d = section(this.body, "Description");
+			this.syncers.push(
+				textField(d, {
+					multiline: true,
+					placeholder: "Shown under the sheet title on export",
+					get: () => {
+						const f = ed.byId.get(id);
+						return isFrame(f) ? f.description : "";
+					},
+					...this.textHandlers(id, "description"),
+				}),
+			);
+		}
+
+		/* ---- block details */
+		if (isBlock(single)) {
+			const id = single.id;
+			this.buildLinkSection(id);
+			const d = section(this.body, "Description");
+			this.syncers.push(
+				textField(d, {
+					multiline: true,
+					placeholder: "Optional details shown under the title",
+					get: () => {
+						const b = ed.byId.get(id);
+						return isBlock(b) ? b.description : "";
+					},
+					...this.textHandlers(id, "description"),
+				}),
+			);
+		}
+
+		/* ---- connector details */
+		if (isConnector(single)) {
+			const id = single.id;
+			const s = section(this.body, "Label");
+			this.syncers.push(
+				textField(s, {
+					multiline: true,
+					placeholder: "e.g. yes / no",
+					get: () => {
+						const c = ed.byId.get(id);
+						return isConnector(c) ? c.label : "";
+					},
+					...this.textHandlers(id, "label"),
+				}),
+			);
+		}
+
+		/* ---- block style */
+		if (mode === "block" || blocks.length) {
+			const shapeSec = section(this.body, "Shape");
+			this.syncers.push(
+				segmented(
+					shapeSec,
+					BLOCK_SHAPES.map((shape) => ({ value: shape, label: SHAPE_LABELS[shape], draw: drawShape(shape) })),
+					() => ed.selectedBlocks()[0]?.shape ?? (ed.tool === "block" ? ed.toolShape : ed.current.shape),
+					(shape: BlockShape) => ed.applyShape(shape),
+				),
+			);
+			this.syncers.push(swatches(section(this.body, "Fill"), FILL_SWATCHES, () => blockStyle().fill, (fill) => ed.applyBlockStyle({ fill })));
+			this.syncers.push(
+				swatches(section(this.body, "Stroke"), STROKE_SWATCHES, () => blockStyle().stroke, (stroke) => ed.applyBlockStyle({ stroke })),
+			);
+			this.strokeControls(
+				() => blockStyle().strokeWidth,
+				(strokeWidth) => ed.applyBlockStyle({ strokeWidth }),
+				() => blockStyle().strokeStyle,
+				(strokeStyle) => ed.applyBlockStyle({ strokeStyle }),
+			);
+			const textSec = section(this.body, "Text");
+			this.syncers.push(
+				segmented(
+					textSec,
+					FONT_SIZES.map((f) => ({ value: f.value, label: f.label, text: f.text })),
+					() => blockStyle().fontSize,
+					(fontSize: number) => ed.applyBlockStyle({ fontSize }),
+				),
+			);
+			this.syncers.push(
+				segmented(
+					textSec,
+					[
+						{ value: "left", label: "Align left", icon: "text-left" },
+						{ value: "center", label: "Align center", icon: "text-center" },
+						{ value: "right", label: "Align right", icon: "text-right" },
+					],
+					() => blockStyle().textAlign,
+					(textAlign: TextAlign) => ed.applyBlockStyle({ textAlign }),
+				),
+			);
+		}
+
+		/* ---- connector style */
+		if (mode === "connector" || connectors.length) {
+			const routeSec = section(this.body, "Line");
+			this.syncers.push(
+				segmented(
+					routeSec,
+					[
+						{ value: "elbow", label: "Elbow", draw: (s: SVGSVGElement) => void line(s, { d: "M4 19 H12 V5 H20", "stroke-width": 1.8 }) },
+						{ value: "straight", label: "Straight", draw: (s: SVGSVGElement) => void line(s, { d: "M4 19 L20 5", "stroke-width": 1.8 }) },
+						{ value: "curved", label: "Curved", draw: (s: SVGSVGElement) => void line(s, { d: "M4 19 C14 19 10 5 20 5", "stroke-width": 1.8 }) },
+					],
+					() => connector()?.routing ?? ed.current.routing,
+					(routing: Routing) => ed.applyRouting(routing),
+				),
+			);
+			const arrows: ArrowHead[] = ["none", "arrow", "triangle", "dot"];
+			const arrowSec = section(this.body, "Arrowheads");
+			this.syncers.push(
+				segmented(
+					arrowSec,
+					arrows.map((a) => ({ value: a, label: `Start: ${a}`, draw: drawArrow(a, true) })),
+					() => connStyle().startArrow,
+					(startArrow: ArrowHead) => ed.applyConnectorStyle({ startArrow }),
+				),
+			);
+			this.syncers.push(
+				segmented(
+					arrowSec,
+					arrows.map((a) => ({ value: a, label: `End: ${a}`, draw: drawArrow(a, false) })),
+					() => connStyle().endArrow,
+					(endArrow: ArrowHead) => ed.applyConnectorStyle({ endArrow }),
+				),
+			);
+			this.syncers.push(
+				swatches(section(this.body, "Color"), STROKE_SWATCHES, () => connStyle().stroke, (stroke) => ed.applyConnectorStyle({ stroke })),
+			);
+			this.strokeControls(
+				() => connStyle().strokeWidth,
+				(strokeWidth) => ed.applyConnectorStyle({ strokeWidth }),
+				() => connStyle().strokeStyle,
+				(strokeStyle) => ed.applyConnectorStyle({ strokeStyle }),
+			);
+		}
+
+		/* ---- frame style */
+		if (mode === "frame" || frames.length) {
+			this.syncers.push(
+				swatches(section(this.body, "Frame background"), FRAME_FILL_SWATCHES, () => frameStyle().fill, (fill) => ed.applyFrameStyle({ fill })),
+			);
+			this.syncers.push(
+				swatches(
+					section(this.body, "Frame color (also the sheet tab color)"),
+					STROKE_SWATCHES,
+					() => frameStyle().stroke,
+					(stroke) => ed.applyFrameStyle({ stroke }),
+				),
+			);
+		}
+
+		/* ---- arrange */
+		const boxes = sel.filter(isBox);
+		if (boxes.length >= 2) {
+			const al = section(this.body, "Align");
+			const row = el("div", "bd-button-row", al);
+			for (const [mode2, icon, label] of [
+				["left", "align-left", "Align left"],
+				["center", "align-center", "Align centers horizontally"],
+				["right", "align-right", "Align right"],
+				["top", "align-top", "Align top"],
+				["middle", "align-middle", "Align centers vertically"],
+				["bottom", "align-bottom", "Align bottom"],
+			] as const) {
+				iconButton(row, icon, label, () => ed.alignSelection(mode2));
+			}
+			if (boxes.length >= 3) {
+				iconButton(row, "distribute-h", "Distribute horizontally", () => ed.distributeSelection("h"));
+				iconButton(row, "distribute-v", "Distribute vertically", () => ed.distributeSelection("v"));
+			}
+		}
+
+		if (sel.length) {
+			const act = section(this.body, "Actions");
+			const row = el("div", "bd-button-row", act);
+			iconButton(row, "duplicate", "Duplicate — Ctrl/Cmd+D", () => ed.duplicateSelection());
+			iconButton(row, "front", "Bring to front", () => ed.reorderSelection("front"));
+			iconButton(row, "back_layer", "Send to back", () => ed.reorderSelection("back"));
+			if (isFrame(single)) iconButton(row, "fit", "Zoom to frame", () => ed.navigateToFrame(single.id));
+			iconButton(row, "trash", "Delete — Del", () => ed.deleteSelection(), "bd-danger");
+		}
+	}
+
+	private strokeControls(
+		getWidth: () => number,
+		setWidth: (w: number) => void,
+		getStyle: () => StrokeStyle,
+		setStyle: (s: StrokeStyle) => void,
+	): void {
+		const sec = section(this.body, "Stroke width & style");
+		this.syncers.push(
+			segmented(
+				sec,
+				[1, 2, 4].map((w) => ({
+					value: w,
+					label: w === 1 ? "Thin" : w === 2 ? "Medium" : "Thick",
+					draw: (s: SVGSVGElement) => void line(s, { d: "M4 12 H20", "stroke-width": w * 1.2 }),
+				})),
+				getWidth,
+				setWidth,
+			),
+		);
+		this.syncers.push(
+			segmented(
+				sec,
+				(["solid", "dashed", "dotted"] as StrokeStyle[]).map((st) => ({
+					value: st,
+					label: st[0].toUpperCase() + st.slice(1),
+					draw: (s: SVGSVGElement) =>
+						void line(s, {
+							d: "M3 12 H21",
+							"stroke-width": 2,
+							"stroke-dasharray": st === "dashed" ? "5 3" : st === "dotted" ? "0.5 3.5" : "",
+						}),
+				})),
+				getStyle,
+				setStyle,
+			),
+		);
+	}
+
+	/** Link row: quick frame picker plus "note or URL" via the host's picker. */
+	private buildLinkSection(id: string): void {
+		const ed = this.ed;
+		const sec = section(this.body, "Link (Ctrl/Cmd+click to follow)");
+		const row = el("div", "bd-link-row", sec);
+		const select = el("select", "bd-select dropdown", row);
+		const follow = iconButton(row, "follow-link", "Follow link", () => ed.followLink(id));
+		const remove = iconButton(row, "unlink", "Remove link", () => ed.updateElement(id, { link: null }));
+		const sync = () => {
+			const b = ed.byId.get(id);
+			if (!isBlock(b)) return;
+			const current = b.link;
+			const parsed = parseLink(current);
+			const optionsKey = ed.frames().map((f) => `${f.id}:${f.title}`).join("|") + `|${current}`;
+			if (select.dataset.key !== optionsKey) {
+				select.dataset.key = optionsKey;
+				clearEl(select);
+				const add = (parent: HTMLElement, value: string, label: string) => {
+					const o = el("option", null, parent, label);
+					o.value = value;
+				};
+				const group = (label: string) => {
+					const g = el("optgroup", null, select);
+					g.label = label;
+					return g;
+				};
+				add(select, "", "No link");
+				const frames = ed.frames();
+				if (frames.length) {
+					const g = group("Go to frame");
+					for (const f of frames) add(g, frameLink(f.id), `${f.title || "Frame"}${f.id === b.frameId ? " (this frame)" : ""}`);
+				}
+				if (parsed && parsed.kind !== "frame") add(group("Current link"), current as string, ed.describeLink(current));
+				if (parsed?.kind === "frame" && !ed.byId.has(parsed.frameId)) add(group("Current link"), current as string, "Missing frame");
+				add(group("Other"), "__pick__", "Note, other drawing or URL…");
+			}
+			if (activeElementOf(select) !== select) select.value = current ?? "";
+			follow.disabled = !current;
+			remove.disabled = !current;
+		};
+		select.addEventListener("change", () => {
+			const value = select.value;
+			if (value === "__pick__") {
+				void ed.editLink(id).then(() => sync());
+				sync();
+				return;
+			}
+			const frameId = parseFrameLink(value);
+			if (!value) ed.updateElement(id, { link: null });
+			else if (frameId) ed.linkToFrame(id, frameId);
+			else ed.updateElement(id, { link: value });
+		});
+		sync();
+		this.syncers.push(sync);
+	}
+}
