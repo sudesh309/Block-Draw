@@ -55,7 +55,7 @@ export function startMockBridge(root: string, secret: string): Promise<MockBridg
 				const out = doPost({ postData: { contents: body, type: req.headers["content-type"] } }).text;
 				const key = `k${++seq}`;
 				outputs.set(key, out);
-				log.push(`POST ${JSON.parse(body).action}`);
+				log.push(`POST ${(JSON.parse(body) as { action?: string }).action}`);
 				res.writeHead(302, { Location: `/macros/echo?user_content_key=${key}` });
 				res.end();
 			});

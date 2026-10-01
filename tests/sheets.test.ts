@@ -244,7 +244,7 @@ describe("Apps Script bridge (Code.gs in a sandbox)", () => {
 		await expect(noService.ping()).rejects.toThrow(/advanced service/);
 		const ok = new AppsScriptTransport("u", "s3cret", bridge(svc).http);
 		await expect(ok.get("missing")).rejects.toMatchObject({ notFound: true });
-		expect(JSON.parse(bridge(svc).doGet().text).ok).toBe(true);
+		expect((JSON.parse(bridge(svc).doGet().text) as { ok: boolean }).ok).toBe(true);
 	});
 
 	it("explains non-JSON responses", async () => {
@@ -263,13 +263,13 @@ describe("Sheets REST transport", () => {
 				const url = new URL(req.url);
 				const m = /^\/v4\/spreadsheets(?:\/([^/:]+))?(:batchUpdate)?$/.exec(url.pathname);
 				if (!m) return { status: 404, text: "{}" };
-				if (req.method === "POST" && !m[1]) return { status: 200, text: JSON.stringify(svc.toJson(svc.create(JSON.parse(req.body as string)))) };
+				if (req.method === "POST" && !m[1]) return { status: 200, text: JSON.stringify(svc.toJson(svc.create(JSON.parse(req.body as string) as Parameters<FakeSheetsService["create"]>[0]))) };
 				if (req.method === "GET" && m[1]) {
 					expect(url.searchParams.get("fields")).toContain("sheets.properties");
 					return { status: 200, text: JSON.stringify(svc.toJson(svc.get(decodeURIComponent(m[1])))) };
 				}
 				if (req.method === "POST" && m[2]) {
-					svc.batchUpdate(decodeURIComponent(m[1]), JSON.parse(req.body as string));
+					svc.batchUpdate(decodeURIComponent(m[1]), JSON.parse(req.body as string) as Parameters<FakeSheetsService["batchUpdate"]>[1]);
 					return { status: 200, text: "{}" };
 				}
 				return { status: 400, text: "{}" };

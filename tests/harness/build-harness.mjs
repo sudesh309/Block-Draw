@@ -46,4 +46,4 @@ writeFileSync(
 </html>
 `,
 );
-console.log("harness built:", join(out, "index.html"));
+process.stdout.write(`harness built: ${join(out, "index.html")}\n`);

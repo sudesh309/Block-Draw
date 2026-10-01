@@ -10,6 +10,7 @@ import { chromium } from "playwright-core";
 const here = dirname(fileURLToPath(import.meta.url));
 const url = "file://" + join(here, "dist", "index.html");
 const SHOTS = process.env.SHOTS || null;
+const print = (line) => process.stdout.write(`${line}\n`);
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
@@ -527,13 +528,13 @@ for (const t of tests) {
 	try {
 		await t.fn();
 		assert.deepEqual(errors, [], "console errors");
-		console.log(`  ✓ ${t.name}`);
+		print(`  ✓ ${t.name}`);
 	} catch (e) {
 		failed++;
-		console.log(`  ✗ ${t.name}\n    ${String(e && e.stack ? e.stack : e).split("\n").slice(0, 6).join("\n    ")}`);
+		print(`  ✗ ${t.name}\n    ${String(e && e.stack ? e.stack : e).split("\n").slice(0, 6).join("\n    ")}`);
 		if (SHOTS) await page.screenshot({ path: join(SHOTS, `FAILED-${t.name.replace(/[^a-z0-9]+/gi, "-")}.png`) });
 	}
 }
 await browser.close();
-console.log(`\n${tests.length - failed}/${tests.length} UI tests passed`);
+print(`\n${tests.length - failed}/${tests.length} UI tests passed`);
 process.exit(failed ? 1 : 0);

@@ -5,7 +5,9 @@
 //
 // OBSIDIAN_BIN is the Obsidian executable (e.g. from `Obsidian-x.y.z.AppImage --appimage-extract`,
 // squashfs-root/obsidian). Needs xvfb-run on Linux without a display. Set SHOTS=<dir> to keep
-// screenshots. A fresh temporary vault and Obsidian profile are used; nothing else is touched.
+// screenshots and PLUGIN_DIR=<dir> to install main.js/manifest.json/styles.css from somewhere
+// other than the repository root (e.g. files downloaded from a release). A fresh temporary vault
+// and Obsidian profile are used; nothing else is touched.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -14,6 +16,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import esbuild from "esbuild";
 import { chromium } from "playwright-core";
+import { startCdpShim } from "./cdpShim.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
@@ -36,7 +39,7 @@ await esbuild.build({
 	outfile: join(here, "dist", "mockBridge.mjs"),
 	logLevel: "warning",
 });
-const { startMockBridge } = await import(join(here, "dist", "mockBridge.mjs"));
+const { startMockBridge } = await import("./dist/mockBridge.mjs");
 const SECRET = "e2e-secret";
 const bridge = await startMockBridge(root, SECRET);
 
@@ -46,7 +49,8 @@ const vault = join(work, "vault");
 const pluginDir = join(vault, ".obsidian", "plugins", "block-draw");
 mkdirSync(join(home, ".config", "obsidian"), { recursive: true });
 mkdirSync(pluginDir, { recursive: true });
-for (const f of ["main.js", "manifest.json", "styles.css"]) cpSync(join(root, f), join(pluginDir, f));
+const pluginSource = process.env.PLUGIN_DIR || root;
+for (const f of ["main.js", "manifest.json", "styles.css"]) cpSync(join(pluginSource, f), join(pluginDir, f));
 writeFileSync(join(vault, ".obsidian", "community-plugins.json"), JSON.stringify(["block-draw"]));
 writeFileSync(join(vault, "Welcome.md"), "# Welcome\n");
 writeFileSync(
@@ -84,7 +88,13 @@ function shutdown() {
 process.on("exit", shutdown);
 
 await waitForCdp();
-const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
+let browser;
+try {
+	browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
+} catch (e) {
+	if (!/Browser context management is not supported/.test(String(e))) throw e;
+	browser = await chromium.connectOverCDP(await startCdpShim(PORT));
+}
 let page;
 for (let i = 0; i < 60 && !page; i++) {
 	page = browser.contexts()[0]?.pages().find((p) => p.url().startsWith("app://"));
@@ -105,20 +115,23 @@ await page.waitForFunction(() => window.app?.workspace?.layoutReady === true, nu
 /* ------------------------------------------------------------- helpers */
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const print = (line) => process.stdout.write(`${line}\n`);
 const shot = async (name) => SHOTS && page.screenshot({ path: join(SHOTS, `${name}.png`) });
 const frame = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
-const editorEval = (fn, arg) =>
-	page.evaluate(
-		([src, a]) => {
-			const leaf = window.app.workspace.getLeavesOfType("block-draw-view").find((l) => l.view.containerEl.isShown());
-			const ed = leaf?.view?.editor;
-			return new Function("ed", "view", "arg", `return (${src})(ed, view, arg)`)(ed, leaf?.view, a);
-		},
-		[fn.toString(), arg],
+/** Runs fn(editor, arg) in the page with the editor of the visible drawing. */
+async function editorEval(fn, arg) {
+	const ed = await page.evaluateHandle(
+		() => window.app.workspace.getLeavesOfType("block-draw-view").find((l) => l.view.containerEl.isShown())?.view?.editor,
 	);
+	try {
+		return await ed.evaluate(fn, arg);
+	} finally {
+		await ed.dispose();
+	}
+}
 /** Page coordinates of a world point in the visible drawing. */
 const toPage = (p) =>
-	editorEval((ed, _v, p) => {
+	editorEval((ed, p) => {
 		const r = ed.svg.getBoundingClientRect();
 		const s = ed.worldToScreen(p);
 		return { x: r.left + s.x, y: r.top + s.y };
@@ -161,8 +174,23 @@ const state = {};
 
 test("vault trust prompt enables the plugin", async () => {
 	const trust = page.getByRole("button", { name: "Trust author and enable plugins" });
-	if (await trust.isVisible().catch(() => false)) await trust.click();
+	await trust.waitFor({ state: "visible", timeout: 8000 }).catch(() => undefined);
+	if (await trust.isVisible().catch(() => false)) {
+		await trust.click();
+	} else {
+		// No trust prompt (e.g. already answered): turn off restricted mode like the settings toggle.
+		await page.evaluate(async () => {
+			await window.app.plugins.setEnable(true);
+			await window.app.plugins.enablePluginAndSave("block-draw");
+		});
+	}
 	await waitFor(() => page.evaluate(() => !!window.app.plugins.plugins["block-draw"]), "plugin to load");
+	// Older versions open Settings → Community plugins after trusting the vault.
+	for (let i = 0; i < 3 && (await page.isVisible(".modal-container")); i++) {
+		await page.keyboard.press("Escape");
+		await sleep(200);
+	}
+	print(`    Obsidian ${await page.evaluate(() => window.require("electron").ipcRenderer.sendSync("version"))}`);
 	const reg = await page.evaluate(() => ({
 		ext: window.app.viewRegistry.getTypeByExtension("blockdraw"),
 		cmd: !!window.app.commands.commands["block-draw:create-drawing"],
@@ -295,7 +323,7 @@ test("exports JSON, Excel, SVG and PNG files", async () => {
 	assert.deepEqual(png, [0x89, 0x50, 0x4e, 0x47]);
 	assert.match(await readFile(`${base}.svg`), /^<svg[^>]+viewBox/);
 	// with a frame selected, image exports contain just that frame
-	await editorEval((ed, _v, id) => ed.setSelection([id]), state.second.id);
+	await editorEval((ed, id) => ed.setSelection([id]), state.second.id);
 	await command("block-draw:export-svg");
 	const frameSvg = `${base} - Frame 2.svg`;
 	await waitFor(() => exists(frameSvg), "frame SVG");
@@ -392,14 +420,14 @@ let failed = 0;
 for (const t of tests) {
 	try {
 		await t.fn();
-		console.log(`  ✓ ${t.name}`);
+		print(`  ✓ ${t.name}`);
 	} catch (e) {
 		failed++;
-		console.log(`  ✗ ${t.name}\n    ${String(e?.stack ?? e).split("\n").slice(0, 5).join("\n    ")}`);
+		print(`  ✗ ${t.name}\n    ${String(e?.stack ?? e).split("\n").slice(0, 5).join("\n    ")}`);
 		if (SHOTS) await page.screenshot({ path: join(SHOTS, `e2e-FAILED-${t.name.replace(/[^a-z0-9]+/gi, "-")}.png`) }).catch(() => undefined);
 	}
 }
-console.log(`\n${tests.length - failed}/${tests.length} Obsidian e2e tests passed`);
+print(`\n${tests.length - failed}/${tests.length} Obsidian e2e tests passed`);
 await browser.close().catch(() => undefined);
 await bridge.close();
 shutdown();
