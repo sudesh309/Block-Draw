@@ -19,13 +19,12 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 
 ## Installation
 
-Block Draw is not in the community plugin directory yet.
+Block Draw is not in the community plugin directory yet, so install it manually or with BRAT. It needs Obsidian 1.5 or later.
 
 **Manual install**
 
-1. Download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Template-Generator/releases).
-2. Copy them into `<your vault>/.obsidian/plugins/block-draw/`.
-3. In Obsidian, open **Settings → Community plugins**, turn off restricted mode if needed, and enable **Block Draw**.
+1. From the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest), download `block-draw-<version>.zip` and unzip it into `<your vault>/.obsidian/plugins/`, so the files end up in `.obsidian/plugins/block-draw/`. (Or download `main.js`, `manifest.json` and `styles.css` and put them in that folder.)
+2. In Obsidian, open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
 
 **With BRAT**: add `sudesh309/Template-Generator` as a beta plugin.
 
@@ -205,6 +204,15 @@ Block links are `frame:<frame id>`, `[[wikilink]]` or a URL. After a Google Shee
 
 If you use Obsidian Sync, turn on syncing of **other file types** in its settings so `.blockdraw` files are synced too.
 
+## Network use and privacy
+
+Block Draw works offline: drawing, saving and the JSON, Excel, SVG and PNG exports stay on your device. It connects to the network only when you export to Google Sheets or test that connection, and only to Google:
+
+- **Apps Script web app**: the workbook goes to the web app you deployed in your own Google account (`script.google.com`), which writes it to your Google Drive.
+- **Google account** (desktop): signing in goes through `accounts.google.com` and `oauth2.googleapis.com`, and the workbook goes straight to the Google Sheets API (`sheets.googleapis.com`), with access limited to the spreadsheets Block Draw creates.
+
+Only Google Sheets export needs a Google account. There is no telemetry and there are no ads, and no other servers are contacted.
+
 ## Development
 
 ```bash
@@ -217,7 +225,7 @@ npm run test:ui    # editor tests in Chromium (set CHROMIUM_PATH if Chromium is 
 OBSIDIAN_BIN=/path/to/obsidian npm run test:e2e   # end-to-end tests in the Obsidian desktop app
 ```
 
-The Google Sheets tests validate every generated request against Google's published Sheets API schema (a trimmed copy lives in `tests/fixtures`), and run the real `apps-script/Code.gs` against an in-memory Sheets service. The end-to-end tests drive the real Obsidian app: drawing, saving, frame links, exports, settings and embeds, with a local stand-in for the Apps Script web app.
+The Google Sheets tests validate every generated request against Google's published Sheets API schema (a trimmed copy lives in `tests/fixtures`), and run the real `apps-script/Code.gs` against an in-memory Sheets service. The end-to-end tests drive the real Obsidian app: drawing, saving, frame links, exports, settings and embeds, with a local stand-in for the Apps Script web app. They pass on Obsidian 1.5.3 (the oldest version the manifest allows) and on current releases; set `PLUGIN_DIR` to test files downloaded from a release instead of the local build.
 
 Source layout:
 
@@ -231,7 +239,11 @@ Source layout:
 | `src/obsidian` | View, settings, link picker, exports, Google sign-in, embeds |
 | `apps-script` | The Google Apps Script bridge |
 
-Releases: bump the version with `npm version <x.y.z>` and push the tag; the release workflow builds the plugin and drafts a GitHub release with the three plugin files.
+Releasing a new version:
+
+1. Add a `## x.y.z` section to `CHANGELOG.md` and commit it.
+2. Run `npm version x.y.z`. It updates `package.json`, `manifest.json` and `versions.json`, commits, and creates the tag `x.y.z` (no `v`, as Obsidian requires).
+3. Run `git push --follow-tags`. The release workflow checks that the tag matches the manifest, runs the tests, and publishes a GitHub release with `main.js`, `manifest.json`, `styles.css` and a zip of the plugin folder, using the changelog section as release notes. Obsidian and BRAT pick up new versions from these releases.
 
 ## License
 
