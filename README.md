@@ -19,12 +19,11 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 
 ## Installation
 
-Block Draw is not in the community plugin directory yet, so install it manually or with BRAT. It needs Obsidian 1.5 or later.
+Block Draw needs Obsidian 1.5 or later.
 
-**Manual install**
+**From the community plugins list**: in Obsidian, open **Settings → Community plugins → Browse**, search for **Block Draw**, and install it from there.
 
-1. From the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest), download `block-draw-<version>.zip` and unzip it into `<your vault>/.obsidian/plugins/`, so the files end up in `.obsidian/plugins/block-draw/`. (Or download `main.js`, `manifest.json` and `styles.css` and put them in that folder.)
-2. In Obsidian, open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
+**Manual install**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest) into `<your vault>/.obsidian/plugins/block-draw/`, then in Obsidian open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
 
 **With BRAT**: add `sudesh309/Template-Generator` as a beta plugin.
 
@@ -243,7 +242,7 @@ Releasing a new version:
 
 1. Add a `## x.y.z` section to `CHANGELOG.md` and commit it.
 2. Run `npm version x.y.z`. It updates `package.json`, `manifest.json` and `versions.json`, commits, and creates the tag `x.y.z` (no `v`, as Obsidian requires).
-3. Run `git push --follow-tags`. The release workflow checks that the tag matches the manifest, runs the tests, and publishes a GitHub release with `main.js`, `manifest.json`, `styles.css` and a zip of the plugin folder, using the changelog section as release notes. Obsidian and BRAT pick up new versions from these releases.
+3. Run `git push --follow-tags`. The release workflow checks that the tag matches the manifest, runs the tests, and publishes a GitHub release with `main.js`, `manifest.json` and `styles.css`, signed with [artifact attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds), using the changelog section as release notes. Obsidian, BRAT and the community directory pick up new versions from these releases.
 
 Instead of pushing a tag, you can push the version commit and run the **Release** workflow from the Actions tab; it tags the commit with the version from `manifest.json`.
 

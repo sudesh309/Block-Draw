@@ -57,7 +57,7 @@ function doPost(e) {
         return reply_({ ok: false, error: 'Unknown action: ' + req.action });
     }
   } catch (err) {
-    var message = String((err && err.message) || err);
+    var message = err instanceof Error ? err.message : String(err);
     return reply_({ ok: false, error: message, notFound: /not found/i.test(message) });
   }
 }

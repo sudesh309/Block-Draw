@@ -1,9 +1,10 @@
 name: Release
 
-# Publishes a GitHub release with the files Obsidian installs (main.js, manifest.json and
-# styles.css) plus a zip of the plugin folder, using the matching section of CHANGELOG.md as notes.
-# Either push a tag that matches the version in manifest.json (e.g. 0.1.0, without a "v"), or run
-# this workflow from the Actions tab: it then tags the selected commit with that version.
+# Publishes a GitHub release with exactly the files Obsidian installs: main.js, manifest.json and
+# styles.css (nothing else, so the community directory's scanner doesn't flag extra release
+# assets), signed with GitHub artifact attestations, using the matching section of CHANGELOG.md as
+# notes. Either push a tag that matches the version in manifest.json (e.g. 0.1.0, without a "v"),
+# or run this workflow from the Actions tab: it then tags the selected commit with that version.
 on:
   push:
     tags:
@@ -12,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -51,12 +54,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
       - name: Publish release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p dist/block-draw
-          cp main.js manifest.json styles.css dist/block-draw/
-          (cd dist && zip -r "../block-draw-$VERSION.zip" block-draw)
           gh release create "$VERSION" --title "$VERSION" --target "$GITHUB_SHA" --notes-file release-notes.md \
-            main.js manifest.json styles.css "block-draw-$VERSION.zip"
+            main.js manifest.json styles.css

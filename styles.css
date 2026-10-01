@@ -704,7 +704,9 @@
 .bd-text-editor[data-kind="connector"],
 .bd-text-editor[data-kind="frame"] {
 	background: var(--bd-canvas-bg);
-	outline: 1px solid var(--bd-accent) !important;
+	/* Same specificity as the :focus rule above and declared after it, so this wins the cascade
+	   on its own: no !important needed. */
+	outline: 1px solid var(--bd-accent);
 	border-radius: 4px;
 }
 
@@ -712,7 +714,9 @@
 
 .bd-readonly .bd-props,
 .bd-readonly .bd-hint {
-	display: none !important;
+	/* Same specificity as .bd-props.is-visible / .bd-hint.is-visible above and declared after
+	   them, so this wins the cascade on its own: no !important needed. */
+	display: none;
 }
 
 .bd-embed {

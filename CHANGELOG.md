@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+- Releases now ship exactly `main.js`, `manifest.json` and `styles.css`, signed with GitHub artifact attestations, and nothing else.
+- Removed two unnecessary `!important` rules in the stylesheet.
+- No functional changes to the plugin itself.
+
 ## 0.1.0
 
 First release.
