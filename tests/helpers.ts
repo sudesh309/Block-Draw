@@ -20,6 +20,8 @@ export function block(id: string, x: number, y: number, extra: Partial<BlockElem
 		shape: "rounded",
 		frameId: null,
 		link: null,
+		comment: "",
+		commentOpen: false,
 		style: { ...DEFAULT_BLOCK_STYLE },
 		...extra,
 	};
@@ -48,6 +50,8 @@ export function connector(id: string, from: string, to: string, extra: Partial<C
 		to: { id: to, side: "auto" },
 		label: "",
 		routing: "elbow",
+		comment: "",
+		commentOpen: false,
 		style: { ...DEFAULT_CONNECTOR_STYLE },
 		...extra,
 	};

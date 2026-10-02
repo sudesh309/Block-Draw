@@ -77,6 +77,10 @@ export interface BlockElement extends Bounds {
 	 */
 	link: string | null;
 	style: BlockStyle;
+	/** Optional annotation, shown via the comment badge instead of inline in the shape. */
+	comment: string;
+	/** Whether the comment callout is currently shown on the canvas (and in exports). */
+	commentOpen: boolean;
 }
 
 export interface FrameStyle {
@@ -113,6 +117,10 @@ export interface ConnectorElement {
 	label: string;
 	routing: Routing;
 	style: ConnectorStyle;
+	/** Optional annotation, shown via the comment badge near the connector's label. */
+	comment: string;
+	/** Whether the comment callout is currently shown on the canvas (and in exports). */
+	commentOpen: boolean;
 }
 
 export type BoxElement = BlockElement | FrameElement;

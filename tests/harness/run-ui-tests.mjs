@@ -314,6 +314,58 @@ test("double-clicking a connector edits its label", async () => {
 	assert.equal(await page.locator(".bd-connector-label").count(), 1);
 });
 
+test("block comments: panel toggle and clicking the canvas badge", async () => {
+	const a = await addBlock(400, 300, "Checkout");
+	assert.equal(await page.locator(".bd-comment-badge").count(), 0);
+	await page.evaluate((id) => window.bd.editor.updateElement(id, { comment: "Ask about discount codes" }), a.id);
+	await frame();
+	assert.equal(await page.locator(".bd-comment-badge").count(), 1);
+	assert.equal(await page.locator(".bd-comment-callout").count(), 0);
+	// the panel's Shown/Hidden toggle drives commentOpen
+	await page.click('.bd-props .bd-seg-btn[title="Show the comment on the canvas"]');
+	await frame();
+	assert.equal((await els()).find((e) => e.id === a.id).commentOpen, true);
+	assert.equal(await page.locator(".bd-comment-callout").count(), 1);
+	assert.equal(await page.locator(".bd-comment-badge.is-open").count(), 1);
+	await shot("05-comment-open");
+	// clicking the badge on the canvas toggles it back off
+	const b = (await els()).find((e) => e.id === a.id);
+	const badge = await toScreen({ x: b.x + b.width - 12, y: b.y + b.height - 12 });
+	await page.mouse.click(badge.x, badge.y);
+	await frame();
+	assert.equal((await els()).find((e) => e.id === a.id).commentOpen, false);
+	assert.equal(await page.locator(".bd-comment-callout").count(), 0);
+	// the badge is still there (the comment itself was not removed), just collapsed
+	assert.equal(await page.locator(".bd-comment-badge").count(), 1);
+});
+
+test("connector comments: badge near the label and the context menu", async () => {
+	const a = await addBlock(300, 300, "Start");
+	const b = await addBlock(700, 300, "Finish");
+	const conn = await page.evaluate(({ a, b }) => window.bd.editor.connect(a, b, { select: true }), { a: a.id, b: b.id });
+	await page.evaluate((id) => window.bd.editor.updateElement(id, { comment: "Double-check timeout handling" }), conn.id);
+	await frame();
+	assert.equal(await page.locator(".bd-comment-badge").count(), 1);
+	const mid = await toScreen({ x: (a.x + a.width + b.x) / 2, y: a.y + a.height / 2 });
+	await page.mouse.click(mid.x, mid.y, { button: "right" });
+	const menus = await page.evaluate(() => window.bd.menus);
+	const titles = menus[menus.length - 1];
+	assert.ok(titles.includes("Show comment"));
+	assert.ok(titles.includes("Remove comment"));
+	await page.evaluate(() => window.bd.clickMenu("Show comment"));
+	await frame();
+	assert.equal((await els()).find((e) => e.type === "connector").commentOpen, true);
+	assert.equal(await page.locator(".bd-comment-callout").count(), 1);
+	// "Remove comment" clears it and the badge disappears entirely
+	await page.mouse.click(mid.x, mid.y, { button: "right" });
+	await page.evaluate(() => window.bd.clickMenu("Remove comment"));
+	await frame();
+	const after = (await els()).find((e) => e.type === "connector");
+	assert.equal(after.comment, "");
+	assert.equal(after.commentOpen, false);
+	assert.equal(await page.locator(".bd-comment-badge").count(), 0);
+});
+
 test("properties panel changes shape and fill", async () => {
 	const b = await addBlock(400, 300, "Styled");
 	await page.click('.bd-props .bd-seg-btn[title="Decision"]');

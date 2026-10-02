@@ -106,7 +106,7 @@ export class PropsPanel {
 
 	/* ------------------------------------------------------------------ */
 
-	private textHandlers(id: string, field: "description" | "label" | "title") {
+	private textHandlers(id: string, field: "description" | "label" | "title" | "comment") {
 		const ed = this.ed;
 		return {
 			onFocus: () => {
@@ -187,6 +187,7 @@ export class PropsPanel {
 					...this.textHandlers(id, "description"),
 				}),
 			);
+			this.buildCommentSection(id);
 		}
 
 		/* ---- connector details */
@@ -204,6 +205,7 @@ export class PropsPanel {
 					...this.textHandlers(id, "label"),
 				}),
 			);
+			this.buildCommentSection(id);
 		}
 
 		/* ---- block style */
@@ -376,6 +378,35 @@ export class PropsPanel {
 				getStyle,
 				setStyle,
 			),
+		);
+	}
+
+	/** Comment section: a note shown via a small badge on the canvas, collapsed by default. */
+	private buildCommentSection(id: string): void {
+		const ed = this.ed;
+		const sec = section(this.body, "Comment");
+		const getter = (): { comment: string; commentOpen: boolean } => {
+			const e = ed.byId.get(id);
+			return isBlock(e) || isConnector(e) ? e : { comment: "", commentOpen: false };
+		};
+		this.syncers.push(
+			segmented(
+				sec,
+				[
+					{ value: false, label: "Hide the comment on the canvas", text: "Hidden" },
+					{ value: true, label: "Show the comment on the canvas", text: "Shown" },
+				],
+				() => getter().commentOpen,
+				(commentOpen: boolean) => ed.updateElement(id, { commentOpen }),
+			),
+		);
+		this.syncers.push(
+			textField(sec, {
+				multiline: true,
+				placeholder: "Add a note — shown via the comment badge",
+				get: () => getter().comment,
+				...this.textHandlers(id, "comment"),
+			}),
 		);
 	}
 

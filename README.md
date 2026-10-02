@@ -11,6 +11,7 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 - **Connections**: hover a block and drag one of its edge dots onto another block. Drop on empty space to create a connected block, or click a dot to add one in that direction. Elbow, straight or curved lines, arrowheads, labels, and re-attachable ends. Connections follow their blocks.
 - **Frames**: group blocks into frames (F). Moving a frame moves its blocks. The frames panel lists them in export order; click to jump, double-click to rename, reorder with the arrows.
 - **Links between frames**: link any block to another frame (Ctrl/Cmd+K, the link dropdown, or right-click). Ctrl/Cmd+click the block or click its corner badge to jump there; **Back** (Alt+←) returns. Blocks can also link to notes, frames in other drawings, or URLs.
+- **Comments**: add a note to any block or connector in the properties panel. A small badge shows it exists; click the badge (or the panel's Shown/Hidden toggle) to expand or collapse it on the canvas. Comments are included in every export.
 - **Deep links and embeds**: `[[Checkout.blockdraw#Payment details]]` opens a drawing at a frame, and a `blockdraw` code block shows a live preview of a drawing or of one frame inside a note.
 - **Exports**: Google Sheets, Excel (.xlsx), JSON (structured or raw), SVG and PNG (whole drawing or the selected frame).
 - **Follows your theme** (light and dark), works on desktop and mobile (tap, double-tap, pinch to zoom).
@@ -83,6 +84,12 @@ height: 320
 
 ![A note with an embedded frame preview](docs/images/embed.png)
 
+## Comments
+
+Select a block or connector and type in the **Comment** field of the properties panel. A small badge appears on the canvas — click it (or the panel's **Shown** / **Hidden** toggle, or **Show comment** / **Hide comment** in the right-click menu) to expand or collapse the note. The open/closed state is saved with the drawing, so a comment left open stays visible in read-only embeds and in SVG/PNG exports; **Remove comment** clears it.
+
+A comment is separate from a block's description: the description is part of the block itself and is always shown under the title, while a comment is an aside that stays out of the way until you open it. Comments also appear in the JSON, Excel and Google Sheets exports — see below.
+
 ## Exporting
 
 | Export | Where it goes |
@@ -97,9 +104,9 @@ height: 320
 The Google Sheets and Excel exports build the same workbook:
 
 - **Index** tab: every frame with a link to its tab, block and connection counts, the frames it links to and its description.
-- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block for a note listing its connections.
+- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections.
 - **Canvas** tab for blocks that are not in any frame.
-- **Blocks** and **Connections** tabs with every element as a filterable row (frame, title, description, links, incoming and outgoing connections).
+- **Blocks** and **Connections** tabs with every element as a filterable row (frame, title, description, comment, links, incoming and outgoing connections).
 
 ![A frame tab: blocks as cells, connections as borders, and a link to another frame's tab](docs/images/sheet-frame.png)
 
@@ -155,6 +162,8 @@ The **structured** format (default) is meant for other tools: frames in order, e
           "id": "pay",
           "title": "Payment",
           "description": "Card, wallet or invoice",
+          "comment": "",
+          "commentOpen": false,
           "shape": "rounded",
           "bounds": { "x": 580, "y": 80, "width": 160, "height": 80 },
           "link": { "type": "frame", "frameId": "f2", "frameTitle": "Payment details" },
@@ -168,6 +177,8 @@ The **structured** format (default) is meant for other tools: frames in order, e
           "from": { "blockId": "check", "blockTitle": "Logged in?", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
           "to": { "blockId": "pay", "blockTitle": "Payment", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
           "label": "yes",
+          "comment": "",
+          "commentOpen": false,
           "routing": "elbow"
         }
       ],
@@ -193,8 +204,8 @@ Drawings are plain JSON with one element per line, so they diff nicely in git:
 	"version": 1,
 	"elements": [
 		{"id":"f1","type":"frame","x":0,"y":0,"width":780,"height":440,"title":"Checkout flow","description":"","style":{"fill":"transparent","stroke":"default"}},
-		{"id":"pay","type":"block","x":580,"y":80,"width":160,"height":80,"title":"Payment","description":"","shape":"rounded","frameId":"f1","link":"frame:f2","style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center"}},
-		{"id":"c2","type":"connector","from":{"id":"check","side":"auto"},"to":{"id":"pay","side":"auto"},"label":"yes","routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow"}}
+		{"id":"pay","type":"block","x":580,"y":80,"width":160,"height":80,"title":"Payment","description":"","comment":"","commentOpen":false,"shape":"rounded","frameId":"f1","link":"frame:f2","style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center"}},
+		{"id":"c2","type":"connector","from":{"id":"check","side":"auto"},"to":{"id":"pay","side":"auto"},"label":"yes","comment":"","commentOpen":false,"routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow"}}
 	]
 }
 ```

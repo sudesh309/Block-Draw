@@ -33,6 +33,7 @@ export type Hit =
 	| { kind: "conn-handle"; id: string; side: Side }
 	| { kind: "conn-end"; id: string; end: "from" | "to" }
 	| { kind: "link-badge"; id: string }
+	| { kind: "comment-badge"; id: string }
 	| { kind: "block"; id: string }
 	| { kind: "connector"; id: string; label: boolean }
 	| { kind: "frame"; id: string; title: boolean };

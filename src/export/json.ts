@@ -27,6 +27,8 @@ export interface ExportBlock {
 	id: string;
 	title: string;
 	description: string;
+	comment: string;
+	commentOpen: boolean;
 	shape: string;
 	/** Position relative to the frame's top-left corner (canvas coordinates for unframed blocks). */
 	bounds: ExportBounds;
@@ -52,6 +54,8 @@ export interface ExportConnection {
 	from: ExportConnectionEnd;
 	to: ExportConnectionEnd;
 	label: string;
+	comment: string;
+	commentOpen: boolean;
 	routing: string;
 	style: ConnectorElement["style"];
 }
@@ -135,6 +139,8 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 			id: b.id,
 			title: b.title,
 			description: b.description,
+			comment: b.comment,
+			commentOpen: b.commentOpen,
 			shape: b.shape,
 			bounds: bounds(b, origin),
 			canvasBounds: bounds(b),
@@ -155,6 +161,8 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 		from: end(c.from.id, c.from.side),
 		to: end(c.to.id, c.to.side),
 		label: c.label,
+		comment: c.comment,
+		commentOpen: c.commentOpen,
 		routing: c.routing,
 		style: { ...c.style },
 	});

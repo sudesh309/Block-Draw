@@ -2,7 +2,20 @@ import { expand, unionBounds } from "../geometry/geom";
 import { indexById } from "../model/ops";
 import { isBlock, isConnector, isFrame, type Bounds, type DrawElement } from "../model/types";
 import { type RenderTheme } from "./colors";
-import { frameTitleMetrics, labelBox, renderBlock, renderConnector, renderConnectorLabel, renderFrame, routeFor } from "./elements";
+import {
+	blockCommentCalloutBounds,
+	connectorCommentCalloutBounds,
+	frameTitleMetrics,
+	labelBox,
+	renderBlock,
+	renderBlockCommentCallout,
+	renderConnector,
+	renderConnectorCommentBadge,
+	renderConnectorCommentCallout,
+	renderConnectorLabel,
+	renderFrame,
+	routeFor,
+} from "./elements";
 import { h, toSvgString, type VNode } from "./vnode";
 
 export interface SceneSvgOptions {
@@ -44,6 +57,7 @@ export function contentBounds(elements: readonly DrawElement[]): Bounds | null {
 			list.push(el, { x: t.x, y: t.y - t.size, width: t.width, height: t.height });
 		} else if (isBlock(el)) {
 			list.push(el);
+			if (el.comment.trim() && el.commentOpen) list.push(blockCommentCalloutBounds(el));
 		} else {
 			const from = byId.get(el.from.id);
 			const to = byId.get(el.to.id);
@@ -51,6 +65,7 @@ export function contentBounds(elements: readonly DrawElement[]): Bounds | null {
 			const route = routeFor(el, from, to);
 			list.push(route.bounds);
 			if (el.label.trim()) list.push(labelBox(el, route));
+			if (el.comment.trim() && el.commentOpen) list.push(connectorCommentCalloutBounds(el, route));
 		}
 	}
 	return unionBounds(list);
@@ -91,10 +106,14 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 	const connectors: VNode[] = [];
 	const labels: VNode[] = [];
 	const blocks: VNode[] = [];
+	const comments: VNode[] = [];
 	for (const el of visible) {
 		if (isFrame(el)) frames.push(renderFrame(el, ro));
-		else if (isBlock(el)) blocks.push(renderBlock(el, ro));
-		else {
+		else if (isBlock(el)) {
+			blocks.push(renderBlock(el, ro));
+			const callout = renderBlockCommentCallout(el, ro);
+			if (callout) comments.push(callout);
+		} else {
 			const from = byId.get(el.from.id);
 			const to = byId.get(el.to.id);
 			if (isBlock(from) && isBlock(to)) {
@@ -102,10 +121,14 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 				connectors.push(renderConnector(el, from, to, ro, route));
 				const label = renderConnectorLabel(el, route, ro);
 				if (label) labels.push(label);
+				const badge = renderConnectorCommentBadge(el, route, ro);
+				if (badge) labels.push(badge);
+				const callout = renderConnectorCommentCallout(el, route, ro);
+				if (callout) comments.push(callout);
 			}
 		}
 	}
-	layers.push(h("g", {}, frames), h("g", {}, connectors), h("g", {}, labels), h("g", {}, blocks));
+	layers.push(h("g", {}, frames), h("g", {}, connectors), h("g", {}, labels), h("g", {}, blocks), h("g", {}, comments));
 
 	const k = opts.scale ?? 1;
 	const width = Math.max(1, Math.ceil(bounds.width * k));

@@ -237,6 +237,9 @@ export class PointerController {
 			case "link-badge":
 				ed.followLink(hit.id, e.ctrlKey || e.metaKey);
 				return;
+			case "comment-badge":
+				ed.toggleComment(hit.id);
+				return;
 			case "connector":
 				if (e.shiftKey) ed.toggleSelection(hit.id);
 				else ed.setSelection([hit.id]);
@@ -434,7 +437,7 @@ export class PointerController {
 		const ed = this.ed;
 		const hit = ed.hitTest(world);
 		let hover: string | null = null;
-		if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "conn-handle")) hover = hit.id;
+		if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "comment-badge" || hit.kind === "conn-handle")) hover = hit.id;
 		else if (ed.hoverId) {
 			const cur = ed.byId.get(ed.hoverId);
 			if (isBlock(cur) && containsPoint(cur, world, (CONNECT_HANDLE_OFFSET + 12) / ed.vp.zoom)) hover = cur.id;
@@ -447,7 +450,7 @@ export class PointerController {
 		if (ed.tool === "select") {
 			if (hit?.kind === "resize") cursor = CURSORS[hit.handle];
 			else if (hit?.kind === "conn-handle" || hit?.kind === "conn-end") cursor = "crosshair";
-			else if (hit?.kind === "link-badge" || hit?.kind === "connector") cursor = "pointer";
+			else if (hit?.kind === "link-badge" || hit?.kind === "comment-badge" || hit?.kind === "connector") cursor = "pointer";
 			else if (hit?.kind === "block" || hit?.kind === "frame") cursor = "move";
 		}
 		if (ed.svg.style.cursor !== cursor) ed.svg.style.cursor = cursor;
@@ -632,7 +635,7 @@ export class PointerController {
 		if (ed.options.readOnly || ed.tool !== "select") return;
 		const world = ed.clientToWorld(clientX, clientY);
 		const hit = ed.hitTest(world);
-		if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "connector")) {
+		if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "comment-badge" || hit.kind === "connector")) {
 			ed.setSelection([hit.id]);
 			ed.textEditor.start(hit.id);
 		} else if (hit && hit.kind === "frame" && hit.title) {

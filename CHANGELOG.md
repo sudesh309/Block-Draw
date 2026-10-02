@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Comments: add a note to any block or connector from the properties panel. A badge on the canvas shows it exists; click the badge, the panel's Shown/Hidden toggle, or the right-click menu's Show/Hide comment to expand or collapse it. The open/closed state is saved with the drawing, so an expanded comment stays visible in read-only embeds and in SVG/PNG exports.
+- Comments are included in the JSON export (`comment`/`commentOpen` on blocks and connections), as a "Comment" column in the Excel and Google Sheets exports, and as part of the hover note on a frame's grid sheet.
+
 ## 0.1.1
 
 - Releases now ship exactly `main.js`, `manifest.json` and `styles.css`, signed with GitHub artifact attestations, and nothing else.

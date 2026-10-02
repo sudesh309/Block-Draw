@@ -53,7 +53,25 @@ describe("file format", () => {
 		expect(a.frameId).toBeNull();
 		expect(a.width).toBe(160);
 		expect(a.style.fill).toBe("#a5d8ff");
+		expect(a.comment).toBe("");
+		expect(a.commentOpen).toBe(false);
 		expect((data.elements[1] as BlockElement).shape).toBe("rounded");
+	});
+
+	it("normalizes comment and commentOpen, defaulting values of the wrong type", () => {
+		const data = parseDrawing(
+			JSON.stringify({
+				elements: [
+					{ id: "a", type: "block", comment: 42, commentOpen: "yes" },
+					{ id: "b", type: "block", comment: "note", commentOpen: true },
+					{ id: "c", type: "connector", from: { id: "a" }, to: { id: "b" }, comment: "watch for timeouts", commentOpen: true },
+				],
+			}),
+		);
+		const [a, b, c] = data.elements;
+		expect(a).toMatchObject({ comment: "", commentOpen: false });
+		expect(b).toMatchObject({ comment: "note", commentOpen: true });
+		expect(c).toMatchObject({ comment: "watch for timeouts", commentOpen: true });
 	});
 
 	it("round-trips and preserves unknown top-level keys", () => {

@@ -461,6 +461,7 @@ function blockCells(b: BlockElement, k: number, ctx: Context): { main: CellModel
 
 	const { outgoing, incoming } = connectionSummary(b, ctx);
 	const noteLines: string[] = [];
+	if (b.comment.trim()) noteLines.push(`Comment: ${b.comment.trim()}`);
 	if (targetLabel) noteLines.push(`Link: ${targetLabel}`);
 	if (outgoing.length) noteLines.push(`Outgoing:\n${outgoing.join("\n")}`);
 	if (incoming.length) noteLines.push(`Incoming:\n${incoming.join("\n")}`);
@@ -603,7 +604,7 @@ function drawGridConnector(
 	placeArrow(tipEnd, route.endDir, c.style.endArrow);
 	placeArrow(tipStart, route.startDir, c.style.startArrow);
 
-	if (c.label.trim()) placeLabel(p, pts, c.label.trim(), color, cellPixels);
+	if (c.label.trim()) placeLabel(p, pts, c.label.trim(), color, cellPixels, c.comment.trim() || undefined);
 
 	// Line: one border per unit edge, on a free cell next to the edge.
 	const edge = (candidates: [number, number, "top" | "bottom" | "left" | "right"][]) => {
@@ -635,7 +636,7 @@ function drawGridConnector(
 	}
 }
 
-function placeLabel(p: Placement, pts: Point[], text: string, color: string, cellPixels: number): void {
+function placeLabel(p: Placement, pts: Point[], text: string, color: string, cellPixels: number, note?: string): void {
 	// Longest segment hosts the label, centered on the line (merged cells hide the line under it).
 	let best = 1;
 	let bestLen = -1;
@@ -652,6 +653,7 @@ function placeLabel(p: Placement, pts: Point[], text: string, color: string, cel
 	const widthCells = Math.max(2, Math.min(14, Math.ceil((measureText(firstLine, 12) + 10) / cellPixels)));
 	const cell: CellModel = {
 		value: text.replace(/\s*\n\s*/g, " "),
+		note: note ? `Comment: ${note}` : undefined,
 		style: { color, fontSize: 9, hAlign: "center", vAlign: "middle", wrap: false, bg: "#ffffff" },
 	};
 	const tries = [0, 1, -1, 2, -2, 3, -3];
@@ -694,11 +696,11 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 	const ordered: BlockElement[] = [];
 	for (const r of regions) ordered.push(...readingOrder(r.blocks));
 	for (const b of ctx.blocks) if (!ctx.regionOf.has(b.id)) ordered.push(b);
-	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 10);
+	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 11);
 	tableHeader(
 		s,
-		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "ID"],
-		[160, 200, 260, 90, 180, 220, 220, 80, 80, 110],
+		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "ID", "Comment"],
+		[160, 200, 260, 90, 180, 220, 220, 80, 80, 110, 240],
 	);
 	ordered.forEach((b, i) => {
 		const row = i + 1;
@@ -720,15 +722,16 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 		setCell(s, row, 7, { value: fill ?? "none", style: fill ? { bg: fill } : undefined });
 		setCell(s, row, 8, { value: `${Math.round(b.width)}×${Math.round(b.height)}`, style: { color: MUTED } });
 		setCell(s, row, 9, { value: b.id, style: { color: MUTED } });
-		for (let c = 0; c < 10; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		setCell(s, row, 10, { value: b.comment, style: { wrap: true } });
+		for (let c = 0; c < 11; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
 	});
-	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 10 };
+	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 11 };
 	return s;
 }
 
 function buildConnectionsSheet(ctx: Context): SheetModel {
-	const s = newSheet(SHEET_KEYS.connections, ctx.sheetTitles.get(SHEET_KEYS.connections) as string, ctx.connectors.length + 6, 7);
-	tableHeader(s, ["From frame", "From", "Label", "To", "To frame", "Line", "ID"], [160, 200, 140, 200, 160, 80, 110]);
+	const s = newSheet(SHEET_KEYS.connections, ctx.sheetTitles.get(SHEET_KEYS.connections) as string, ctx.connectors.length + 6, 8);
+	tableHeader(s, ["From frame", "From", "Label", "To", "To frame", "Line", "ID", "Comment"], [160, 200, 140, 200, 160, 80, 110, 240]);
 	ctx.connectors.forEach((c, i) => {
 		const row = i + 1;
 		const fromKey = ctx.regionOf.get(c.from.id);
@@ -740,8 +743,9 @@ function buildConnectionsSheet(ctx: Context): SheetModel {
 		setCell(s, row, 4, sheetLink(ctx, toKey, toKey ? (ctx.sheetTitles.get(toKey) ?? "") : ""));
 		setCell(s, row, 5, { value: c.routing, style: { color: MUTED } });
 		setCell(s, row, 6, { value: c.id, style: { color: MUTED } });
-		for (let col = 0; col < 7; col++) setCell(s, row, col, { style: { borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		setCell(s, row, 7, { value: c.comment, style: { wrap: true } });
+		for (let col = 0; col < 8; col++) setCell(s, row, col, { style: { borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
 	});
-	s.filter = { row: 0, col: 0, rows: Math.max(1, ctx.connectors.length + 1), cols: 7 };
+	s.filter = { row: 0, col: 0, rows: Math.max(1, ctx.connectors.length + 1), cols: 8 };
 	return s;
 }

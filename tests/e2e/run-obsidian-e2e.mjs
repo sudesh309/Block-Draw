@@ -103,7 +103,7 @@ for (let i = 0; i < 60 && !page; i++) {
 assert.ok(page, "Obsidian window not found");
 await page.setViewportSize({ width: 1440, height: 900 });
 const errors = [];
-page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}`));
+page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}\n${e.stack}`));
 page.on("console", (m) => {
 	if (m.type() !== "error") return;
 	const text = m.text();
@@ -219,6 +219,9 @@ test("draws blocks, connects them and saves to disk", async () => {
 	const dot = await toPage({ x: a.x + a.width + 16, y: a.y + a.height / 2 });
 	const cb = await toPage({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 	await drag(dot, cb);
+	await editorEval((ed, id) => ed.updateElement(id, { comment: "Confirm with design", commentOpen: true }), a.id);
+	await frame();
+	assert.equal(await page.locator(".bd-comment-callout").count(), 1);
 	const els = await elements();
 	assert.equal(els.filter((e) => e.type === "block").length, 2);
 	assert.equal(els.filter((e) => e.type === "connector").length, 1);
@@ -230,6 +233,9 @@ test("draws blocks, connects them and saves to disk", async () => {
 		["Start", "Finish"],
 	);
 	assert.equal(saved.elements.filter((e) => e.type === "connector").length, 1);
+	const startSaved = saved.elements.find((e) => e.title === "Start");
+	assert.equal(startSaved.comment, "Confirm with design");
+	assert.equal(startSaved.commentOpen, true);
 	await shot("e2e-02-blocks");
 });
 
@@ -289,6 +295,11 @@ test("reopening the file restores the drawing", async () => {
 	const els = await elements();
 	assert.equal(els.filter((e) => e.type === "frame").length, 2);
 	assert.equal(els.filter((e) => e.type === "block").length, 3);
+	// the comment and its open state survive the round trip through disk.
+	const start = els.find((e) => e.title === "Start");
+	assert.equal(start.comment, "Confirm with design");
+	assert.equal(start.commentOpen, true);
+	assert.equal(await page.locator(".bd-comment-callout").count(), 1);
 });
 
 test("a link with #Frame opens the drawing at that frame", async () => {
@@ -418,12 +429,14 @@ test("no errors were logged", async () => {
 
 let failed = 0;
 for (const t of tests) {
+	const before = errors.length;
 	try {
 		await t.fn();
+		if (errors.length > before) print(`  !! new page errors during "${t.name}": ${JSON.stringify(errors.slice(before))}`);
 		print(`  ✓ ${t.name}`);
 	} catch (e) {
 		failed++;
-		print(`  ✗ ${t.name}\n    ${String(e?.stack ?? e).split("\n").slice(0, 5).join("\n    ")}`);
+		print(`  ✗ ${t.name}\n    ${String(e?.stack ?? e).split("\n").slice(0, 40).join("\n    ")}`);
 		if (SHOTS) await page.screenshot({ path: join(SHOTS, `e2e-FAILED-${t.name.replace(/[^a-z0-9]+/gi, "-")}.png`) }).catch(() => undefined);
 	}
 }

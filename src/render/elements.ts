@@ -5,12 +5,13 @@ import { parseLink } from "../model/links";
 import type {
 	ArrowHead,
 	BlockElement,
+	Bounds,
 	ConnectorElement,
 	FrameElement,
 	StrokeStyle,
 } from "../model/types";
 import { isTransparent, resolveFill, resolveStroke, resolveTextColor, type RenderTheme } from "./colors";
-import { FONT_FAMILY, layoutBlockText, measureText } from "./text";
+import { FONT_FAMILY, LINE_HEIGHT, layoutBlockText, measureText, wrapText } from "./text";
 import { h, type VChild, type VNode } from "./vnode";
 
 export interface RenderOptions {
@@ -87,6 +88,152 @@ function linkBadge(block: BlockElement, o: RenderOptions): VNode | null {
 	);
 }
 
+/* ------------------------------------------------------------- comments */
+
+export const COMMENT_BADGE_SIZE = 16;
+/** Max width of a comment callout, in world units. */
+export const COMMENT_MAX_WIDTH = 220;
+const COMMENT_FONT_SIZE = 12;
+const COMMENT_PAD = 8;
+const COMMENT_ICON = "M3.5 4 H12.5 V10 H7.5 L4.5 13 V10 H3.5 Z";
+
+/** Local-space box (relative to the block's own origin) of its comment badge, bottom-right corner. */
+export function blockCommentBadgeBox(block: BlockElement): { x: number; y: number; size: number } {
+	const size = COMMENT_BADGE_SIZE;
+	return { x: Math.max(0, block.width - size - 4), y: Math.max(0, block.height - size - 4), size };
+}
+
+/** World-space center of a connector's comment badge: above its label, or at the label position. */
+export function connectorCommentBadgeCenter(conn: ConnectorElement, route: Route): Point {
+	if (conn.label.trim()) {
+		const box = labelBox(conn, route);
+		return { x: route.labelPos.x, y: box.y - COMMENT_BADGE_SIZE / 2 - 6 };
+	}
+	return { ...route.labelPos };
+}
+
+export function connectorCommentBadgeRect(conn: ConnectorElement, route: Route): Bounds {
+	const c = connectorCommentBadgeCenter(conn, route);
+	const size = COMMENT_BADGE_SIZE;
+	return { x: c.x - size / 2, y: c.y - size / 2, width: size, height: size };
+}
+
+function commentCalloutLines(text: string): string[] {
+	return wrapText(text, COMMENT_MAX_WIDTH - COMMENT_PAD * 2, COMMENT_FONT_SIZE, 400);
+}
+
+function commentCalloutSize(lines: string[]): { width: number; height: number } {
+	const lh = COMMENT_FONT_SIZE * LINE_HEIGHT;
+	const textWidth = Math.max(0, ...lines.map((l) => measureText(l, COMMENT_FONT_SIZE, 400)));
+	return { width: Math.min(COMMENT_MAX_WIDTH, textWidth + COMMENT_PAD * 2 + 4), height: lines.length * lh + COMMENT_PAD * 2 };
+}
+
+/** Bounds of a block's comment callout (shown below the block), regardless of whether it is open. */
+export function blockCommentCalloutBounds(block: BlockElement): Bounds {
+	const lines = commentCalloutLines(block.comment.trim());
+	const { width, height } = commentCalloutSize(lines);
+	return { x: block.x + block.width / 2 - width / 2, y: block.y + block.height + 8, width, height };
+}
+
+/** Bounds of a connector's comment callout (shown above its badge), regardless of whether it is open. */
+export function connectorCommentCalloutBounds(conn: ConnectorElement, route: Route): Bounds {
+	const badge = connectorCommentBadgeRect(conn, route);
+	const lines = commentCalloutLines(conn.comment.trim());
+	const { width, height } = commentCalloutSize(lines);
+	return { x: badge.x + badge.width / 2 - width / 2, y: badge.y - 6 - height, width, height };
+}
+
+/** Small badge indicating an element has a comment; click toggles the callout open/closed. */
+function commentBadgeNode(rect: { x: number; y: number; width: number; height: number }, open: boolean, text: string, o: RenderOptions, id: string): VNode {
+	return h(
+		"g",
+		{
+			class: `bd-comment-badge${open ? " is-open" : ""}`,
+			transform: `translate(${r2(rect.x)},${r2(rect.y)})`,
+			"data-comment-badge": o.interactive ? id : null,
+		},
+		[
+			h("title", {}, [`${open ? "Hide" : "Show"} comment: ${text}`]),
+			h("rect", {
+				width: rect.width,
+				height: rect.height,
+				rx: 4,
+				style: styleAttr({
+					fill: open ? o.theme.ink : o.theme.background,
+					stroke: o.theme.ink,
+					"stroke-width": 1,
+					opacity: open ? 0.85 : 0.9,
+				}),
+			}),
+			h("path", {
+				d: COMMENT_ICON,
+				style: styleAttr({
+					fill: "none",
+					stroke: open ? o.theme.background : o.theme.ink,
+					"stroke-width": 1.3,
+					"stroke-linecap": "round",
+					"stroke-linejoin": "round",
+				}),
+			}),
+		],
+	);
+}
+
+/** Comment callout box with a small tail pointing at `anchor`, drawn above or below it. */
+function renderCommentCallout(text: string, anchor: Point, box: Bounds, placement: "above" | "below", o: RenderOptions): VNode {
+	const lines = commentCalloutLines(text);
+	const lh = COMMENT_FONT_SIZE * LINE_HEIGHT;
+	const bg = isTransparent(o.theme.background) ? "#ffffff" : o.theme.background;
+	const tailX = Math.max(box.x + 10, Math.min(box.x + box.width - 10, anchor.x));
+	const tailBase = placement === "below" ? box.y : box.y + box.height;
+	const tailTip = placement === "below" ? tailBase - 6 : tailBase + 6;
+	return h("g", { class: "bd-comment-callout" }, [
+		h("rect", {
+			x: r2(box.x),
+			y: r2(box.y),
+			width: r2(box.width),
+			height: r2(box.height),
+			rx: 6,
+			style: styleAttr({ fill: bg, stroke: o.theme.ink, "stroke-width": 1 }),
+		}),
+		h("path", {
+			d: `M${r2(tailX - 6)},${r2(tailBase)} L${r2(tailX)},${r2(tailTip)} L${r2(tailX + 6)},${r2(tailBase)} Z`,
+			style: styleAttr({ fill: bg }),
+		}),
+		h(
+			"text",
+			{ style: styleAttr({ fill: o.theme.ink, "font-family": FONT_FAMILY, "font-size": `${COMMENT_FONT_SIZE}px` }) },
+			lines.map((line, i) => h("tspan", { x: r2(box.x + COMMENT_PAD), y: r2(box.y + COMMENT_PAD + lh * (i + 0.8)) }, [line || " "])),
+		),
+	]);
+}
+
+/** A block's comment callout, shown below it while `commentOpen` is set. */
+export function renderBlockCommentCallout(block: BlockElement, o: RenderOptions): VNode | null {
+	const text = block.comment.trim();
+	if (!text || !block.commentOpen) return null;
+	const box = blockCommentCalloutBounds(block);
+	const anchor = { x: block.x + block.width / 2, y: box.y };
+	return renderCommentCallout(text, anchor, box, "below", o);
+}
+
+/** A connector's small comment badge; always shown when it has a comment, open or not. */
+export function renderConnectorCommentBadge(conn: ConnectorElement, route: Route, o: RenderOptions): VNode | null {
+	const text = conn.comment.trim();
+	if (!text) return null;
+	return commentBadgeNode(connectorCommentBadgeRect(conn, route), conn.commentOpen, text, o, conn.id);
+}
+
+/** A connector's comment callout, shown above its badge while `commentOpen` is set. */
+export function renderConnectorCommentCallout(conn: ConnectorElement, route: Route, o: RenderOptions): VNode | null {
+	const text = conn.comment.trim();
+	if (!text || !conn.commentOpen) return null;
+	const box = connectorCommentCalloutBounds(conn, route);
+	const badge = connectorCommentBadgeRect(conn, route);
+	const anchor = { x: badge.x + badge.width / 2, y: box.y + box.height };
+	return renderCommentCallout(text, anchor, box, "above", o);
+}
+
 export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 	const { width: w, height: h0, style } = block;
 	const fill = resolveFill(style.fill);
@@ -150,6 +297,11 @@ export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 	}
 	const badge = linkBadge(block, o);
 	if (badge) children.push(badge);
+	const comment = block.comment.trim();
+	if (comment) {
+		const b = blockCommentBadgeBox(block);
+		children.push(commentBadgeNode({ x: b.x, y: b.y, width: b.size, height: b.size }, block.commentOpen, comment, o, block.id));
+	}
 	return h(
 		"g",
 		{

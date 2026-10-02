@@ -75,7 +75,8 @@
 	cursor: grabbing !important;
 }
 
-.bd-link-badge {
+.bd-link-badge,
+.bd-comment-badge {
 	cursor: pointer;
 }
 

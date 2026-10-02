@@ -30,6 +30,7 @@ type Raw = Record<string, unknown>;
 const isObj = (v: unknown): v is Raw => typeof v === "object" && v !== null && !Array.isArray(v);
 const num = (v: unknown, d: number): number => (typeof v === "number" && Number.isFinite(v) ? v : d);
 const str = (v: unknown, d = ""): string => (typeof v === "string" ? v : d);
+const bool = (v: unknown, d: boolean): boolean => (typeof v === "boolean" ? v : d);
 const oneOf = <T extends string>(v: unknown, allowed: readonly T[], d: T): T =>
 	typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : d;
 
@@ -53,6 +54,8 @@ function normalizeBlock(raw: Raw): BlockElement {
 		shape: oneOf<BlockShape>(raw.shape, BLOCK_SHAPES, "rounded"),
 		frameId: typeof raw.frameId === "string" && raw.frameId ? raw.frameId : null,
 		link: typeof raw.link === "string" && raw.link.trim() ? raw.link.trim() : null,
+		comment: str(raw.comment),
+		commentOpen: bool(raw.commentOpen, false),
 		style: {
 			fill: str(s.fill, DEFAULT_BLOCK_STYLE.fill),
 			stroke: str(s.stroke, DEFAULT_BLOCK_STYLE.stroke),
@@ -95,6 +98,8 @@ function normalizeConnector(raw: Raw): ConnectorElement | null {
 		to: { id: to.id, side: oneOf(to.side, ANCHORS, "auto") },
 		label: str(raw.label),
 		routing: oneOf(raw.routing, ROUTINGS, "elbow"),
+		comment: str(raw.comment),
+		commentOpen: bool(raw.commentOpen, false),
 		style: {
 			stroke: str(s.stroke, DEFAULT_CONNECTOR_STYLE.stroke),
 			strokeWidth: Math.max(0.5, num(s.strokeWidth, DEFAULT_CONNECTOR_STYLE.strokeWidth)),

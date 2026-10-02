@@ -55,7 +55,7 @@ import {
 	type Side,
 } from "../model/types";
 import { contentBounds } from "../render/scene";
-import { frameTitleMetrics, labelBox } from "../render/elements";
+import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
 import { layoutBlockText } from "../render/text";
 import { el, svgEl } from "./dom";
 import type { EditorHost, MenuItemSpec } from "./host";
@@ -554,6 +554,13 @@ export class Editor {
 		else this.host.openLink(block.link, newLeaf);
 	}
 
+	/** Shows or hides a block's or connector's comment callout on the canvas. */
+	toggleComment(id: string): void {
+		const el = this.byId.get(id);
+		if (!isBlock(el) && !isConnector(el)) return;
+		this.updateElement(id, { commentOpen: !el.commentOpen });
+	}
+
 	/* ========================================================= selection */
 
 	setSelection(ids: Iterable<string>): void {
@@ -635,12 +642,19 @@ export class Editor {
 			}
 		}
 
-		// Connector labels sit above blocks.
+		// Connector comment badges and labels sit above blocks.
 		for (let i = this.elements.length - 1; i >= 0; i--) {
 			const e = this.elements[i];
-			if (!isConnector(e) || !e.label.trim()) continue;
+			if (!isConnector(e)) continue;
 			const r = this.renderer.route(e);
 			if (!r) continue;
+			if (e.comment.trim()) {
+				const badge = connectorCommentBadgeRect(e, r.route);
+				if (p.x >= badge.x && p.x <= badge.x + badge.width && p.y >= badge.y && p.y <= badge.y + badge.height) {
+					return { kind: "comment-badge", id: e.id };
+				}
+			}
+			if (!e.label.trim()) continue;
 			const box = labelBox(e, r.route);
 			if (p.x >= box.x && p.x <= box.x + box.width && p.y >= box.y && p.y <= box.y + box.height) {
 				return { kind: "connector", id: e.id, label: true };
@@ -652,6 +666,12 @@ export class Editor {
 			if (!isBlock(e)) continue;
 			if (e.link && p.x >= e.x + e.width - 22 && p.x <= e.x + e.width && p.y >= e.y && p.y <= e.y + 22) {
 				if (shapeContains("rectangle", e, p)) return { kind: "link-badge", id: e.id };
+			}
+			if (e.comment.trim()) {
+				const b = blockCommentBadgeBox(e);
+				if (p.x >= e.x + b.x && p.x <= e.x + b.x + b.size && p.y >= e.y + b.y && p.y <= e.y + b.y + b.size) {
+					return { kind: "comment-badge", id: e.id };
+				}
 			}
 			if (shapeContains(e.shape, e, p)) return { kind: "block", id: e.id };
 		}
@@ -729,6 +749,8 @@ export class Editor {
 			shape: this.toolShape,
 			frameId: null,
 			link: null,
+			comment: "",
+			commentOpen: false,
 			style: { ...this.current.block },
 			...patch,
 		};
@@ -792,6 +814,8 @@ export class Editor {
 			to: { id: toId, side: opts.toSide ?? "auto" },
 			label: "",
 			routing: this.current.routing,
+			comment: "",
+			commentOpen: false,
 			style: { ...this.current.connector },
 		};
 		this.commit([...this.elements, conn], { selection: opts.select ? [conn.id] : this.selection });
@@ -829,6 +853,8 @@ export class Editor {
 			to: { id: block.id, side: "auto" },
 			label: "",
 			routing: this.current.routing,
+			comment: "",
+			commentOpen: false,
 			style: { ...this.current.connector },
 		};
 		this.insertBlocks([block], [conn]);
@@ -1114,6 +1140,10 @@ export class Editor {
 				items.push({ title: "Edit text", icon: "edit", onClick: () => this.textEditor.start(b.id) });
 				items.push({ title: b.link ? "Change link…" : "Link to frame or note…", icon: "link", onClick: () => void this.editLink(b.id) });
 				if (b.link) items.push({ title: "Remove link", icon: "unlink", onClick: () => this.updateElement(b.id, { link: null }) });
+				if (b.comment) {
+					items.push({ title: b.commentOpen ? "Hide comment" : "Show comment", onClick: () => this.toggleComment(b.id) });
+					items.push({ title: "Remove comment", onClick: () => this.updateElement(b.id, { comment: "", commentOpen: false }) });
+				}
 			}
 		}
 		if (frames.length === 1 && sel.length === 1) {
@@ -1124,6 +1154,10 @@ export class Editor {
 		if (connectors.length === 1 && sel.length === 1 && !ro) {
 			const c = connectors[0];
 			items.push({ title: c.label ? "Edit label" : "Add label", icon: "edit", onClick: () => this.textEditor.start(c.id) });
+			if (c.comment) {
+				items.push({ title: c.commentOpen ? "Hide comment" : "Show comment", onClick: () => this.toggleComment(c.id) });
+				items.push({ title: "Remove comment", onClick: () => this.updateElement(c.id, { comment: "", commentOpen: false }) });
+			}
 			items.push({ title: "Reverse direction", onClick: () => this.reverseConnector(c.id) });
 			for (const r of ["elbow", "straight", "curved"] as Routing[]) {
 				items.push({

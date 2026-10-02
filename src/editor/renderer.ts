@@ -4,7 +4,17 @@ import { sideAnchor } from "../geometry/shapes";
 import { parseFrameLink } from "../model/links";
 import { isBlock, isBox, isConnector, isFrame, type BlockElement, type ConnectorElement } from "../model/types";
 import { SCREEN_THEME } from "../render/colors";
-import { renderBlock, renderConnector, renderConnectorLabel, renderFrame, routeFor, type RenderOptions } from "../render/elements";
+import {
+	renderBlock,
+	renderBlockCommentCallout,
+	renderConnector,
+	renderConnectorCommentBadge,
+	renderConnectorCommentCallout,
+	renderConnectorLabel,
+	renderFrame,
+	routeFor,
+	type RenderOptions,
+} from "../render/elements";
 import { h, toDom, type VNode } from "../render/vnode";
 import { svgEl } from "./dom";
 import type { Editor } from "./Editor";
@@ -74,6 +84,8 @@ export class SceneRenderer {
 	private readonly connectors: Layer;
 	private readonly labels: Layer;
 	private readonly blocks: Layer;
+	/** Comment callouts: its own layer on top of everything else, so they are never obscured. */
+	private readonly comments: Layer;
 	readonly overlay: SVGGElement;
 	private routes = new Map<string, RouteEntry>();
 
@@ -85,6 +97,7 @@ export class SceneRenderer {
 		this.connectors = new Layer(svgEl("g", { class: "bd-layer-connectors" }, viewport));
 		this.labels = new Layer(svgEl("g", { class: "bd-layer-labels" }, viewport));
 		this.blocks = new Layer(svgEl("g", { class: "bd-layer-blocks" }, viewport));
+		this.comments = new Layer(svgEl("g", { class: "bd-layer-comments" }, viewport));
 		this.overlay = svgEl("g", { class: "bd-layer-overlay" }, viewport);
 	}
 
@@ -105,6 +118,7 @@ export class SceneRenderer {
 		this.connectors.clear();
 		this.labels.clear();
 		this.blocks.clear();
+		this.comments.clear();
 		this.routes.clear();
 	}
 
@@ -125,6 +139,7 @@ export class SceneRenderer {
 		const connectors: LayerItem[] = [];
 		const labels: LayerItem[] = [];
 		const blocks: LayerItem[] = [];
+		const comments: LayerItem[] = [];
 		const live = new Set<string>();
 		for (const el of ed.elements) {
 			const editing = ed.editingId === el.id;
@@ -134,6 +149,9 @@ export class SceneRenderer {
 				const target = parseFrameLink(el.link);
 				const linked = target ? ed.byId.get(target) : null;
 				blocks.push({ id: el.id, deps: [el, editing, linked], build: () => renderBlock(el, opts) });
+				if (el.comment.trim() && el.commentOpen) {
+					comments.push({ id: el.id, deps: [el], build: () => renderBlockCommentCallout(el, opts) ?? h("g", {}) });
+				}
 			} else {
 				const entry = this.route(el);
 				if (!entry) continue;
@@ -150,6 +168,20 @@ export class SceneRenderer {
 						build: () => renderConnectorLabel(el, entry.route, opts) ?? h("g", {}),
 					});
 				}
+				if (el.comment.trim()) {
+					labels.push({
+						id: `${el.id}:comment`,
+						deps: [el, entry.from, entry.to],
+						build: () => renderConnectorCommentBadge(el, entry.route, opts) ?? h("g", {}),
+					});
+					if (el.commentOpen) {
+						comments.push({
+							id: el.id,
+							deps: [el, entry.from, entry.to],
+							build: () => renderConnectorCommentCallout(el, entry.route, opts) ?? h("g", {}),
+						});
+					}
+				}
 			}
 		}
 		for (const id of this.routes.keys()) if (!live.has(id)) this.routes.delete(id);
@@ -157,6 +189,7 @@ export class SceneRenderer {
 		this.connectors.sync(connectors);
 		this.labels.sync(labels);
 		this.blocks.sync(blocks);
+		this.comments.sync(comments);
 		this.renderOverlay();
 	}
 

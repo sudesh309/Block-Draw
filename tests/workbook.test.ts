@@ -152,10 +152,23 @@ describe("workbook layout", () => {
 	it("tabulates blocks and connections", () => {
 		const wb = build();
 		const blocks = sheetByKey(wb, SHEET_KEYS.blocks);
-		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 10 });
+		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 11 });
 		expect(blocks.cells.get(cellKey(1, 1))?.value).toBe("Cart");
+		expect(blocks.cells.get(cellKey(1, 10))?.value).toBe("Confirm totals before moving on");
 		const conns = sheetByKey(wb, SHEET_KEYS.connections);
+		expect(conns.filter).toEqual({ row: 0, col: 0, rows: 8, cols: 8 });
 		expect(conns.cells.get(cellKey(2, 2))?.value).toBe("yes");
+		expect(conns.cells.get(cellKey(2, 7))?.value).toBe("Requires 3-D Secure");
+	});
+
+	it("surfaces comments as cell notes on the frame grid", () => {
+		const s = sheetByKey(build(), "frame:f1");
+		const cart = s.cells.get(cellKey(ORIGIN_ROW + 3, ORIGIN_COL + 2));
+		expect(cart?.note).toContain("Comment: Confirm totals before moving on");
+		// a note on a block that already had one (from its outgoing connection) keeps both.
+		expect(cart?.note).toContain("Outgoing:");
+		const label = [...s.cells.values()].find((c) => c.value === "yes");
+		expect(label?.note).toBe("Comment: Requires 3-D Secure");
 	});
 
 	it("scales huge frames down to a bounded grid", () => {
