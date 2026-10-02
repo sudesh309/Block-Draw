@@ -55,7 +55,7 @@ import {
 	type Routing,
 	type Side,
 } from "../model/types";
-import { applyDrawingTheme, drawingThemeById, type DrawingThemeId } from "../model/themes";
+import { applyDrawingTheme, DRAWING_THEMES, drawingThemeById, type DrawingThemeId } from "../model/themes";
 import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
@@ -624,7 +624,7 @@ export class Editor {
 			threeD: theme.threeD,
 		};
 		this.current.frame = { fill: theme.frameFill, stroke: theme.frameStroke };
-		this.palette = id === "futuristic" ? "futuristic" : id === "classic" ? "classic" : "minimal";
+		this.palette = id === "futuristic" ? "futuristic" : id === "classic" ? "classic" : id === "minimal" ? "minimal" : "3d";
 		this.props.refresh();
 		this.host.notice(`Applied the ${theme.name} theme to ${scope ? "the selection" : "the drawing"}. Undo with Ctrl/Cmd+Z.`);
 	}
@@ -1200,10 +1200,16 @@ export class Editor {
 			items.push({ title: "Zoom to fit", icon: "fit", onClick: () => this.zoomToFit({ animate: true }), separator: true });
 			items.push({ title: "Present", icon: "present", onClick: () => this.presenter.start() });
 			if (!ro) {
-				items.push({ title: "Theme: Executive 3D", icon: "palette", onClick: () => this.applyTheme("executive"), separator: true });
-				items.push({ title: "Theme: Minimal", icon: "palette", onClick: () => this.applyTheme("minimal") });
-				items.push({ title: "Theme: Futuristic", icon: "palette", onClick: () => this.applyTheme("futuristic") });
-				items.push({ title: "Theme: Classic", icon: "palette", onClick: () => this.applyTheme("classic") });
+				DRAWING_THEMES.forEach((t, i) => {
+					items.push({
+						title: `Theme: ${t.name}`,
+						icon: "palette",
+						onClick: () => this.applyTheme(t.id),
+						...(i === 0 ? { separator: true } : {}),
+					});
+				});
+				const allOn = this.elements.length > 0 && this.elements.filter((e) => isBlock(e) || isConnector(e)).every((e) => e.style.threeD);
+				items.push({ title: "3D effect", icon: "cube", checked: allOn, onClick: () => this.toggle3D() });
 			}
 			items.push({
 				separator: true,
@@ -1315,6 +1321,7 @@ export class Editor {
 		this.props.update();
 		this.framesPanel.update();
 		this.zoomControls.update();
+		this.presenter.update();
 		this.updateHint();
 		this.emptyEl.classList.toggle("is-visible", this.elements.length === 0 && !this.options.readOnly);
 	}

@@ -132,6 +132,7 @@ export class PropsPanel {
 
 	private build(mode: "selection" | "block" | "connector" | "frame", sel: DrawElement[]): void {
 		const ed = this.ed;
+		const prevScroll = this.el.scrollTop;
 		clearEl(this.body);
 		this.syncers = [];
 		const blocks = sel.filter(isBlock);
@@ -409,6 +410,7 @@ export class PropsPanel {
 			if (isFrame(single)) iconButton(row, "fit", "Zoom to frame", () => ed.navigateToFrame(single.id));
 			iconButton(row, "trash", "Delete — Del", () => ed.deleteSelection(), "bd-danger");
 		}
+		if (prevScroll > 0) this.el.scrollTop = prevScroll;
 	}
 
 	/** Chooses which swatch set the color rows below show. */

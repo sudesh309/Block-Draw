@@ -11,7 +11,7 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 - **Connections**: hover a block and drag one of its edge dots onto another block. Drop on empty space to create a connected block, or click a dot to add one in that direction. Elbow, straight or curved lines, arrowheads, labels, and re-attachable ends. Connections follow their blocks.
 - **Frames**: group blocks into frames (F). Moving a frame moves its blocks. The frames panel lists them in export order; click to jump, double-click to rename, reorder with the arrows.
 - **Links between frames**: link any block to another frame (Ctrl/Cmd+K, the link dropdown, or right-click). Ctrl/Cmd+click the block or click its corner badge to jump there; **Back** (Alt+←) returns. Blocks can also link to notes, frames in other drawings, or URLs.
-- **Executive-ready looks**: one-click themes (Executive 3D, Minimal, Futuristic, Classic), minimalist and futuristic color palettes, and a **3D effect** for blocks and links — raised tiles with soft shadows, neon-edged tiles on dark fills, and tube-like links.
+- **Executive-ready looks**: one-click themes (3D, Minimal, Futuristic, Classic), 3D, minimalist and futuristic color palettes, and a **3D effect** for blocks and links — raised tiles with soft shadows, neon-edged tiles on dark fills, and tube-like links.
 - **Presentation mode** (P): full screen, an overview slide then one slide per frame, a laser pointer, a light or dark stage, and click-to-spotlight.
 - **For architects and engineers**: **dependency tracing** (T) highlights everything upstream and downstream of a block; **animated flow** shows data moving along a link; **tags** label a block with its technology or role (“Service · Java”, “PostgreSQL”) above the title.
 - **Comments**: add a note to any block or connector in the properties panel. A small badge shows it exists; click the badge (or the panel's Shown/Hidden toggle) to expand or collapse it on the canvas. Comments are included in every export.
@@ -97,22 +97,22 @@ A comment is separate from a block's description: the description is part of the
 
 ## Themes, palettes and 3D
 
-![The Executive 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
+![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
 
 **One-click themes** restyle the whole drawing — or just the selection — in a single undoable step. Right-click the empty canvas, use the **Quick theme** buttons in the properties panel, or run *Apply theme: …* from the command palette:
 
 | Theme | Look |
 | --- | --- |
-| Executive 3D | Soft board-room colors, navy lines, raised 3D blocks and links |
+| 3D | Soft board-room colors, navy lines, raised 3D blocks and links |
 | Minimal | White and grey, fine lines, flat |
 | Futuristic | Deep navy tiles with neon edges and glow, in 3D |
 | Classic | The original pastel colors, flat |
 
 Themes keep your color coding: blocks that shared a color before still share one afterwards. Shapes, text, links and positions are never touched. The theme also becomes the style for blocks and connectors you add next.
 
-**Palettes**: the **Palette** row in the properties panel switches the swatches between *Classic*, *Minimal* (neutrals with one accent) and *Futuristic* (navy and neon).
+**Palettes**: the **Palette** row in the properties panel switches the swatches between *3D*, *Classic*, *Minimal* (neutrals with one accent) and *Futuristic* (navy and neon).
 
-**3D effect**: set **Depth → 3D** for blocks or **Effect → 3D** for connectors in the properties panel, use **3D effect** in the right-click menu, or run *Toggle 3D effect* (selection, or the whole drawing when nothing is selected). 3D blocks are extruded tiles with a top-lit face and a soft shadow; on dark fills the sides take the block's edge color and the edge glows. 3D links get a drop shadow and a sheen. The effect is part of the drawing, so it shows in embeds and in SVG and PNG exports.
+**3D effect**: set **Depth → 3D** for blocks or **Effect → 3D** for connectors in the properties panel, use **3D effect** in the right-click menu, or run *Toggle 3D effect* (selection, or the whole drawing when nothing is selected). 3D blocks are extruded tiles with a top-lit face and a calibrated soft shadow; on dark fills the sides take the block's edge color and the edge glows. 3D links get a drop shadow and a sheen. The effect is part of the drawing, so it shows in embeds and in SVG and PNG exports.
 
 ![The Futuristic theme with animated flow](docs/images/theme-futuristic.png)
 
@@ -127,10 +127,11 @@ Press **P** (or the toolbar's screen icon, or *Present drawing* in the command p
 | → ↓ Space Page Down | Next slide |
 | ← ↑ Page Up | Previous slide |
 | 1–9, Home, End | Jump to a slide |
-| Click a block | Spotlight it and its dependencies; click empty space to clear |
+| Click a block | Spotlight it and its dependencies with live legend; click empty space to clear |
 | Click a link badge | Jump to the linked frame's slide |
 | S | Switch between your theme and a dark stage |
 | L | Laser pointer on / off |
+| ? | Toggle presentation guide & shortcut cheat sheet |
 | Esc | Clear the spotlight, then end the presentation |
 
 Nothing can be edited while presenting, and your view is restored afterwards.

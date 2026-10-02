@@ -2,7 +2,7 @@ import { parseFrameLink } from "../model/links";
 import { isBlock, type Bounds } from "../model/types";
 import { frameTitleMetrics } from "../render/elements";
 import { contentBounds } from "../render/scene";
-import { el } from "./dom";
+import { clearEl, el } from "./dom";
 import type { Editor } from "./Editor";
 import { iconButton } from "./ui/controls";
 import type { Viewport } from "./types";
@@ -28,6 +28,8 @@ export class Presenter {
 	private counterEl: HTMLDivElement | null = null;
 	private progressEl: HTMLDivElement | null = null;
 	private laser: HTMLDivElement | null = null;
+	private legendEl: HTMLDivElement | null = null;
+	private guideEl: HTMLDivElement | null = null;
 	private laserOn = true;
 	private enteredFullscreen = false;
 	private readonly off: (() => void)[] = [];
@@ -88,7 +90,9 @@ export class Presenter {
 		for (const fn of this.off.splice(0)) fn();
 		this.bar?.remove();
 		this.laser?.remove();
-		this.bar = this.laser = this.titleEl = this.counterEl = this.progressEl = null;
+		this.legendEl?.remove();
+		this.guideEl?.remove();
+		this.bar = this.laser = this.legendEl = this.guideEl = this.titleEl = this.counterEl = this.progressEl = null;
 		ed.root.classList.remove("bd-presenting", "bd-laser-on", "bd-stage-dark");
 		ed.clearTrace();
 		if (this.enteredFullscreen && ed.doc.fullscreenElement === ed.root) void ed.doc.exitFullscreen().catch(() => undefined);
@@ -136,7 +140,8 @@ export class Presenter {
 				this.go(this.slides.length - 1);
 				return true;
 			case "Escape":
-				if (this.ed.traceRootId) this.ed.clearTrace();
+				if (this.guideEl?.classList.contains("is-open")) this.toggleGuide(false);
+				else if (this.ed.traceRootId) this.ed.clearTrace();
 				else this.stop();
 				return true;
 			case "s":
@@ -149,6 +154,9 @@ export class Presenter {
 				return true;
 			case "t":
 				this.ed.clearTrace();
+				return true;
+			case "?":
+				this.toggleGuide();
 				return true;
 		}
 		if (/^[1-9]$/.test(key)) {
@@ -191,10 +199,101 @@ export class Presenter {
 		this.counterEl = el("div", "bd-present-counter", info);
 		iconButton(this.bar, "next", "Next — → or Space", () => this.next());
 		iconButton(this.bar, "stage", "Light / dark stage — S", () => ed.root.classList.toggle("bd-stage-dark"));
+		iconButton(this.bar, "help", "Legend & shortcuts — ?", () => this.toggleGuide());
 		iconButton(this.bar, "close", "End presentation — Esc", () => this.stop());
 		const track = el("div", "bd-present-progress", this.bar);
 		this.progressEl = el("div", "bd-present-progress-fill", track);
 		this.laser = el("div", "bd-laser", ed.root);
+		this.legendEl = el("div", "bd-present-legend", ed.root);
+		this.buildGuide();
+	}
+
+	toggleGuide(force?: boolean): void {
+		if (!this.guideEl) return;
+		const open = force ?? !this.guideEl.classList.contains("is-open");
+		this.guideEl.classList.toggle("is-open", open);
+	}
+
+	private buildGuide(): void {
+		this.guideEl = el("div", "bd-present-guide bd-panel", this.ed.root);
+		const head = el("div", "bd-panel-head", this.guideEl);
+		el("div", "bd-panel-title", head, "Presentation Guide");
+		iconButton(head, "close", "Close", () => this.toggleGuide(false));
+
+		const body = el("div", "bd-present-guide-body", this.guideEl);
+
+		el("div", "bd-guide-heading", body, "Block Spotlight (Click a block)");
+		const spotGrid = el("div", "bd-guide-spot-grid", body);
+		for (const [cls, label, desc] of [
+			["bd-legend-dot-focus", "Focus", "The selected block being analyzed"],
+			["bd-legend-dot-up", "Upstream", "Preceding blocks & inputs leading into this block"],
+			["bd-legend-dot-down", "Downstream", "Successor blocks & outputs depending on this block"],
+			["bd-legend-dot-dim", "Dimmed", "Elements outside this flow"],
+		]) {
+			const row = el("div", "bd-guide-row", spotGrid);
+			const dotWrap = el("span", "bd-guide-row-dot", row);
+			el("span", `bd-legend-dot ${cls}`, dotWrap);
+			el("strong", "bd-guide-label", row, label);
+			el("span", "bd-guide-desc", row, desc);
+		}
+
+		el("div", "bd-guide-heading", body, "Navigation & Shortcuts");
+		const navGrid = el("div", "bd-guide-nav-grid", body);
+		for (const [keys, action] of [
+			["→ / Space / Enter", "Next slide"],
+			["← / Backspace", "Previous slide"],
+			["Click a block", "Toggle spotlight on its flow"],
+			["Click canvas / Esc", "Clear spotlight"],
+			["S", "Toggle light / dark stage"],
+			["L", "Toggle laser pointer"],
+			["Esc", "Exit presentation"],
+		]) {
+			const row = el("div", "bd-guide-nav-row", navGrid);
+			el("span", "bd-guide-keys", row, keys);
+			el("span", "bd-guide-action", row, action);
+		}
+	}
+
+	update(): void {
+		if (!this.active) return;
+		this.updateLegend();
+	}
+
+	private updateLegend(): void {
+		if (!this.legendEl) return;
+		const trace = this.ed.currentTrace();
+		if (!trace) {
+			this.legendEl.classList.remove("is-visible");
+			clearEl(this.legendEl);
+			return;
+		}
+		const root = this.ed.byId.get(trace.rootId);
+		const title = isBlock(root) && root.title.trim() ? root.title.trim().split("\n")[0] : "Block";
+		clearEl(this.legendEl);
+
+		const rootPill = el("span", "bd-legend-pill bd-legend-root", this.legendEl);
+		el("span", "bd-legend-dot bd-legend-dot-focus", rootPill);
+		el("span", "bd-legend-text", rootPill, `Focus: ${title}`);
+
+		const upPill = el("span", "bd-legend-pill bd-legend-up", this.legendEl);
+		el("span", "bd-legend-dot bd-legend-dot-up", upPill);
+		el("span", "bd-legend-text", upPill, `Upstream: ${trace.upstream.size}`);
+
+		const downPill = el("span", "bd-legend-pill bd-legend-down", this.legendEl);
+		el("span", "bd-legend-dot bd-legend-dot-down", downPill);
+		el("span", "bd-legend-text", downPill, `Downstream: ${trace.downstream.size}`);
+
+		const clearBtn = el("button", "bd-legend-clear", this.legendEl);
+		clearBtn.type = "button";
+		clearBtn.textContent = "✕ Clear";
+		clearBtn.title = "Clear spotlight (Esc)";
+		clearBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+		clearBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.ed.clearTrace();
+		});
+
+		this.legendEl.classList.add("is-visible");
 	}
 
 	private go(i: number, animate = true): void {
