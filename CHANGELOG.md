@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.1
+
+- Renamed the **Executive 3D** theme to **3D** across themes, context menus, and documentation while maintaining backward-compatible "executive" aliases.
+- Added a matching **3D** color palette for quick color picking.
+- Calibrated 3D block shadows: tightened extrusion projection, capped max depth, and significantly reduced drop shadow spread and blur footprint.
+- Presentation mode: added a real-time floating spotlight legend displaying the root focus block, upstream dependencies (amber badge), downstream dependencies (emerald badge), and a clear button.
+- Presentation mode: added an on-screen Presentation Guide & shortcut cheat sheet (`?` key or bottom bar button).
+- Softened trace glows and drop shadow filters in CSS to eliminate visual noise.
+- Preserved scroll position in the properties panel when editing properties or switching themes/palettes.
+- Documented keyboard shortcuts (`G`, `R`, `C`, `?`) in the help dialog.
+
 ## 0.4.0
 
 - Themes: one-click **Executive 3D**, **Minimal**, **Futuristic** and **Classic** looks for the whole drawing or the selection (right-click the canvas, the properties panel's Quick theme buttons, or the command palette). Color-coded groups stay grouped, and it is one undo step.

@@ -285,8 +285,9 @@ export class Presenter {
 
 		const clearBtn = el("button", "bd-legend-clear", this.legendEl);
 		clearBtn.type = "button";
-		clearBtn.textContent = "✕ Clear";
-		clearBtn.title = "Clear spotlight (Esc)";
+		clearBtn.textContent = "✕";
+		clearBtn.title = "Clear spotlight (esc)";
+		clearBtn.setAttribute("aria-label", "Clear spotlight (esc)");
 		clearBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
 		clearBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
