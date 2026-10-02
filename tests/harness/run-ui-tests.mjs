@@ -554,6 +554,194 @@ test("composed diagram screenshot (light and dark)", async () => {
 	assert.equal(json.frames[1].linkedFrom[0].title, "Checkout flow");
 });
 
+/** Three connected blocks A → B → C, an isolated D, and two frames. */
+async function sampleChain() {
+	return page.evaluate(() => {
+		const ed = window.bd.editor;
+		const f1 = ed.addFrame({ x: 0, y: 0, width: 640, height: 300 });
+		const f2 = ed.addFrame({ x: 740, y: 0, width: 420, height: 300 });
+		ed.updateElement(f1.id, { title: "Front end" });
+		ed.updateElement(f2.id, { title: "Back end" });
+		const mk = (x, y, title, fill) => ed.makeBlock({ x, y, width: 160, height: 80 }, { title, style: { ...ed.current.block, fill } });
+		const a = mk(40, 100, "Web app", "#a5d8ff");
+		const b = mk(320, 100, "API gateway", "#b2f2bb");
+		const c = mk(780, 100, "Orders service", "#b2f2bb");
+		const d = mk(780, 200, "Audit log", "#ffec99");
+		ed.insertBlocks([a, b, c, d]);
+		ed.connect(a.id, b.id);
+		ed.connect(b.id, c.id);
+		ed.clearSelection();
+		ed.zoomToFit({ animate: false });
+		return { a: a.id, b: b.id, c: c.id, d: d.id, f1: f1.id, f2: f2.id };
+	});
+}
+
+const classesOf = (id) => page.evaluate((id) => document.querySelector(`.bd-block[data-id="${id}"]`)?.getAttribute("class") ?? "", id);
+
+test("3D effect: panel toggle raises blocks and links, and context menu toggles it back", async () => {
+	const ids = await sampleChain();
+	const c = await centerOf(ids.b);
+	await page.mouse.click(c.x, c.y);
+	await page.click('.bd-props .bd-seg-btn[title="Raised 3D tile"]');
+	await frame();
+	let b = (await els()).find((e) => e.id === ids.b);
+	assert.equal(b.style.threeD, true);
+	assert.match(await classesOf(ids.b), /bd-3d/);
+	// extrusion paths plus a gradient face
+	const parts = await page.evaluate((id) => document.querySelectorAll(`.bd-block[data-id="${id}"] > path`).length, ids.b);
+	assert.ok(parts > 5, `expected extrusion paths, got ${parts}`);
+	assert.equal(await page.evaluate((id) => !!document.querySelector(`.bd-block[data-id="${id}"] linearGradient`), ids.b), true);
+	await page.mouse.click(c.x, c.y, { button: "right" });
+	await page.evaluate(() => window.bd.clickMenu("3D effect"));
+	b = (await els()).find((e) => e.id === ids.b);
+	assert.equal(b.style.threeD, false);
+	// connectors: select one and raise it
+	const conn = (await els()).find((e) => e.type === "connector");
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), conn.id);
+	await frame();
+	await page.click('.bd-props .bd-seg-btn[title="Raised 3D line with shadow"]');
+	await page.click('.bd-props .bd-seg-btn[title="Animated flow in the line\'s direction"]');
+	await frame();
+	const after = (await els()).find((e) => e.id === conn.id);
+	assert.equal(after.style.threeD, true);
+	assert.equal(after.style.flow, true);
+	const cls = await page.evaluate((id) => document.querySelector(`.bd-connector[data-id="${id}"]`)?.getAttribute("class"), conn.id);
+	assert.match(cls, /bd-flow/);
+	assert.match(cls, /bd-3d/);
+	assert.equal(await page.locator(`.bd-connector[data-id="${conn.id}"] .bd-connector-shadow`).count(), 1);
+});
+
+test("themes restyle the drawing in one undoable step; palettes switch the swatches", async () => {
+	const ids = await sampleChain();
+	await page.mouse.click(640, 760, { button: "right" });
+	await page.evaluate(() => window.bd.clickMenu("Theme: Futuristic"));
+	await frame();
+	let all = await els();
+	const blocks = all.filter((e) => e.type === "block");
+	assert.ok(blocks.every((b) => b.style.threeD));
+	const byId = Object.fromEntries(blocks.map((b) => [b.id, b]));
+	// blocks that shared a fill still share one, and differ from the other groups
+	assert.equal(byId[ids.b].style.fill, byId[ids.c].style.fill);
+	assert.notEqual(byId[ids.a].style.fill, byId[ids.b].style.fill);
+	const conn = all.find((e) => e.type === "connector" && e.from.id === ids.a);
+	assert.equal(conn.style.stroke, byId[ids.a].style.stroke, "futuristic links take their source block's neon");
+	assert.equal(all.find((e) => e.id === ids.f1).style.fill, "#0f172a");
+	await page.keyboard.press("Control+z");
+	all = await els();
+	assert.equal(all.find((e) => e.id === ids.a).style.fill, "#a5d8ff");
+	assert.equal(all.find((e) => e.id === ids.a).style.threeD, false);
+	// quick theme on the selection only
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), ids.d);
+	await frame();
+	await page.click('.bd-props .bd-theme-btn[data-theme="executive"]');
+	all = await els();
+	assert.equal(all.find((e) => e.id === ids.d).style.threeD, true);
+	assert.equal(all.find((e) => e.id === ids.a).style.threeD, false);
+	// palette switch
+	await page.click('.bd-props .bd-seg-btn[title="Futuristic colors"]');
+	await frame();
+	assert.equal(await page.locator('.bd-props .bd-swatch[title="#22d3ee"]').count() > 0, true);
+	await page.click('.bd-props .bd-swatch[title="#1e1b4b"]');
+	assert.equal((await els()).find((e) => e.id === ids.d).style.fill, "#1e1b4b");
+});
+
+test("tag shows above the title and is saved", async () => {
+	const b = await addBlock(400, 300, "Orders");
+	await page.fill('.bd-props input[placeholder^="e.g. Service"]', "Service · Java");
+	await page.evaluate(() => document.activeElement.blur());
+	await frame();
+	const after = (await els()).find((e) => e.id === b.id);
+	assert.equal(after.tag, "Service · Java");
+	const text = await page.evaluate((id) => document.querySelector(`.bd-block[data-id="${id}"] .bd-text`).textContent, b.id);
+	assert.ok(text.startsWith("SERVICE · JAVA"), text);
+	const json = await page.evaluate(() => window.bd.structuredJson());
+	assert.equal(json.unframed.blocks[0].tag, "Service · Java");
+});
+
+test("trace highlights upstream and downstream, dims the rest", async () => {
+	const ids = await sampleChain();
+	const c = await centerOf(ids.b);
+	await page.mouse.click(c.x, c.y);
+	await page.keyboard.press("t");
+	await frame();
+	assert.match(await classesOf(ids.b), /bd-trace-root/);
+	assert.match(await classesOf(ids.a), /bd-trace-up/);
+	assert.match(await classesOf(ids.c), /bd-trace-down/);
+	assert.match(await classesOf(ids.d), /bd-dimmed/);
+	assert.equal(await page.locator(".bd-connector.bd-trace-path").count(), 2);
+	assert.match(await page.textContent(".bd-hint"), /1 upstream .* 1 downstream/);
+	await shot("08-trace");
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.doesNotMatch(await classesOf(ids.d), /bd-dimmed/);
+	assert.equal(await page.locator(".bd-svg.bd-tracing").count(), 0);
+});
+
+test("presentation: overview then frames, spotlight on click, Esc restores the editor", async () => {
+	const ids = await sampleChain();
+	const before = await page.evaluate(() => ({ ...window.bd.editor.vp }));
+	await page.keyboard.press("p");
+	await page.waitForTimeout(400);
+	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 1);
+	assert.equal(await page.textContent(".bd-present-counter"), "1 / 3");
+	assert.equal(await page.textContent(".bd-present-title"), "Overview");
+	assert.equal(await page.isVisible(".bd-toolbar"), false);
+	await page.keyboard.press("ArrowRight");
+	await page.waitForTimeout(450);
+	assert.equal(await page.textContent(".bd-present-title"), "Front end");
+	await page.keyboard.press("ArrowRight");
+	await page.waitForTimeout(450);
+	assert.equal(await page.textContent(".bd-present-counter"), "3 / 3");
+	await page.keyboard.press("s");
+	await page.mouse.move(600, 380);
+	const c = await centerOf(ids.c);
+	await page.mouse.click(c.x, c.y);
+	await frame();
+	assert.match(await classesOf(ids.c), /bd-trace-root/);
+	// clicks never edit or move anything
+	assert.equal((await els()).find((e) => e.id === ids.c).x, 780);
+	await shot("09-presentation-dark");
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 1, "first Esc clears the spotlight");
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 0);
+	assert.equal(await page.locator(".bd-present-bar").count(), 0);
+	assert.equal(await page.evaluate(() => window.bd.editor.options.readOnly), false);
+	await page.waitForTimeout(400);
+	const after = await page.evaluate(() => ({ ...window.bd.editor.vp }));
+	assert.deepEqual(after, before);
+});
+
+test("themed diagram screenshots (executive, futuristic)", async () => {
+	await sampleChain();
+	await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const blocks = ed.getElements().filter((e) => e.type === "block");
+		ed.updateElement(blocks[1].id, { tag: "Gateway · Kong" });
+		ed.updateElement(blocks[2].id, { tag: "Service · Java", shape: "rounded" });
+		ed.updateElement(blocks[3].id, { tag: "PostgreSQL", shape: "cylinder" });
+		ed.applyTheme("executive");
+		ed.zoomToFit({ animate: false });
+	});
+	await frame();
+	await shot("10-theme-executive");
+	await page.evaluate(() => {
+		const ed = window.bd.editor;
+		ed.applyTheme("futuristic");
+		for (const c of ed.getElements().filter((e) => e.type === "connector")) ed.updateElement(c.id, { style: { ...c.style, flow: true } });
+	});
+	await frame();
+	await shot("11-theme-futuristic");
+	await page.evaluate(() => window.bd.editor.applyTheme("minimal"));
+	await frame();
+	await shot("12-theme-minimal");
+	const svg = await page.evaluate(() => window.bd.svg());
+	assert.ok(svg.includes("linearGradient") === false, "minimal is flat");
+	assert.equal(errors.length, 0, errors.join("\n"));
+});
+
 test("double-tap on a touch screen adds a block", async () => {
 	const touch = await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true });
 	const tp = await touch.newPage();

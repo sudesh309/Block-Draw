@@ -44,6 +44,7 @@ export class Toolbar {
 		el("div", "bd-toolbar-sep", this.el);
 		const view = el("div", "bd-toolbar-group", this.el);
 		this.framesBtn = iconButton(view, "frames", "Frames", () => ed.framesPanel.toggle());
+		iconButton(view, "present", "Present — P", () => ed.presenter.start(), "bd-present-btn");
 		if (ed.host.exportMenu) {
 			iconButton(view, "export", "Export", (e) => {
 				const r = (e.currentTarget as HTMLElement).getBoundingClientRect();

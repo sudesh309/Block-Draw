@@ -54,6 +54,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 		shape: oneOf<BlockShape>(raw.shape, BLOCK_SHAPES, "rounded"),
 		frameId: typeof raw.frameId === "string" && raw.frameId ? raw.frameId : null,
 		link: typeof raw.link === "string" && raw.link.trim() ? raw.link.trim() : null,
+		tag: str(raw.tag),
 		comment: str(raw.comment),
 		commentOpen: bool(raw.commentOpen, false),
 		style: {
@@ -64,6 +65,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 			textColor: str(s.textColor, DEFAULT_BLOCK_STYLE.textColor),
 			fontSize: Math.max(4, num(s.fontSize, DEFAULT_BLOCK_STYLE.fontSize)),
 			textAlign: oneOf(s.textAlign, ALIGNS, DEFAULT_BLOCK_STYLE.textAlign),
+			threeD: bool(s.threeD, DEFAULT_BLOCK_STYLE.threeD),
 		},
 	};
 }
@@ -106,6 +108,8 @@ function normalizeConnector(raw: Raw): ConnectorElement | null {
 			strokeStyle: oneOf(s.strokeStyle, STROKE_STYLES, DEFAULT_CONNECTOR_STYLE.strokeStyle),
 			startArrow: oneOf(s.startArrow, ARROWS, DEFAULT_CONNECTOR_STYLE.startArrow),
 			endArrow: oneOf(s.endArrow, ARROWS, DEFAULT_CONNECTOR_STYLE.endArrow),
+			threeD: bool(s.threeD, DEFAULT_CONNECTOR_STYLE.threeD),
+			flow: bool(s.flow, DEFAULT_CONNECTOR_STYLE.flow),
 		},
 	};
 }

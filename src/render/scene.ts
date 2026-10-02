@@ -4,6 +4,7 @@ import { isBlock, isConnector, isFrame, type Bounds, type DrawElement } from "..
 import { type RenderTheme } from "./colors";
 import {
 	blockCommentCalloutBounds,
+	blockPaintBounds,
 	connectorCommentCalloutBounds,
 	frameTitleMetrics,
 	labelBox,
@@ -56,7 +57,7 @@ export function contentBounds(elements: readonly DrawElement[]): Bounds | null {
 			const t = frameTitleMetrics(el, 1);
 			list.push(el, { x: t.x, y: t.y - t.size, width: t.width, height: t.height });
 		} else if (isBlock(el)) {
-			list.push(el);
+			list.push(blockPaintBounds(el));
 			if (el.comment.trim() && el.commentOpen) list.push(blockCommentCalloutBounds(el));
 		} else {
 			const from = byId.get(el.from.id);

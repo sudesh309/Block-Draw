@@ -54,6 +54,8 @@ export interface BlockStyle {
 	textColor: string;
 	fontSize: number;
 	textAlign: TextAlign;
+	/** Draws the block as a raised 3D tile (extruded sides and a soft shadow). */
+	threeD: boolean;
 }
 
 export interface Bounds {
@@ -76,6 +78,8 @@ export interface BlockElement extends Bounds {
 	 * `frame:<frameId>` (frame in this drawing), `[[wikilink]]` (vault file) or an http(s) URL.
 	 */
 	link: string | null;
+	/** Optional stereotype / technology shown above the title, e.g. "Service" or "PostgreSQL". */
+	tag: string;
 	style: BlockStyle;
 	/** Optional annotation, shown via the comment badge instead of inline in the shape. */
 	comment: string;
@@ -107,6 +111,10 @@ export interface ConnectorStyle {
 	strokeStyle: StrokeStyle;
 	startArrow: ArrowHead;
 	endArrow: ArrowHead;
+	/** Draws the line as a raised tube with a drop shadow. */
+	threeD: boolean;
+	/** Animates the line in its direction (marching dashes) on the canvas and in embeds. */
+	flow: boolean;
 }
 
 export interface ConnectorElement {
@@ -160,6 +168,7 @@ export const DEFAULT_BLOCK_STYLE: BlockStyle = {
 	textColor: COLOR_AUTO,
 	fontSize: 16,
 	textAlign: "center",
+	threeD: false,
 };
 
 export const DEFAULT_FRAME_STYLE: FrameStyle = {
@@ -173,6 +182,8 @@ export const DEFAULT_CONNECTOR_STYLE: ConnectorStyle = {
 	strokeStyle: "solid",
 	startArrow: "none",
 	endArrow: "arrow",
+	threeD: false,
+	flow: false,
 };
 
 export const DEFAULT_BLOCK_SIZE = { width: 160, height: 80 };

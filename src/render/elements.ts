@@ -10,7 +10,7 @@ import type {
 	FrameElement,
 	StrokeStyle,
 } from "../model/types";
-import { isTransparent, resolveFill, resolveStroke, resolveTextColor, type RenderTheme } from "./colors";
+import { isTransparent, parseColor, relativeLuminance, resolveFill, resolveStroke, resolveTextColor, shadeColor, toHex6, type RenderTheme } from "./colors";
 import { FONT_FAMILY, LINE_HEIGHT, layoutBlockText, measureText, wrapText } from "./text";
 import { h, type VChild, type VNode } from "./vnode";
 
@@ -234,27 +234,99 @@ export function renderConnectorCommentCallout(conn: ConnectorElement, route: Rou
 	return renderCommentCallout(text, anchor, box, "above", o);
 }
 
+/* ---------------------------------------------------------------- 3D effect */
+
+/** Extrusion direction of 3D blocks: light comes from the top left. */
+const DEPTH_DX = 0.5;
+
+/** Extrusion depth of a 3D block, in world units (0 when the block is flat). */
+export function blockDepth(block: BlockElement): number {
+	if (!block.style.threeD || block.shape === "text") return 0;
+	return Math.max(5, Math.min(14, Math.min(block.width, block.height) * 0.14));
+}
+
+/** Everything a block paints, including its 3D sides and shadow. */
+export function blockPaintBounds(block: BlockElement): Bounds {
+	const d = blockDepth(block) * 1.6;
+	return { x: block.x, y: block.y, width: block.width + d * DEPTH_DX, height: block.height + d };
+}
+
+/** Dark tiles (navy, charcoal) get neon-tinted sides and a glow instead of near-black sides. */
+function isDarkFill(fill: string | null): boolean {
+	const c = fill ? parseColor(fill) : null;
+	return !!c && c.a > 0.5 && relativeLuminance(c) < 0.06;
+}
+
+/** Extruded sides and a soft contact shadow, drawn under the block's face. */
+function blockExtrusion(block: BlockElement, d: number, stroke: string | null, sw: number): VChild[] {
+	const path = shapePath(block.shape, block.width, block.height);
+	const at = (t: number) => `translate(${r2(t * DEPTH_DX)},${r2(t)})`;
+	const nodes: VChild[] = [
+		h("path", { d: path, transform: at(d * 1.6), style: "fill:#000000;fill-opacity:0.07", "pointer-events": "none" }),
+		h("path", { d: path, transform: at(d * 1.25), style: "fill:#000000;fill-opacity:0.09", "pointer-events": "none" }),
+	];
+	const fill = resolveFill(block.style.fill);
+	const neon = isDarkFill(fill) && stroke ? shadeColor(stroke, 0.55) : null;
+	const side = neon ?? (fill ? shadeColor(fill, 0.3) : null);
+	const sideStyle = side ? `fill:${side}` : `fill:${stroke ?? "#868e96"};fill-opacity:0.28`;
+	const steps = Math.ceil(d / 1.25);
+	for (let i = steps; i >= 1; i--) {
+		const deepest = i === steps;
+		nodes.push(
+			h("path", {
+				d: path,
+				transform: at((d * i) / steps),
+				style: deepest && stroke && sw > 0 ? `${sideStyle};stroke:${stroke};stroke-opacity:0.35;stroke-width:${sw}` : sideStyle,
+				"pointer-events": "none",
+			}),
+		);
+	}
+	return nodes;
+}
+
+/** Vertical sheen on a 3D block's face: a gradient keyed by color, so duplicate ids are identical. */
+function faceGradient(fill: string): { id: string; node: VNode } | null {
+	const hex = toHex6(fill);
+	const light = hex ? shadeColor(hex, isDarkFill(hex) ? -0.09 : -0.22) : null;
+	if (!hex || !light) return null;
+	const id = `bd-face-${hex.slice(1)}`;
+	const node = h("defs", {}, [
+		h("linearGradient", { id, x1: 0, y1: 0, x2: 0, y2: 1 }, [
+			h("stop", { offset: "0", "stop-color": light }),
+			h("stop", { offset: "1", "stop-color": hex }),
+		]),
+	]);
+	return { id, node };
+}
+
 export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 	const { width: w, height: h0, style } = block;
 	const fill = resolveFill(style.fill);
 	const stroke = block.shape === "text" ? null : resolveStroke(style.stroke, o.theme);
 	const sw = block.shape === "text" ? 0 : style.strokeWidth;
+	const depth = blockDepth(block);
+	const gradient = depth && fill ? faceGradient(fill) : null;
+	const glow = depth && stroke && sw > 0 && isDarkFill(fill) && parseColor(stroke) ? `drop-shadow(0 0 4px ${stroke})` : null;
 	const shapeStyle = styleAttr({
-		fill: fill ?? "none",
+		fill: gradient ? `url(#${gradient.id})` : (fill ?? "none"),
 		stroke: stroke && sw > 0 ? stroke : "none",
 		"stroke-width": sw > 0 ? sw : null,
 		"stroke-dasharray": sw > 0 ? dashArray(style.strokeStyle, sw) : null,
 		"stroke-linecap": style.strokeStyle === "dotted" ? "round" : null,
 		"stroke-linejoin": "round",
+		filter: glow,
 	});
-	const children: VChild[] = [
+	const children: VChild[] = [];
+	if (gradient) children.push(gradient.node);
+	if (depth) children.push(...blockExtrusion(block, depth, stroke, sw));
+	children.push(
 		h("path", {
 			class: "bd-shape",
 			d: shapePath(block.shape, w, h0),
 			style: shapeStyle,
 			"pointer-events": o.interactive ? "all" : null,
 		}),
-	];
+	);
 	const deco = shapeDecorationPath(block.shape, w, h0);
 	if (deco && stroke && sw > 0) {
 		children.push(
@@ -282,10 +354,11 @@ export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 							{
 								x: r2(line.x),
 								y: r2(line.y),
+								class: line.tag ? "bd-text-tag" : null,
 								style: styleAttr({
 									"font-size": `${line.size}px`,
 									"font-weight": line.weight,
-									opacity: line.muted ? 0.78 : null,
+									opacity: line.tag ? 0.7 : line.muted ? 0.78 : null,
 								}),
 							},
 							[line.text || " "],
@@ -305,7 +378,7 @@ export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 	return h(
 		"g",
 		{
-			class: `bd-block${block.link ? " bd-has-link" : ""}`,
+			class: `bd-block${block.link ? " bd-has-link" : ""}${depth ? " bd-3d" : ""}`,
 			"data-id": o.interactive ? block.id : null,
 			transform: `translate(${r2(block.x)},${r2(block.y)})`,
 		},
@@ -452,6 +525,32 @@ export function renderConnector(
 	const pts = trimRoute(route, arrowTrim(conn.style.startArrow, sw), arrowTrim(conn.style.endArrow, sw));
 	const d = routePathData({ ...route, points: pts });
 	const children: VChild[] = [];
+	const threeD = conn.style.threeD;
+	const dash = dashArray(conn.style.strokeStyle, sw);
+	if (threeD) {
+		const off = 2 + sw;
+		const shadow = "rgba(0,0,0,0.22)";
+		const heads = [
+			arrowHead(conn.style.endArrow, route.end, route.endDir, shadow, sw),
+			arrowHead(conn.style.startArrow, route.start, route.startDir, shadow, sw),
+		].filter((n): n is VNode => !!n);
+		children.push(
+			h("g", { class: "bd-connector-shadow", transform: `translate(${r2(off * 0.5)},${r2(off)})`, "pointer-events": "none" }, [
+				h("path", {
+					d,
+					style: styleAttr({
+						fill: "none",
+						stroke: shadow,
+						"stroke-width": sw + 1.5,
+						"stroke-dasharray": dash,
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round",
+					}),
+				}),
+				...heads,
+			]),
+		);
+	}
 	if (o.interactive) {
 		children.push(
 			h("path", {
@@ -470,19 +569,38 @@ export function renderConnector(
 			style: styleAttr({
 				fill: "none",
 				stroke: color,
-				"stroke-width": sw,
-				"stroke-dasharray": dashArray(conn.style.strokeStyle, sw),
+				"stroke-width": threeD ? sw + 1 : sw,
+				"stroke-dasharray": dash,
 				"stroke-linecap": "round",
 				"stroke-linejoin": "round",
 			}),
 		}),
 	);
+	if (threeD) {
+		children.push(
+			h("path", {
+				class: "bd-connector-sheen",
+				d,
+				"pointer-events": "none",
+				style: styleAttr({
+					fill: "none",
+					stroke: "#ffffff",
+					"stroke-opacity": 0.45,
+					"stroke-width": r2(Math.max(0.8, sw * 0.35)),
+					"stroke-dasharray": dash,
+					"stroke-linecap": "round",
+					"stroke-linejoin": "round",
+				}),
+			}),
+		);
+	}
 	const endHead = arrowHead(conn.style.endArrow, route.end, route.endDir, color, sw);
 	if (endHead) children.push(endHead);
 	const startHead = arrowHead(conn.style.startArrow, route.start, route.startDir, color, sw);
 	if (startHead) children.push(startHead);
 
-	return h("g", { class: "bd-connector", "data-id": o.interactive ? conn.id : null }, children);
+	const cls = `bd-connector${conn.style.flow ? " bd-flow" : ""}${threeD ? " bd-3d" : ""}`;
+	return h("g", { class: cls, "data-id": o.interactive ? conn.id : null }, children);
 }
 
 /**

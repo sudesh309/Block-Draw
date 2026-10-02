@@ -15,7 +15,8 @@ import {
 	type StrokeStyle,
 	type TextAlign,
 } from "../../model/types";
-import { FILL_SWATCHES, FRAME_FILL_SWATCHES, STROKE_SWATCHES } from "../../render/colors";
+import { DRAWING_THEMES } from "../../model/themes";
+import { PALETTES, paletteById, type PaletteId } from "../../render/colors";
 import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton, section, segmented, swatches, textField } from "./controls";
@@ -81,6 +82,12 @@ export class PropsPanel {
 		this.el.addEventListener("wheel", (e) => e.stopPropagation(), { passive: true });
 	}
 
+	/** Rebuilds the panel on the next render (e.g. after the palette changed). */
+	refresh(): void {
+		this.key = "";
+		this.ed.requestRender();
+	}
+
 	update(): void {
 		const ed = this.ed;
 		const sel = ed.selectedElements();
@@ -106,7 +113,7 @@ export class PropsPanel {
 
 	/* ------------------------------------------------------------------ */
 
-	private textHandlers(id: string, field: "description" | "label" | "title" | "comment") {
+	private textHandlers(id: string, field: "description" | "label" | "title" | "comment" | "tag") {
 		const ed = this.ed;
 		return {
 			onFocus: () => {
@@ -143,6 +150,7 @@ export class PropsPanel {
 		const connector = () => ed.selectedConnectors()[0] ?? null;
 		const connStyle = () => connector()?.style ?? ed.current.connector;
 		const frameStyle = () => ed.selectedFrames()[0]?.style ?? ed.current.frame;
+		const palette = paletteById(ed.palette);
 
 		/* ---- frame details */
 		if (isFrame(single)) {
@@ -174,6 +182,17 @@ export class PropsPanel {
 		/* ---- block details */
 		if (isBlock(single)) {
 			const id = single.id;
+			const tagSec = section(this.body, "Tag (technology or role)");
+			this.syncers.push(
+				textField(tagSec, {
+					placeholder: "e.g. Service · Java, PostgreSQL, AWS Lambda",
+					get: () => {
+						const b = ed.byId.get(id);
+						return isBlock(b) ? b.tag : "";
+					},
+					...this.textHandlers(id, "tag"),
+				}),
+			);
 			this.buildLinkSection(id);
 			const d = section(this.body, "Description");
 			this.syncers.push(
@@ -219,9 +238,21 @@ export class PropsPanel {
 					(shape: BlockShape) => ed.applyShape(shape),
 				),
 			);
-			this.syncers.push(swatches(section(this.body, "Fill"), FILL_SWATCHES, () => blockStyle().fill, (fill) => ed.applyBlockStyle({ fill })));
+			this.paletteRow();
+			this.syncers.push(swatches(section(this.body, "Fill"), palette.fills, () => blockStyle().fill, (fill) => ed.applyBlockStyle({ fill })));
 			this.syncers.push(
-				swatches(section(this.body, "Stroke"), STROKE_SWATCHES, () => blockStyle().stroke, (stroke) => ed.applyBlockStyle({ stroke })),
+				swatches(section(this.body, "Stroke"), palette.strokes, () => blockStyle().stroke, (stroke) => ed.applyBlockStyle({ stroke })),
+			);
+			this.syncers.push(
+				segmented(
+					section(this.body, "Depth"),
+					[
+						{ value: false, label: "Flat", text: "Flat" },
+						{ value: true, label: "Raised 3D tile", text: "3D" },
+					],
+					() => blockStyle().threeD,
+					(threeD: boolean) => ed.applyBlockStyle({ threeD }),
+				),
 			);
 			this.strokeControls(
 				() => blockStyle().strokeWidth,
@@ -285,8 +316,32 @@ export class PropsPanel {
 					(endArrow: ArrowHead) => ed.applyConnectorStyle({ endArrow }),
 				),
 			);
+			if (!blocks.length && mode !== "block") this.paletteRow();
 			this.syncers.push(
-				swatches(section(this.body, "Color"), STROKE_SWATCHES, () => connStyle().stroke, (stroke) => ed.applyConnectorStyle({ stroke })),
+				swatches(section(this.body, "Color"), palette.strokes, () => connStyle().stroke, (stroke) => ed.applyConnectorStyle({ stroke })),
+			);
+			const fx = section(this.body, "Effect");
+			this.syncers.push(
+				segmented(
+					fx,
+					[
+						{ value: false, label: "Flat line", text: "Flat" },
+						{ value: true, label: "Raised 3D line with shadow", text: "3D" },
+					],
+					() => connStyle().threeD,
+					(threeD: boolean) => ed.applyConnectorStyle({ threeD }),
+				),
+			);
+			this.syncers.push(
+				segmented(
+					fx,
+					[
+						{ value: false, label: "Static line", text: "Static" },
+						{ value: true, label: "Animated flow in the line's direction", text: "Flow" },
+					],
+					() => connStyle().flow,
+					(flow: boolean) => ed.applyConnectorStyle({ flow }),
+				),
 			);
 			this.strokeControls(
 				() => connStyle().strokeWidth,
@@ -299,12 +354,12 @@ export class PropsPanel {
 		/* ---- frame style */
 		if (mode === "frame" || frames.length) {
 			this.syncers.push(
-				swatches(section(this.body, "Frame background"), FRAME_FILL_SWATCHES, () => frameStyle().fill, (fill) => ed.applyFrameStyle({ fill })),
+				swatches(section(this.body, "Frame background"), palette.frameFills, () => frameStyle().fill, (fill) => ed.applyFrameStyle({ fill })),
 			);
 			this.syncers.push(
 				swatches(
 					section(this.body, "Frame color (also the sheet tab color)"),
-					STROKE_SWATCHES,
+					palette.strokes,
 					() => frameStyle().stroke,
 					(stroke) => ed.applyFrameStyle({ stroke }),
 				),
@@ -332,6 +387,19 @@ export class PropsPanel {
 			}
 		}
 
+		if (!ed.options.readOnly && (blocks.length || connectors.length || frames.length)) {
+			const themeSec = section(this.body, "Quick theme");
+			const row = el("div", "bd-button-row", themeSec);
+			for (const t of DRAWING_THEMES) {
+				const btn = el("button", "bd-seg-btn bd-theme-btn", row, t.name);
+				btn.type = "button";
+				btn.title = t.description;
+				btn.dataset.theme = t.id;
+				btn.addEventListener("pointerdown", (e) => e.preventDefault());
+				btn.addEventListener("click", () => ed.applyTheme(t.id));
+			}
+		}
+
 		if (sel.length) {
 			const act = section(this.body, "Actions");
 			const row = el("div", "bd-button-row", act);
@@ -341,6 +409,22 @@ export class PropsPanel {
 			if (isFrame(single)) iconButton(row, "fit", "Zoom to frame", () => ed.navigateToFrame(single.id));
 			iconButton(row, "trash", "Delete — Del", () => ed.deleteSelection(), "bd-danger");
 		}
+	}
+
+	/** Chooses which swatch set the color rows below show. */
+	private paletteRow(): void {
+		const ed = this.ed;
+		this.syncers.push(
+			segmented(
+				section(this.body, "Palette"),
+				PALETTES.map((p) => ({ value: p.id, label: `${p.name} colors`, text: p.name })),
+				() => ed.palette,
+				(id: PaletteId) => {
+					ed.palette = id;
+					this.refresh();
+				},
+			),
+		);
 	}
 
 	private strokeControls(

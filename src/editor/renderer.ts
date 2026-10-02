@@ -1,6 +1,7 @@
 import { add, expand, scale, SIDE_DIR, SIDES, unionBounds } from "../geometry/geom";
 import { routePathData, type Route } from "../geometry/routing";
 import { sideAnchor } from "../geometry/shapes";
+import { traceMembers } from "../model/graph";
 import { parseFrameLink } from "../model/links";
 import { isBlock, isBox, isConnector, isFrame, type BlockElement, type ConnectorElement } from "../model/types";
 import { SCREEN_THEME } from "../render/colors";
@@ -59,6 +60,10 @@ class Layer {
 	clear(): void {
 		for (const entry of this.nodes.values()) entry.node.remove();
 		this.nodes.clear();
+	}
+
+	forEach(fn: (id: string, node: Element) => void): void {
+		for (const [id, entry] of this.nodes) fn(id, entry.node);
 	}
 }
 
@@ -190,7 +195,25 @@ export class SceneRenderer {
 		this.labels.sync(labels);
 		this.blocks.sync(blocks);
 		this.comments.sync(comments);
+		this.applyTrace();
 		this.renderOverlay();
+	}
+
+	/** Dims everything outside the active dependency trace and marks the paths in it. */
+	private applyTrace(): void {
+		const trace = this.ed.currentTrace();
+		const members = trace ? traceMembers(trace) : null;
+		this.ed.svg.classList.toggle("bd-tracing", !!trace);
+		const mark = (rawId: string, node: Element) => {
+			const id = rawId.endsWith(":comment") ? rawId.slice(0, -8) : rawId;
+			const cl = node.classList;
+			cl.toggle("bd-dimmed", !!members && !members.has(id) && !isFrame(this.ed.byId.get(id)));
+			cl.toggle("bd-trace-root", trace?.rootId === id);
+			cl.toggle("bd-trace-up", !!trace?.upstream.has(id) && !trace.downstream.has(id));
+			cl.toggle("bd-trace-down", !!trace?.downstream.has(id));
+			cl.toggle("bd-trace-path", !!trace?.connectors.has(id));
+		};
+		for (const layer of [this.connectors, this.labels, this.blocks, this.comments]) layer.forEach(mark);
 	}
 
 	private renderOverlay(): void {

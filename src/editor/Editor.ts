@@ -12,6 +12,7 @@ import {
 } from "../geometry/geom";
 import { distanceToRoute } from "../geometry/routing";
 import { shapeContains, sideAnchor } from "../geometry/shapes";
+import { traceDependencies, type DependencyTrace } from "../model/graph";
 import { History, type HistoryEntry } from "../model/history";
 import { newId } from "../model/ids";
 import { frameLink, parseLink } from "../model/links";
@@ -54,6 +55,8 @@ import {
 	type Routing,
 	type Side,
 } from "../model/types";
+import { applyDrawingTheme, drawingThemeById, type DrawingThemeId } from "../model/themes";
+import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
 import { layoutBlockText } from "../render/text";
@@ -61,6 +64,7 @@ import { el, svgEl } from "./dom";
 import type { EditorHost, MenuItemSpec } from "./host";
 import { KeyboardController } from "./keyboard";
 import { PointerController } from "./pointer";
+import { Presenter } from "./Presenter";
 import { CONNECT_HANDLE_OFFSET, CONNECT_HANDLE_RADIUS, handlePosition, RESIZE_HANDLE_SIZE, SceneRenderer } from "./renderer";
 import { FramesPanel } from "./ui/FramesPanel";
 import { HelpPanel } from "./ui/HelpPanel";
@@ -114,6 +118,7 @@ export class Editor {
 	readonly framesPanel: FramesPanel;
 	readonly zoomControls: ZoomControls;
 	readonly help: HelpPanel;
+	readonly presenter: Presenter;
 	private readonly hintEl: HTMLDivElement;
 	private readonly emptyEl: HTMLDivElement;
 
@@ -126,6 +131,10 @@ export class Editor {
 	hoverId: string | null = null;
 	editingId: string | null = null;
 	navStack: Viewport[] = [];
+	/** Block whose upstream/downstream dependencies are highlighted, if any. */
+	traceRootId: string | null = null;
+	/** Swatch set shown in the properties panel. */
+	palette: PaletteId = "classic";
 	readonly history = new History();
 	options: EditorOptions;
 	current: CurrentStyle = {
@@ -186,6 +195,7 @@ export class Editor {
 		this.framesPanel = new FramesPanel(this);
 		this.zoomControls = new ZoomControls(this);
 		this.help = new HelpPanel(this);
+		this.presenter = new Presenter(this);
 		this.pointer = new PointerController(this);
 		this.keyboard = new KeyboardController(this);
 
@@ -218,6 +228,7 @@ export class Editor {
 	}
 
 	destroy(): void {
+		this.presenter.stop();
 		this.destroyed = true;
 		this.resizeObserver?.disconnect();
 		if (this.animation !== null) this.win.cancelAnimationFrame(this.animation);
@@ -561,6 +572,75 @@ export class Editor {
 		this.updateElement(id, { commentOpen: !el.commentOpen });
 	}
 
+	/* ===================================================== dependencies */
+
+	/** Highlights everything a block depends on and everything that depends on it. */
+	traceBlock(id: string): void {
+		if (!isBlock(this.byId.get(id))) return;
+		this.traceRootId = id;
+		this.requestRender();
+	}
+
+	toggleTrace(id: string): void {
+		if (this.traceRootId === id) this.clearTrace();
+		else this.traceBlock(id);
+	}
+
+	clearTrace(): void {
+		if (this.traceRootId === null) return;
+		this.traceRootId = null;
+		this.requestRender();
+	}
+
+	/** The active trace, recomputed from the current elements (null when off). */
+	currentTrace(): DependencyTrace | null {
+		if (this.traceRootId && !isBlock(this.byId.get(this.traceRootId))) this.traceRootId = null;
+		return this.traceRootId ? traceDependencies(this.elements, this.traceRootId) : null;
+	}
+
+	/* ============================================================ themes */
+
+	/**
+	 * Restyles the selection (or the whole drawing when nothing is selected) with a theme, as
+	 * one undo step, and makes it the style for new elements.
+	 */
+	applyTheme(id: DrawingThemeId): void {
+		const theme = drawingThemeById(id);
+		if (!theme || this.options.readOnly) return;
+		const scope = this.selection.size ? new Set(this.selection) : undefined;
+		this.commit(applyDrawingTheme(this.elements, theme, scope));
+		this.current.block = {
+			...this.current.block,
+			fill: theme.fills[0],
+			stroke: theme.strokes[0],
+			strokeWidth: theme.strokeWidth,
+			textColor: "auto",
+			threeD: theme.threeD,
+		};
+		this.current.connector = {
+			...this.current.connector,
+			stroke: theme.connector === "source" ? theme.strokes[0] : theme.connector,
+			strokeWidth: theme.connectorWidth,
+			threeD: theme.threeD,
+		};
+		this.current.frame = { fill: theme.frameFill, stroke: theme.frameStroke };
+		this.palette = id === "futuristic" ? "futuristic" : id === "classic" ? "classic" : "minimal";
+		this.props.refresh();
+		this.host.notice(`Applied the ${theme.name} theme to ${scope ? "the selection" : "the drawing"}. Undo with Ctrl/Cmd+Z.`);
+	}
+
+	/** Turns the 3D effect on or off for the selected blocks and connectors (all when none). */
+	toggle3D(): void {
+		if (this.options.readOnly) return;
+		const targets = this.selection.size ? this.selectedElements() : this.elements;
+		const items = targets.filter((e): e is BlockElement | ConnectorElement => isBlock(e) || isConnector(e));
+		if (!items.length) return;
+		const on = !items.every((e) => e.style.threeD);
+		const patches = new Map<string, ElementPatch>();
+		for (const e of items) patches.set(e.id, { style: { ...e.style, threeD: on } } as ElementPatch);
+		this.commit(updateElements(this.elements, patches));
+	}
+
 	/* ========================================================= selection */
 
 	setSelection(ids: Iterable<string>): void {
@@ -749,6 +829,7 @@ export class Editor {
 			shape: this.toolShape,
 			frameId: null,
 			link: null,
+			tag: "",
 			comment: "",
 			commentOpen: false,
 			style: { ...this.current.block },
@@ -1117,7 +1198,15 @@ export class Editor {
 				items.push({ title: "Select all", onClick: () => this.selectAll() });
 			}
 			items.push({ title: "Zoom to fit", icon: "fit", onClick: () => this.zoomToFit({ animate: true }), separator: true });
+			items.push({ title: "Present", icon: "present", onClick: () => this.presenter.start() });
+			if (!ro) {
+				items.push({ title: "Theme: Executive 3D", icon: "palette", onClick: () => this.applyTheme("executive"), separator: true });
+				items.push({ title: "Theme: Minimal", icon: "palette", onClick: () => this.applyTheme("minimal") });
+				items.push({ title: "Theme: Futuristic", icon: "palette", onClick: () => this.applyTheme("futuristic") });
+				items.push({ title: "Theme: Classic", icon: "palette", onClick: () => this.applyTheme("classic") });
+			}
 			items.push({
+				separator: true,
 				title: "Show grid",
 				icon: "grid",
 				checked: this.options.showGrid,
@@ -1136,6 +1225,11 @@ export class Editor {
 		if (blocks.length === 1 && sel.length === 1) {
 			const b = blocks[0];
 			if (b.link) items.push({ title: `Open link (${this.describeLink(b.link)})`, icon: "follow-link", onClick: () => this.followLink(b.id) });
+			items.push({
+				title: this.traceRootId === b.id ? "Hide dependencies" : "Trace dependencies",
+				icon: "trace",
+				onClick: () => this.toggleTrace(b.id),
+			});
 			if (!ro) {
 				items.push({ title: "Edit text", icon: "edit", onClick: () => this.textEditor.start(b.id) });
 				items.push({ title: b.link ? "Change link…" : "Link to frame or note…", icon: "link", onClick: () => void this.editLink(b.id) });
@@ -1169,6 +1263,10 @@ export class Editor {
 			}
 		}
 		if (!ro) {
+			if (blocks.length || connectors.length) {
+				const allOn = [...blocks, ...connectors].every((e) => e.style.threeD);
+				items.push({ title: "3D effect", icon: "cube", checked: allOn, onClick: () => this.toggle3D(), separator: true });
+			}
 			items.push({ title: "Duplicate", icon: "duplicate", onClick: () => this.duplicateSelection(), separator: true });
 			items.push({
 				title: "Copy",
@@ -1223,7 +1321,12 @@ export class Editor {
 
 	private updateHint(): void {
 		let text = "";
-		if (!this.options.readOnly) {
+		const trace = this.currentTrace();
+		if (trace && !this.presenter.isActive()) {
+			const root = this.byId.get(trace.rootId);
+			const name = isBlock(root) && root.title.trim() ? `“${root.title.trim().split("\n")[0]}”` : "this block";
+			text = `${name}: ${trace.upstream.size} upstream (amber) · ${trace.downstream.size} downstream (green) — Esc to clear`;
+		} else if (!this.options.readOnly) {
 			const busy = this.pointer.hint();
 			if (busy) text = busy;
 			else if (this.editingId) text = "Enter to finish · Shift+Enter for a new line";

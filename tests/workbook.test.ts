@@ -152,7 +152,7 @@ describe("workbook layout", () => {
 	it("tabulates blocks and connections, without any internal element id", () => {
 		const wb = build();
 		const blocks = sheetByKey(wb, SHEET_KEYS.blocks);
-		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 10 });
+		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 11 });
 		expect(blocks.cells.get(cellKey(1, 1))?.value).toBe("Cart");
 		expect(blocks.cells.get(cellKey(1, 9))?.value).toBe("Confirm totals before moving on");
 		const blockHeaders = Array.from({ length: 10 }, (_, i) => blocks.cells.get(cellKey(0, i))?.value);

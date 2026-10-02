@@ -11,6 +11,9 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 - **Connections**: hover a block and drag one of its edge dots onto another block. Drop on empty space to create a connected block, or click a dot to add one in that direction. Elbow, straight or curved lines, arrowheads, labels, and re-attachable ends. Connections follow their blocks.
 - **Frames**: group blocks into frames (F). Moving a frame moves its blocks. The frames panel lists them in export order; click to jump, double-click to rename, reorder with the arrows.
 - **Links between frames**: link any block to another frame (Ctrl/Cmd+K, the link dropdown, or right-click). Ctrl/Cmd+click the block or click its corner badge to jump there; **Back** (Alt+←) returns. Blocks can also link to notes, frames in other drawings, or URLs.
+- **Executive-ready looks**: one-click themes (Executive 3D, Minimal, Futuristic, Classic), minimalist and futuristic color palettes, and a **3D effect** for blocks and links — raised tiles with soft shadows, neon-edged tiles on dark fills, and tube-like links.
+- **Presentation mode** (P): full screen, an overview slide then one slide per frame, a laser pointer, a light or dark stage, and click-to-spotlight.
+- **For architects and engineers**: **dependency tracing** (T) highlights everything upstream and downstream of a block; **animated flow** shows data moving along a link; **tags** label a block with its technology or role (“Service · Java”, “PostgreSQL”) above the title.
 - **Comments**: add a note to any block or connector in the properties panel. A small badge shows it exists; click the badge (or the panel's Shown/Hidden toggle) to expand or collapse it on the canvas. Comments are included in every export.
 - **Deep links and embeds**: `[[Checkout.blockdraw#Payment details]]` opens a drawing at a frame, and a `blockdraw` code block shows a live preview of a drawing or of one frame inside a note.
 - **Exports**: Google Sheets, Excel (.xlsx), JSON (structured or raw), SVG and PNG (whole drawing or the selected frame).
@@ -52,6 +55,8 @@ Block Draw needs Obsidian 1.5 or later.
 | Ctrl/Cmd+K | Link the selected block |
 | Ctrl/Cmd+click | Follow a block's link |
 | [ and ] (or Page Up/Down) | Previous / next frame |
+| P | Present (see [Presenting](#presenting)) |
+| T | Trace the selected block's dependencies (Esc clears) |
 | Alt+← | Back to where you were before following a link |
 | Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z | Undo, redo |
 | Ctrl/Cmd+C / X / V / D | Copy, cut, paste, duplicate |
@@ -89,6 +94,54 @@ height: 320
 Select a block or connector and type in the **Comment** field of the properties panel. A small badge appears on the canvas — click it (or the panel's **Shown** / **Hidden** toggle, or **Show comment** / **Hide comment** in the right-click menu) to expand or collapse the note. The open/closed state is saved with the drawing, so a comment left open stays visible in read-only embeds and in SVG/PNG exports; **Remove comment** clears it.
 
 A comment is separate from a block's description: the description is part of the block itself and is always shown under the title, while a comment is an aside that stays out of the way until you open it. Comments also appear in the JSON, Excel and Google Sheets exports — see below.
+
+## Themes, palettes and 3D
+
+![The Executive 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
+
+**One-click themes** restyle the whole drawing — or just the selection — in a single undoable step. Right-click the empty canvas, use the **Quick theme** buttons in the properties panel, or run *Apply theme: …* from the command palette:
+
+| Theme | Look |
+| --- | --- |
+| Executive 3D | Soft board-room colors, navy lines, raised 3D blocks and links |
+| Minimal | White and grey, fine lines, flat |
+| Futuristic | Deep navy tiles with neon edges and glow, in 3D |
+| Classic | The original pastel colors, flat |
+
+Themes keep your color coding: blocks that shared a color before still share one afterwards. Shapes, text, links and positions are never touched. The theme also becomes the style for blocks and connectors you add next.
+
+**Palettes**: the **Palette** row in the properties panel switches the swatches between *Classic*, *Minimal* (neutrals with one accent) and *Futuristic* (navy and neon).
+
+**3D effect**: set **Depth → 3D** for blocks or **Effect → 3D** for connectors in the properties panel, use **3D effect** in the right-click menu, or run *Toggle 3D effect* (selection, or the whole drawing when nothing is selected). 3D blocks are extruded tiles with a top-lit face and a soft shadow; on dark fills the sides take the block's edge color and the edge glows. 3D links get a drop shadow and a sheen. The effect is part of the drawing, so it shows in embeds and in SVG and PNG exports.
+
+![The Futuristic theme with animated flow](docs/images/theme-futuristic.png)
+
+## Presenting
+
+![Presentation mode in Obsidian](docs/images/presentation.png)
+
+Press **P** (or the toolbar's screen icon, or *Present drawing* in the command palette). The drawing goes full screen with every panel hidden: first an overview of the whole drawing, then one slide per frame, in the frames panel's order, with an animated move between slides.
+
+| Keys | Action |
+| --- | --- |
+| → ↓ Space Page Down | Next slide |
+| ← ↑ Page Up | Previous slide |
+| 1–9, Home, End | Jump to a slide |
+| Click a block | Spotlight it and its dependencies; click empty space to clear |
+| Click a link badge | Jump to the linked frame's slide |
+| S | Switch between your theme and a dark stage |
+| L | Laser pointer on / off |
+| Esc | Clear the spotlight, then end the presentation |
+
+Nothing can be edited while presenting, and your view is restored afterwards.
+
+## For architects and engineers
+
+![Tracing the dependencies of a block](docs/images/trace.png)
+
+- **Dependency tracing**: select a block and press **T** (or right-click → *Trace dependencies*). Blocks it depends on glow amber (upstream, against the arrows), blocks that depend on it glow green (downstream, along the arrows), the paths between them animate, and everything else fades. The hint bar counts both sides. Cycles are handled. Esc clears it.
+- **Animated flow**: set a connector's **Effect** to **Flow** and dashes march along it in its direction — on the canvas and in embedded previews (static in exported images). Respects the system's reduced-motion setting.
+- **Tags**: give a block a technology or role in the **Tag** field (“Service · Java”, “Queue · Kafka”, “PostgreSQL”). It is shown in small capitals above the title, like a C4 stereotype, and exported in the JSON (`tag`) and in the workbook's Blocks tab.
 
 ## Exporting
 
@@ -161,6 +214,7 @@ The **structured** format (default) is meant for other tools: frames in order, e
         {
           "id": "pay",
           "title": "Payment",
+          "tag": "Service",
           "description": "Card, wallet or invoice",
           "comment": "",
           "commentOpen": false,
@@ -204,8 +258,8 @@ Drawings are plain JSON with one element per line, so they diff nicely in git:
 	"version": 1,
 	"elements": [
 		{"id":"f1","type":"frame","x":0,"y":0,"width":780,"height":440,"title":"Checkout flow","description":"","style":{"fill":"transparent","stroke":"default"}},
-		{"id":"pay","type":"block","x":580,"y":80,"width":160,"height":80,"title":"Payment","description":"","comment":"","commentOpen":false,"shape":"rounded","frameId":"f1","link":"frame:f2","style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center"}},
-		{"id":"c2","type":"connector","from":{"id":"check","side":"auto"},"to":{"id":"pay","side":"auto"},"label":"yes","comment":"","commentOpen":false,"routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow"}}
+		{"id":"pay","type":"block","x":580,"y":80,"width":160,"height":80,"title":"Payment","description":"","comment":"","commentOpen":false,"shape":"rounded","frameId":"f1","link":"frame:f2","tag":"Service","style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center","threeD":true}},
+		{"id":"c2","type":"connector","from":{"id":"check","side":"auto"},"to":{"id":"pay","side":"auto"},"label":"yes","comment":"","commentOpen":false,"routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow","threeD":false,"flow":true}}
 	]
 }
 ```

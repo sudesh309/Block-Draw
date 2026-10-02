@@ -1,5 +1,6 @@
 import { moment, normalizePath, Notice, Plugin, TFile, TFolder, type Editor as MarkdownEditor } from "obsidian";
 import { createEmptyDrawing, parseDrawing, serializeDrawing } from "./model/file";
+import { DRAWING_THEMES } from "./model/themes";
 import { FILE_EXTENSION, type DrawingFile } from "./model/types";
 import { BlockDrawView, VIEW_ICON, VIEW_TYPE } from "./obsidian/BlockDrawView";
 import { registerEmbeds } from "./obsidian/embed";
@@ -214,6 +215,16 @@ export default class BlockDrawPlugin extends Plugin {
 		withView("previous-frame", "Go to previous frame", (v) => v.editor?.stepFrame(-1));
 		withView("add-frame", "Add frame", (v) => v.editor?.addFrameAfterContent());
 		withView("toggle-frames-panel", "Toggle frames panel", (v) => v.editor?.framesPanel.toggle());
+		withView("present", "Present drawing (one slide per frame)", (v) => v.editor?.presenter.start());
+		withView("toggle-3d", "Toggle 3D effect (selection, or the whole drawing)", (v) => v.editor?.toggle3D());
+		withView("trace-dependencies", "Trace dependencies of the selected block", (v) => {
+			const only = v.editor?.selectedBlocks() ?? [];
+			if (only.length === 1) v.editor?.toggleTrace(only[0].id);
+			else new Notice("Select one block to trace its dependencies.");
+		});
+		for (const t of DRAWING_THEMES) {
+			withView(`theme-${t.id}`, `Apply theme: ${t.name} (selection, or the whole drawing)`, (v) => v.editor?.applyTheme(t.id));
+		}
 	}
 
 	private registerMenus(): void {

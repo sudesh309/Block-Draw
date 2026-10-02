@@ -5,6 +5,8 @@ export const FONT_FAMILY =
 	'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
 export const LINE_HEIGHT = 1.25;
 export const DESCRIPTION_SCALE = 0.8;
+/** Tag (stereotype) line above the title, relative to the title size. */
+export const TAG_SCALE = 0.62;
 
 type MeasureFn = (text: string, size: number, weight: number) => number;
 
@@ -119,6 +121,8 @@ export interface LaidOutLine {
 	size: number;
 	weight: number;
 	muted: boolean;
+	/** Tag line: small caps with letter spacing. */
+	tag?: boolean;
 }
 
 export interface BlockTextLayout {
@@ -137,13 +141,18 @@ export function layoutBlockText(block: BlockElement): BlockTextLayout {
 	const size = block.style.fontSize;
 	const dsize = Math.max(8, Math.round(size * DESCRIPTION_SCALE));
 	const weight = titleWeight(block);
+	const tsize = Math.max(8, Math.round(size * TAG_SCALE));
+	const tag = block.tag.trim().toUpperCase();
+	const tagLines = tag ? wrapText(tag, inner.width, tsize, 600) : [];
+	const tlh = tsize * LINE_HEIGHT;
 	const titleLines = block.title ? wrapText(block.title, inner.width, size, weight) : [];
 	const desc = block.description.trim();
 	const descLines = desc ? wrapText(desc, inner.width, dsize, 400) : [];
 	const lh = size * LINE_HEIGHT;
 	const dlh = dsize * LINE_HEIGHT;
 	const gap = titleLines.length && descLines.length ? size * 0.35 : 0;
-	const total = titleLines.length * lh + gap + descLines.length * dlh;
+	const tagGap = tagLines.length && (titleLines.length || descLines.length) ? size * 0.2 : 0;
+	const total = tagLines.length * tlh + tagGap + titleLines.length * lh + gap + descLines.length * dlh;
 
 	const align = block.style.textAlign;
 	const anchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
@@ -151,6 +160,11 @@ export function layoutBlockText(block: BlockElement): BlockTextLayout {
 
 	let top = inner.y + Math.max(0, (inner.height - total) / 2);
 	const lines: LaidOutLine[] = [];
+	for (const t of tagLines) {
+		lines.push({ text: t, x, y: top + tlh / 2 + tsize * 0.35, size: tsize, weight: 600, muted: true, tag: true });
+		top += tlh;
+	}
+	top += tagGap;
 	for (const t of titleLines) {
 		lines.push({ text: t, x, y: top + lh / 2 + size * 0.35, size, weight, muted: false });
 		top += lh;

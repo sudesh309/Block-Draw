@@ -26,6 +26,8 @@ export type ExportLink =
 export interface ExportBlock {
 	id: string;
 	title: string;
+	/** Stereotype / technology tag shown above the title (empty when none). */
+	tag: string;
 	description: string;
 	comment: string;
 	commentOpen: boolean;
@@ -138,6 +140,7 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 		return {
 			id: b.id,
 			title: b.title,
+			tag: b.tag,
 			description: b.description,
 			comment: b.comment,
 			commentOpen: b.commentOpen,

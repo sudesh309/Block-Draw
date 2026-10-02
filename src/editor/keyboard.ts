@@ -38,6 +38,8 @@ export class KeyboardController {
 		const lower = key.length === 1 ? key.toLowerCase() : key;
 		const ro = ed.options.readOnly;
 
+		if (ed.presenter.isActive()) return !mod && ed.presenter.handleKey(e);
+
 		if (key === " ") {
 			if (!this.spaceDown) {
 				this.spaceDown = true;
@@ -50,6 +52,10 @@ export class KeyboardController {
 			if (ed.pointer.cancel()) return true;
 			if (ed.help.isOpen()) {
 				ed.help.toggle(false);
+				return true;
+			}
+			if (ed.traceRootId) {
+				ed.clearTrace();
 				return true;
 			}
 			if (ed.tool !== "select") {
@@ -215,6 +221,15 @@ export class KeyboardController {
 			case "g":
 				ed.setOptions({ showGrid: !ed.options.showGrid });
 				return true;
+			case "p":
+				ed.presenter.start();
+				return true;
+			case "t": {
+				const only = ed.selectedBlocks();
+				if (only.length === 1) ed.toggleTrace(only[0].id);
+				else ed.clearTrace();
+				return true;
+			}
 			case "?":
 				ed.help.toggle();
 				return true;

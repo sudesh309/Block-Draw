@@ -736,11 +736,11 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 	const ordered: BlockElement[] = [];
 	for (const r of regions) ordered.push(...readingOrder(r.blocks));
 	for (const b of ctx.blocks) if (!ctx.regionOf.has(b.id)) ordered.push(b);
-	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 10);
+	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 11);
 	tableHeader(
 		s,
-		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "Comment"],
-		[160, 200, 260, 90, 180, 220, 220, 80, 80, 240],
+		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "Comment", "Tag"],
+		[160, 200, 260, 90, 180, 220, 220, 80, 80, 240, 140],
 	);
 	ordered.forEach((b, i) => {
 		const row = i + 1;
@@ -762,9 +762,10 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 		setCell(s, row, 7, { value: fill ?? "none", style: fill ? { bg: fill } : undefined });
 		setCell(s, row, 8, { value: `${Math.round(b.width)}×${Math.round(b.height)}`, style: { color: MUTED } });
 		setCell(s, row, 9, { value: b.comment, style: { wrap: true } });
-		for (let c = 0; c < 10; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		setCell(s, row, 10, { value: b.tag });
+		for (let c = 0; c < 11; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
 	});
-	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 10 };
+	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 11 };
 	return s;
 }
 

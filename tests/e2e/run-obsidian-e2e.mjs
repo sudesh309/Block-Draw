@@ -342,6 +342,32 @@ test("exports JSON, Excel, SVG and PNG files", async () => {
 	assert.ok(svg.includes(">Detail<") && !svg.includes(">Start<"));
 });
 
+test("theme, 3D and presentation commands work in Obsidian", async () => {
+	await editorEval((ed) => ed.clearSelection());
+	await command("block-draw:theme-futuristic");
+	await frame();
+	let els = await elements();
+	assert.ok(els.filter((e) => e.type === "block").every((b) => b.style.threeD), "futuristic raises every block");
+	await waitFor(async () => (await readFile(state.path)).includes('"threeD":true'), "3D saved to disk");
+	assert.ok((await page.locator(".bd-block.bd-3d").count()) >= 3);
+	await shot("e2e-08-futuristic");
+	await command("block-draw:present");
+	await page.waitForSelector(".bd-editor.bd-presenting");
+	assert.equal(await page.isVisible(".bd-toolbar"), false);
+	const first = await page.textContent(".bd-present-counter");
+	await page.keyboard.press("ArrowRight");
+	await sleep(450);
+	assert.notEqual(await page.textContent(".bd-present-counter"), first);
+	await shot("e2e-09-presenting");
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 0);
+	assert.equal(await page.isVisible(".bd-toolbar"), true);
+	await command("block-draw:toggle-3d");
+	els = await elements();
+	assert.ok(els.filter((e) => e.type !== "frame").every((e) => !e.style.threeD), "toggle-3d turns it off everywhere");
+});
+
 test("Google Sheets export goes through the Apps Script bridge and updates in place", async () => {
 	await page.evaluate(
 		async ([url, secret]) => {

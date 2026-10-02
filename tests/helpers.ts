@@ -20,6 +20,7 @@ export function block(id: string, x: number, y: number, extra: Partial<BlockElem
 		shape: "rounded",
 		frameId: null,
 		link: null,
+		tag: "",
 		comment: "",
 		commentOpen: false,
 		style: { ...DEFAULT_BLOCK_STYLE },

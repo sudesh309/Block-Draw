@@ -41,22 +41,48 @@ export const SCREEN_THEME: RenderTheme = {
 	lightText: "#ffffff",
 };
 
-export const FILL_SWATCHES = [
-	COLOR_TRANSPARENT,
-	"#ffffff",
-	"#e9ecef",
-	"#ffc9c9",
-	"#ffd8a8",
-	"#ffec99",
-	"#b2f2bb",
-	"#a5d8ff",
-	"#d0bfff",
-	"#fcc2d7",
+export type PaletteId = "classic" | "minimal" | "futuristic";
+
+export interface Palette {
+	id: PaletteId;
+	name: string;
+	fills: string[];
+	strokes: string[];
+	frameFills: string[];
+}
+
+/** Swatch sets offered in the properties panel. */
+export const PALETTES: Palette[] = [
+	{
+		id: "classic",
+		name: "Classic",
+		fills: [COLOR_TRANSPARENT, "#ffffff", "#e9ecef", "#ffc9c9", "#ffd8a8", "#ffec99", "#b2f2bb", "#a5d8ff", "#d0bfff", "#fcc2d7"],
+		strokes: [COLOR_DEFAULT, "#868e96", "#e03131", "#f08c00", "#2f9e44", "#1971c2", "#6741d9", "#c2255c"],
+		frameFills: [COLOR_TRANSPARENT, "#f8f9fa", "#fff5f5", "#fff9db", "#ebfbee", "#e7f5ff", "#f3f0ff"],
+	},
+	{
+		id: "minimal",
+		name: "Minimal",
+		fills: [COLOR_TRANSPARENT, "#ffffff", "#f8f9fa", "#f1f3f5", "#e9ecef", "#dee2e6", "#e7f5ff", "#495057", "#212529"],
+		strokes: [COLOR_DEFAULT, "#212529", "#495057", "#868e96", "#ced4da", "#1c7ed6"],
+		frameFills: [COLOR_TRANSPARENT, "#ffffff", "#f8f9fa", "#f1f3f5"],
+	},
+	{
+		id: "futuristic",
+		name: "Futuristic",
+		fills: [COLOR_TRANSPARENT, "#0b1020", "#111827", "#1e1b4b", "#0f2e3d", "#22d3ee", "#a78bfa", "#f472b6", "#a3e635", "#fbbf24"],
+		strokes: [COLOR_DEFAULT, "#22d3ee", "#a78bfa", "#f472b6", "#a3e635", "#fbbf24", "#38bdf8", "#e2e8f0"],
+		frameFills: [COLOR_TRANSPARENT, "#0b1020", "#0f172a", "#111827", "#1e1b4b"],
+	},
 ];
 
-export const STROKE_SWATCHES = [COLOR_DEFAULT, "#868e96", "#e03131", "#f08c00", "#2f9e44", "#1971c2", "#6741d9", "#c2255c"];
+export function paletteById(id: string): Palette {
+	return PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+}
 
-export const FRAME_FILL_SWATCHES = [COLOR_TRANSPARENT, "#f8f9fa", "#fff5f5", "#fff9db", "#ebfbee", "#e7f5ff", "#f3f0ff"];
+export const FILL_SWATCHES = PALETTES[0].fills;
+export const STROKE_SWATCHES = PALETTES[0].strokes;
+export const FRAME_FILL_SWATCHES = PALETTES[0].frameFills;
 
 export interface Rgba {
 	r: number;
@@ -143,4 +169,17 @@ export function resolveTextColor(textColor: string, fill: string, theme: RenderT
 	if (!c) return theme.ink;
 	if (c.a < 0.5) return theme.ink;
 	return relativeLuminance(c) > 0.35 ? theme.darkText : theme.lightText;
+}
+
+/**
+ * Mixes a concrete color toward black (amount > 0) or white (amount < 0); null when the color
+ * can't be parsed (CSS variables, "default", transparent).
+ */
+export function shadeColor(color: string, amount: number): string | null {
+	const c = parseColor(color);
+	if (!c || c.a === 0) return null;
+	const target = amount > 0 ? 0 : 255;
+	const t = Math.min(1, Math.abs(amount));
+	const mix = (v: number) => Math.round(v + (target - v) * t);
+	return "#" + [mix(c.r), mix(c.g), mix(c.b)].map((v) => v.toString(16).padStart(2, "0")).join("");
 }

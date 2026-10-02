@@ -30,6 +30,10 @@ const MENU_ICONS: Record<string, IconName> = {
 	sheet: "sheet",
 	image: "image",
 	export: "download",
+	present: "presentation",
+	trace: "git-fork",
+	cube: "box",
+	palette: "palette",
 };
 
 /** Remembers the last viewport per file while Obsidian is running. */

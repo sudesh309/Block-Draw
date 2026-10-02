@@ -453,6 +453,7 @@ export class PointerController {
 			else if (hit?.kind === "link-badge" || hit?.kind === "comment-badge" || hit?.kind === "connector") cursor = "pointer";
 			else if (hit?.kind === "block" || hit?.kind === "frame") cursor = "move";
 		}
+		if (ed.presenter.laserVisible()) cursor = "none";
 		if (ed.svg.style.cursor !== cursor) ed.svg.style.cursor = cursor;
 	}
 

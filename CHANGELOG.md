@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Themes: one-click **Executive 3D**, **Minimal**, **Futuristic** and **Classic** looks for the whole drawing or the selection (right-click the canvas, the properties panel's Quick theme buttons, or the command palette). Color-coded groups stay grouped, and it is one undo step.
+- Palettes: the properties panel's swatches can switch between Classic, Minimal and Futuristic colors.
+- 3D effect for blocks (raised tiles with a top-lit face and soft shadow; neon sides and glow on dark fills) and for links (shadow and sheen). Toggle it in the properties panel, the right-click menu, or with the *Toggle 3D effect* command. Shown in embeds and SVG/PNG exports.
+- Presentation mode (P): full screen, an overview slide then one slide per frame, laser pointer, light or dark stage, click a block to spotlight it. Read-only, and the view is restored afterwards.
+- Dependency tracing (T): highlights everything upstream and downstream of the selected block and fades the rest.
+- Animated flow on connectors, to show the direction data moves.
+- Tags: a technology or role shown above a block's title, exported in JSON (`tag`) and as a Tag column on the workbook's Blocks tab.
+
 ## 0.3.1
 
 - Google Sheets export: when the Apps Script web app replies with something other than JSON — most often because its deployment's "Who has access" isn't set to "Anyone", or the web app address is the editor's `/dev` test link instead of the deployed `/exec` one — the error now says exactly what's wrong and how to fix it, instead of just "did not return JSON (HTTP 200)".
