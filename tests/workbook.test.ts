@@ -149,16 +149,40 @@ describe("workbook layout", () => {
 		expect(s.cells.get(cellKey(5, 4))?.value).toBe("Checkout flow");
 	});
 
-	it("tabulates blocks and connections", () => {
+	it("tabulates blocks and connections, without any internal element id", () => {
 		const wb = build();
 		const blocks = sheetByKey(wb, SHEET_KEYS.blocks);
-		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 11 });
+		expect(blocks.filter).toEqual({ row: 0, col: 0, rows: 9, cols: 10 });
 		expect(blocks.cells.get(cellKey(1, 1))?.value).toBe("Cart");
-		expect(blocks.cells.get(cellKey(1, 10))?.value).toBe("Confirm totals before moving on");
+		expect(blocks.cells.get(cellKey(1, 9))?.value).toBe("Confirm totals before moving on");
+		const blockHeaders = Array.from({ length: 10 }, (_, i) => blocks.cells.get(cellKey(0, i))?.value);
+		expect(blockHeaders).not.toContain("ID");
+		expect([...blocks.cells.values()].some((c) => c.value === "cart")).toBe(false);
 		const conns = sheetByKey(wb, SHEET_KEYS.connections);
-		expect(conns.filter).toEqual({ row: 0, col: 0, rows: 8, cols: 8 });
+		expect(conns.filter).toEqual({ row: 0, col: 0, rows: 8, cols: 7 });
 		expect(conns.cells.get(cellKey(2, 2))?.value).toBe("yes");
-		expect(conns.cells.get(cellKey(2, 7))?.value).toBe("Requires 3-D Secure");
+		expect(conns.cells.get(cellKey(2, 6))?.value).toBe("Requires 3-D Secure");
+		const connHeaders = Array.from({ length: 7 }, (_, i) => conns.cells.get(cellKey(0, i))?.value);
+		expect(connHeaders).not.toContain("ID");
+	});
+
+	it("gives each frame a textual block table beside its grid", () => {
+		const s = sheetByKey(build(), "frame:f1");
+		const [key] = [...s.cells].find(([, c]) => c.value === "Block Title") ?? [];
+		const [headerRow, startCol] = (key as string).split(":").map(Number);
+		expect(headerRow).toBe(0);
+		const headers = Array.from({ length: 5 }, (_, i) => s.cells.get(cellKey(0, startCol + i))?.value);
+		expect(headers).toEqual(["Block Title", "LinkTo", "LinkFrom", "Block Description", "Notes"]);
+		const rowOf = (title: string) =>
+			[...s.cells].find(([k, c]) => c.value === title && Number(k.split(":")[1]) === startCol)?.[0].split(":").map(Number)[0];
+		const cartRow = rowOf("Cart") as number;
+		const cols = (row: number, i: number) => s.cells.get(cellKey(row, startCol + i))?.value;
+		expect(cols(cartRow, 1)).toContain("Logged in?"); // LinkTo: Cart's outgoing connection
+		expect(cols(cartRow, 3)).toBe(""); // Block Description (Cart has none)
+		expect(cols(cartRow, 4)).toBe("Confirm totals before moving on"); // Notes
+		const payRow = rowOf("Payment") as number;
+		expect(cols(payRow, 2)).toContain("Logged in?"); // LinkFrom
+		expect(cols(payRow, 3)).toBe("Card, wallet or invoice");
 	});
 
 	it("surfaces comments as cell notes on the frame grid", () => {

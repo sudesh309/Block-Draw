@@ -333,6 +333,9 @@ function placeMerged(p: Placement, range: GridRange, cell: CellModel): boolean {
 	return true;
 }
 
+/** Gap, in narrow grid columns, between the visual grid and the textual block table beside it. */
+const TABLE_GAP_COLS = 2;
+
 function buildRegionSheet(region: Region, ctx: Context): SheetModel {
 	const { opts } = ctx;
 	const unit = Math.max(opts.cellSize, region.bounds.width / MAX_GRID_COLS, region.bounds.height / MAX_GRID_ROWS);
@@ -340,7 +343,13 @@ function buildRegionSheet(region: Region, ctx: Context): SheetModel {
 	const cols = Math.max(1, Math.ceil(region.bounds.width / unit - 1e-9));
 	const rows = Math.max(1, Math.ceil(region.bounds.height / unit - 1e-9));
 	const headerCols = Math.max(cols, 16);
-	const sheet = newSheet(region.key, ctx.sheetTitles.get(region.key) as string, ORIGIN_ROW + rows + 3, ORIGIN_COL + headerCols + 2);
+	const tableStartCol = ORIGIN_COL + headerCols + TABLE_GAP_COLS;
+	const sheet = newSheet(
+		region.key,
+		ctx.sheetTitles.get(region.key) as string,
+		Math.max(ORIGIN_ROW + rows + 3, region.blocks.length + 2),
+		tableStartCol + BLOCK_TABLE_HEADERS.length,
+	);
 	sheet.defaultColWidth = opts.cellPixels;
 	sheet.defaultRowHeight = opts.cellPixels;
 	sheet.hideGridlines = true;
@@ -439,7 +448,38 @@ function buildRegionSheet(region: Region, ctx: Context): SheetModel {
 		if (!a || !b) continue;
 		drawGridConnector(p, c, a, b, opts.cellPixels, obstacles, usedEdges);
 	}
+
+	addFrameBlockTable(sheet, region, ctx, tableStartCol);
 	return sheet;
+}
+
+/**
+ * Textual table of this frame's blocks — title, what it links to and from, description and
+ * comment — placed beside the visual grid so the frame reads without the diagram too.
+ */
+const BLOCK_TABLE_HEADERS = ["Block Title", "LinkTo", "LinkFrom", "Block Description", "Notes"];
+const BLOCK_TABLE_WIDTHS = [180, 220, 220, 240, 240];
+
+function addFrameBlockTable(sheet: SheetModel, region: Region, ctx: Context, startCol: number): void {
+	BLOCK_TABLE_HEADERS.forEach((h, i) => {
+		setCell(sheet, 0, startCol + i, { value: h, style: { bold: true, bg: HEADER_BG, borders: { bottom: TABLE_LINE }, vAlign: "middle" } });
+		sheet.colWidths.set(startCol + i, BLOCK_TABLE_WIDTHS[i]);
+	});
+	sheet.rowHeights.set(0, Math.max(sheet.rowHeights.get(0) ?? 0, 26));
+	const ordered = readingOrder(region.blocks);
+	ordered.forEach((b, i) => {
+		const row = i + 1;
+		const { outgoing, incoming } = connectionSummary(b, ctx);
+		setCell(sheet, row, startCol, { value: b.title.trim() || "(untitled)", style: { bold: true, wrap: true, vAlign: "top" } });
+		setCell(sheet, row, startCol + 1, { value: outgoing.join("\n"), style: { wrap: true, vAlign: "top" } });
+		setCell(sheet, row, startCol + 2, { value: incoming.join("\n"), style: { wrap: true, vAlign: "top" } });
+		setCell(sheet, row, startCol + 3, { value: b.description, style: { wrap: true, vAlign: "top" } });
+		setCell(sheet, row, startCol + 4, { value: b.comment, style: { wrap: true, vAlign: "top" } });
+		for (let c = 0; c < BLOCK_TABLE_HEADERS.length; c++) {
+			setCell(sheet, row, startCol + c, { style: { borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		}
+	});
+	sheet.filter = { row: 0, col: startCol, rows: Math.max(1, ordered.length + 1), cols: BLOCK_TABLE_HEADERS.length };
 }
 
 /**
@@ -696,11 +736,11 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 	const ordered: BlockElement[] = [];
 	for (const r of regions) ordered.push(...readingOrder(r.blocks));
 	for (const b of ctx.blocks) if (!ctx.regionOf.has(b.id)) ordered.push(b);
-	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 11);
+	const s = newSheet(SHEET_KEYS.blocks, ctx.sheetTitles.get(SHEET_KEYS.blocks) as string, ordered.length + 6, 10);
 	tableHeader(
 		s,
-		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "ID", "Comment"],
-		[160, 200, 260, 90, 180, 220, 220, 80, 80, 110, 240],
+		["Frame", "Block", "Description", "Shape", "Links to", "Outgoing", "Incoming", "Fill", "Size", "Comment"],
+		[160, 200, 260, 90, 180, 220, 220, 80, 80, 240],
 	);
 	ordered.forEach((b, i) => {
 		const row = i + 1;
@@ -721,17 +761,16 @@ function buildBlocksSheet(regions: Region[], ctx: Context): SheetModel {
 		const fill = hex(b.style.fill);
 		setCell(s, row, 7, { value: fill ?? "none", style: fill ? { bg: fill } : undefined });
 		setCell(s, row, 8, { value: `${Math.round(b.width)}×${Math.round(b.height)}`, style: { color: MUTED } });
-		setCell(s, row, 9, { value: b.id, style: { color: MUTED } });
-		setCell(s, row, 10, { value: b.comment, style: { wrap: true } });
-		for (let c = 0; c < 11; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		setCell(s, row, 9, { value: b.comment, style: { wrap: true } });
+		for (let c = 0; c < 10; c++) setCell(s, row, c, { style: { vAlign: "top", borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
 	});
-	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 11 };
+	s.filter = { row: 0, col: 0, rows: Math.max(1, ordered.length + 1), cols: 10 };
 	return s;
 }
 
 function buildConnectionsSheet(ctx: Context): SheetModel {
-	const s = newSheet(SHEET_KEYS.connections, ctx.sheetTitles.get(SHEET_KEYS.connections) as string, ctx.connectors.length + 6, 8);
-	tableHeader(s, ["From frame", "From", "Label", "To", "To frame", "Line", "ID", "Comment"], [160, 200, 140, 200, 160, 80, 110, 240]);
+	const s = newSheet(SHEET_KEYS.connections, ctx.sheetTitles.get(SHEET_KEYS.connections) as string, ctx.connectors.length + 6, 7);
+	tableHeader(s, ["From frame", "From", "Label", "To", "To frame", "Line", "Comment"], [160, 200, 140, 200, 160, 80, 240]);
 	ctx.connectors.forEach((c, i) => {
 		const row = i + 1;
 		const fromKey = ctx.regionOf.get(c.from.id);
@@ -742,10 +781,9 @@ function buildConnectionsSheet(ctx: Context): SheetModel {
 		setCell(s, row, 3, { value: blockLabel(c.to.id, ctx), style: { bold: true } });
 		setCell(s, row, 4, sheetLink(ctx, toKey, toKey ? (ctx.sheetTitles.get(toKey) ?? "") : ""));
 		setCell(s, row, 5, { value: c.routing, style: { color: MUTED } });
-		setCell(s, row, 6, { value: c.id, style: { color: MUTED } });
-		setCell(s, row, 7, { value: c.comment, style: { wrap: true } });
-		for (let col = 0; col < 8; col++) setCell(s, row, col, { style: { borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
+		setCell(s, row, 6, { value: c.comment, style: { wrap: true } });
+		for (let col = 0; col < 7; col++) setCell(s, row, col, { style: { borders: { bottom: { style: "thin", color: "#e9ecef" } } } });
 	});
-	s.filter = { row: 0, col: 0, rows: Math.max(1, ctx.connectors.length + 1), cols: 8 };
+	s.filter = { row: 0, col: 0, rows: Math.max(1, ctx.connectors.length + 1), cols: 7 };
 	return s;
 }

@@ -104,9 +104,9 @@ A comment is separate from a block's description: the description is part of the
 The Google Sheets and Excel exports build the same workbook:
 
 - **Index** tab: every frame with a link to its tab, block and connection counts, the frames it links to and its description.
-- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections.
-- **Canvas** tab for blocks that are not in any frame.
-- **Blocks** and **Connections** tabs with every element as a filterable row (frame, title, description, comment, links, incoming and outgoing connections).
+- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections. Beside the grid, a plain table lists the frame's blocks as text — **Block Title**, **LinkTo** and **LinkFrom** (its outgoing and incoming connections), **Block Description** and **Notes** (its comment) — so the frame reads without the diagram too.
+- **Canvas** tab for blocks that are not in any frame, with the same textual table.
+- **Blocks** and **Connections** tabs listing every element across all frames as a filterable row (frame, title, description, shape or line, comment, links, incoming and outgoing connections). Internal element ids are never shown.
 
 ![A frame tab: blocks as cells, connections as borders, and a link to another frame's tab](docs/images/sheet-frame.png)
 

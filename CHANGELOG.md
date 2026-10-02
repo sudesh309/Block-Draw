@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- The Excel and Google Sheets exports no longer show internal element ids anywhere (the "ID" column on the Blocks and Connections tabs is gone).
+- Each frame's sheet now has a plain-text table beside its grid listing its blocks — Block Title, LinkTo, LinkFrom, Block Description and Notes — so the frame's content reads without the diagram. The Canvas tab (unframed blocks) gets the same table.
+
 ## 0.2.0
 
 - Comments: add a note to any block or connector from the properties panel. A badge on the canvas shows it exists; click the badge, the panel's Shown/Hidden toggle, or the right-click menu's Show/Hide comment to expand or collapse it. The open/closed state is saved with the drawing, so an expanded comment stays visible in read-only embeds and in SVG/PNG exports.
