@@ -218,6 +218,37 @@ export function simplifyPolyline(points: Point[]): Point[] {
 	return out;
 }
 
+/**
+ * Parallel copy of a polyline `d` units to the right of the direction of travel (negative `d`:
+ * to the left; "right" as seen on screen, where y points down). Corners are mitered, so an
+ * orthogonal route keeps its shape. Repeated points are dropped.
+ */
+export function offsetPolyline(points: Point[], d: number): Point[] {
+	const pts: Point[] = [];
+	for (const p of points) {
+		const last = pts[pts.length - 1];
+		if (!last || dist(last, p) > 1e-6) pts.push(p);
+	}
+	if (pts.length < 2 || d === 0) return pts.map((p) => ({ ...p }));
+	const normals: Point[] = [];
+	for (let i = 1; i < pts.length; i++) {
+		const n = normalize(sub(pts[i], pts[i - 1]));
+		normals.push({ x: -n.y, y: n.x });
+	}
+	return pts.map((p, i) => {
+		if (i === 0) return add(p, scale(normals[0], d));
+		if (i === pts.length - 1) return add(p, scale(normals[i - 1], d));
+		const a = normals[i - 1];
+		const b = normals[i];
+		const sum = add(a, b);
+		if (Math.hypot(sum.x, sum.y) < 1e-6) return add(p, scale(a, d)); // a full U-turn has no miter
+		const m = normalize(sum);
+		// Keep both offset segments exactly |d| away; capped so very sharp turns do not spike.
+		const k = d / Math.max(m.x * a.x + m.y * a.y, 0.35);
+		return add(p, scale(m, k));
+	});
+}
+
 export function snap(value: number, grid: number): number {
 	return grid > 0 ? Math.round(value / grid) * grid : value;
 }

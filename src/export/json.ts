@@ -29,6 +29,8 @@ export interface ExportBlock {
 	/** Stereotype / technology tag shown above the title (empty when none). */
 	tag: string;
 	description: string;
+	/** False when the description is hidden on the canvas (it is still exported). */
+	descriptionOpen: boolean;
 	comment: string;
 	commentOpen: boolean;
 	shape: string;
@@ -142,6 +144,7 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 			title: b.title,
 			tag: b.tag,
 			description: b.description,
+			descriptionOpen: b.descriptionOpen,
 			comment: b.comment,
 			commentOpen: b.commentOpen,
 			shape: b.shape,

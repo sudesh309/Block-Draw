@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3
+
+- Presentation mode: clicking a comment badge now shows or hides that comment. It only changes what is on screen, so the drawing file is never modified, and the saved open/closed state is back when you leave the presentation.
+- Block descriptions can be shown or hidden, like comments: a **Hidden / Shown** switch above the Description field in the properties panel, and **Hide description** / **Show description** in a block's right-click menu. A hidden description is not drawn (canvas, embeds, SVG and PNG exports, or the Excel and Google Sheets grid) and does not count towards the block's height, but the text is kept: it is still in the JSON export (`descriptionOpen`), the Blocks tab and each frame's text table.
+- Animated **Flow** on a link with arrowheads at both ends now runs both ways: the link is drawn as two parallel lanes whose dashes move in opposite directions (also while a dependency trace animates it). A link with an arrowhead only at its start now flows toward that arrowhead instead of away from it.
+
 ## 0.4.2
 
 - Added the **10 most used fonts in the world for business presentations** (Inter, Segoe UI, Roboto, Arial / Helvetica, Calibri, Aptos, Open Sans, Montserrat, Lato, Georgia) with cross-platform fallback stacks.

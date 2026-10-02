@@ -198,6 +198,20 @@ export class PropsPanel {
 			this.buildLinkSection(id);
 			const d = section(this.body, "Description");
 			this.syncers.push(
+				segmented(
+					d,
+					[
+						{ value: false, label: "Hide the description on the block", text: "Hidden" },
+						{ value: true, label: "Show the description on the block", text: "Shown" },
+					],
+					() => {
+						const b = ed.byId.get(id);
+						return isBlock(b) ? b.descriptionOpen : true;
+					},
+					(descriptionOpen: boolean) => ed.updateElement(id, { descriptionOpen }),
+				),
+			);
+			this.syncers.push(
 				textField(d, {
 					multiline: true,
 					placeholder: "Optional details shown under the title",
@@ -359,7 +373,7 @@ export class PropsPanel {
 					fx,
 					[
 						{ value: false, label: "Static line", text: "Static" },
-						{ value: true, label: "Animated flow in the line's direction", text: "Flow" },
+						{ value: true, label: "Animated flow along the arrowheads (both ways when there are two)", text: "Flow" },
 					],
 					() => connStyle().flow,
 					(flow: boolean) => ed.applyConnectorStyle({ flow }),

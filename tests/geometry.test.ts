@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { segmentCrossesBox, simplifyPolyline } from "../src/geometry/geom";
+import { offsetPolyline, segmentCrossesBox, simplifyPolyline } from "../src/geometry/geom";
 import { routeConnector, trimRoute, type RouteEndpoint } from "../src/geometry/routing";
 import { boundaryPoint, shapeContains, sideAnchor } from "../src/geometry/shapes";
 import type { AnchorSide, BlockShape, Bounds } from "../src/model/types";
@@ -162,5 +162,37 @@ describe("polyline helpers", () => {
 		expect(segmentCrossesBox({ x: -5, y: 5 }, { x: 15, y: 5 }, box)).toBe(true);
 		expect(segmentCrossesBox({ x: -5, y: 0 }, { x: 15, y: 0 }, box)).toBe(false);
 		expect(segmentCrossesBox({ x: 10, y: 5 }, { x: 20, y: 5 }, box)).toBe(false);
+	});
+});
+
+describe("offsetPolyline", () => {
+	const round = (pts: { x: number; y: number }[]) => pts.map((p) => ({ x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 }));
+
+	it("moves a segment to the right of its direction of travel", () => {
+		expect(offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }], 2)).toEqual([{ x: 0, y: 2 }, { x: 10, y: 2 }]);
+		expect(offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }], -2)).toEqual([{ x: 0, y: -2 }, { x: 10, y: -2 }]);
+		expect(round(offsetPolyline([{ x: 0, y: 0 }, { x: 0, y: 10 }], 2))).toEqual([{ x: -2, y: 0 }, { x: -2, y: 10 }]);
+	});
+
+	it("miters the corners of an elbow", () => {
+		const elbow = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }];
+		expect(round(offsetPolyline(elbow, 2))).toEqual([{ x: 0, y: 2 }, { x: 8, y: 2 }, { x: 8, y: 10 }]);
+		expect(round(offsetPolyline(elbow, -2))).toEqual([{ x: 0, y: -2 }, { x: 12, y: -2 }, { x: 12, y: 10 }]);
+	});
+
+	it("puts the lane of the reversed route on the opposite side", () => {
+		const elbow = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }];
+		const back = offsetPolyline([...elbow].reverse(), 2);
+		expect(round(back)).toEqual([{ x: 12, y: 10 }, { x: 12, y: -2 }, { x: 0, y: -2 }]);
+	});
+
+	it("ignores repeated points and survives degenerate input", () => {
+		expect(offsetPolyline([{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 10, y: 0 }], 1)).toEqual([{ x: 0, y: 1 }, { x: 10, y: 1 }]);
+		expect(offsetPolyline([{ x: 5, y: 5 }], 3)).toEqual([{ x: 5, y: 5 }]);
+		expect(offsetPolyline([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 0, y: 0 }], 1)).toHaveLength(3);
+		for (const p of offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 1, y: 1 }], 2)) {
+			expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+			expect(Math.hypot(p.x, p.y)).toBeLessThan(40);
+		}
 	});
 });

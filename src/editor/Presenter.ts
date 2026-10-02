@@ -1,5 +1,5 @@
 import { parseFrameLink } from "../model/links";
-import { isBlock, type Bounds } from "../model/types";
+import { isBlock, isConnector, type Bounds } from "../model/types";
 import { frameTitleMetrics } from "../render/elements";
 import { contentBounds } from "../render/scene";
 import { clearEl, el } from "./dom";
@@ -32,6 +32,8 @@ export class Presenter {
 	private guideEl: HTMLDivElement | null = null;
 	private laserOn = true;
 	private enteredFullscreen = false;
+	/** Comments the presenter opened or closed by clicking; view-only, never saved to the drawing. */
+	private readonly commentOverrides = new Map<string, boolean>();
 	private readonly off: (() => void)[] = [];
 
 	constructor(private readonly ed: Editor) {}
@@ -45,6 +47,19 @@ export class Presenter {
 		return this.active && this.laserOn;
 	}
 
+	/** Whether a comment is shown right now: the presenter's own clicks win over the saved state. */
+	commentOpen(el: { id: string; commentOpen: boolean }): boolean {
+		return this.commentOverrides.get(el.id) ?? el.commentOpen;
+	}
+
+	/** Shows or hides a comment for the rest of the presentation without changing the drawing. */
+	toggleComment(id: string): void {
+		const el = this.ed.byId.get(id);
+		if (!isBlock(el) && !isConnector(el)) return;
+		this.commentOverrides.set(id, !this.commentOpen(el));
+		this.ed.requestRender();
+	}
+
 	start(): void {
 		const ed = this.ed;
 		if (this.active) return;
@@ -55,6 +70,7 @@ export class Presenter {
 		}
 		this.active = true;
 		this.index = 0;
+		this.commentOverrides.clear();
 		this.saved = { vp: { ...ed.vp }, readOnly: ed.options.readOnly };
 		ed.textEditor.commit();
 		ed.setTool("select");
@@ -93,6 +109,7 @@ export class Presenter {
 		this.legendEl?.remove();
 		this.guideEl?.remove();
 		this.bar = this.laser = this.legendEl = this.guideEl = this.titleEl = this.counterEl = this.progressEl = null;
+		this.commentOverrides.clear();
 		ed.root.classList.remove("bd-presenting", "bd-laser-on", "bd-stage-dark");
 		ed.clearTrace();
 		if (this.enteredFullscreen && ed.doc.fullscreenElement === ed.root) void ed.doc.exitFullscreen().catch(() => undefined);
@@ -243,6 +260,7 @@ export class Presenter {
 			["→ / Space / Enter", "Next slide"],
 			["← / Backspace", "Previous slide"],
 			["Click a block", "Toggle spotlight on its flow"],
+			["Click a comment badge", "Show / hide that comment (the drawing is not changed)"],
 			["Click canvas / Esc", "Clear spotlight"],
 			["S", "Toggle light / dark stage"],
 			["L", "Toggle laser pointer"],
@@ -330,7 +348,11 @@ export class Presenter {
 			else ed.followLink(hit.id);
 			return;
 		}
-		if (hit && (hit.kind === "block" || hit.kind === "comment-badge")) {
+		if (hit?.kind === "comment-badge") {
+			this.toggleComment(hit.id);
+			return;
+		}
+		if (hit?.kind === "block") {
 			ed.toggleTrace(hit.id);
 			return;
 		}

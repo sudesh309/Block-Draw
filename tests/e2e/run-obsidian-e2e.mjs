@@ -354,6 +354,17 @@ test("theme, 3D and presentation commands work in Obsidian", async () => {
 	await command("block-draw:present");
 	await page.waitForSelector(".bd-editor.bd-presenting");
 	assert.equal(await page.isVisible(".bd-toolbar"), false);
+	// clicking a comment badge while presenting shows or hides the comment, and never touches the file
+	const savedText = await readFile(state.path);
+	const callouts = () => page.locator(".bd-comment-callout").count();
+	assert.equal(await callouts(), 1, "the saved comment is open");
+	for (const expected of [0, 1]) {
+		const box = await page.locator(".bd-block .bd-comment-badge").first().boundingBox();
+		await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+		await frame();
+		assert.equal(await callouts(), expected, "each click on the badge toggles the comment");
+	}
+	assert.equal(await readFile(state.path), savedText, "presenting does not change the drawing file");
 	const first = await page.textContent(".bd-present-counter");
 	await page.keyboard.press("ArrowRight");
 	await sleep(450);

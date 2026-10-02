@@ -17,6 +17,7 @@ export function block(id: string, x: number, y: number, extra: Partial<BlockElem
 		height: 80,
 		title: id.toUpperCase(),
 		description: "",
+		descriptionOpen: true,
 		shape: "rounded",
 		frameId: null,
 		link: null,

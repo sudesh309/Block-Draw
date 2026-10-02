@@ -133,8 +133,13 @@ export interface BlockTextLayout {
 	requiredHeight: number;
 }
 
+/** The description as drawn: empty while it is hidden. */
+export function visibleDescription(block: BlockElement): string {
+	return block.descriptionOpen ? block.description.trim() : "";
+}
+
 export function titleWeight(block: BlockElement): number {
-	return block.description.trim() ? 600 : 500;
+	return visibleDescription(block) ? 600 : 500;
 }
 
 export function layoutBlockText(block: BlockElement): BlockTextLayout {
@@ -148,7 +153,7 @@ export function layoutBlockText(block: BlockElement): BlockTextLayout {
 	const tagLines = tag ? wrapText(tag, inner.width, tsize, 600, font) : [];
 	const tlh = tsize * LINE_HEIGHT;
 	const titleLines = block.title ? wrapText(block.title, inner.width, size, weight, font) : [];
-	const desc = block.description.trim();
+	const desc = visibleDescription(block);
 	const descLines = desc ? wrapText(desc, inner.width, dsize, 400, font) : [];
 	const lh = size * LINE_HEIGHT;
 	const dlh = dsize * LINE_HEIGHT;

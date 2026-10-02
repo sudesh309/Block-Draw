@@ -1,5 +1,5 @@
-import { add, normalize, scale, type Point } from "../geometry/geom";
-import { routeConnector, routePathData, trimRoute, type Route } from "../geometry/routing";
+import { add, normalize, offsetPolyline, scale, type Point } from "../geometry/geom";
+import { routeConnector, routePathData, sampleCubic, trimRoute, type Route } from "../geometry/routing";
 import { shapeDecorationPath, shapePath } from "../geometry/shapes";
 import { parseLink } from "../model/links";
 import type {
@@ -7,6 +7,7 @@ import type {
 	BlockElement,
 	Bounds,
 	ConnectorElement,
+	ConnectorStyle,
 	FrameElement,
 	StrokeStyle,
 } from "../model/types";
@@ -25,6 +26,8 @@ export interface RenderOptions {
 	editingId?: string | null;
 	/** Resolves a frame id to its title (for link badges/tooltips). */
 	frameTitle?: (id: string) => string | null;
+	/** Connectors on a dependency trace; their dashes animate even without the Flow effect. */
+	tracedLinks?: ReadonlySet<string>;
 }
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -515,6 +518,24 @@ export function labelBox(conn: ConnectorElement, route: Route): { x: number; y: 
 	return { x: route.labelPos.x - width / 2, y: route.labelPos.y - height / 2, width, height };
 }
 
+/** Which way a flowing link's dashes travel: toward its arrowheads (forward when it has none). */
+export function flowDirection(style: ConnectorStyle): "forward" | "backward" | "both" {
+	const atStart = style.startArrow !== "none";
+	const atEnd = style.endArrow !== "none";
+	if (atStart && atEnd) return "both";
+	return atStart ? "backward" : "forward";
+}
+
+/** Two parallel lanes for a two-way link: one drawn start to end, the other end to start. */
+function flowLanes(route: Route, pts: Point[], sw: number): { paths: string[]; width: number; offset: number } | null {
+	const centre = route.curved ? sampleCubic(pts, 32) : pts;
+	const width = Math.max(1, r2(sw * 0.7));
+	const offset = r2(width / 2 + 1.25);
+	const lanes = [offsetPolyline(centre, offset), offsetPolyline([...centre].reverse(), offset)];
+	if (lanes.some((l) => l.length < 2)) return null;
+	return { paths: lanes.map((points) => routePathData({ ...route, curved: false, points })), width, offset };
+}
+
 export function renderConnector(
 	conn: ConnectorElement,
 	from: BlockElement,
@@ -525,7 +546,13 @@ export function renderConnector(
 	const color = resolveStroke(conn.style.stroke, o.theme);
 	const sw = conn.style.strokeWidth;
 	const pts = trimRoute(route, arrowTrim(conn.style.startArrow, sw), arrowTrim(conn.style.endArrow, sw));
-	const d = routePathData({ ...route, points: pts });
+	// Dashes march along the path. So a link that flows toward its start is drawn end to start,
+	// and a two-way link gets two lanes that run against each other.
+	const flow = flowDirection(conn.style);
+	const animated = conn.style.flow || !!o.tracedLinks?.has(conn.id);
+	const lanes = animated && flow === "both" ? flowLanes(route, pts, sw) : null;
+	const d = routePathData({ ...route, points: animated && flow === "backward" ? [...pts].reverse() : pts });
+	const strands = lanes ? lanes.paths.map((p) => ({ d: p, w: lanes.width })) : [{ d, w: sw }];
 	const children: VChild[] = [];
 	const threeD = conn.style.threeD;
 	const dash = dashArray(conn.style.strokeStyle, sw);
@@ -543,7 +570,7 @@ export function renderConnector(
 					style: styleAttr({
 						fill: "none",
 						stroke: shadow,
-						"stroke-width": sw + 1.5,
+						"stroke-width": lanes ? r2(lanes.offset * 2 + lanes.width + 0.5) : sw + 1.5,
 						"stroke-dasharray": dash,
 						"stroke-linecap": "round",
 						"stroke-linejoin": "round",
@@ -564,37 +591,41 @@ export function renderConnector(
 			}),
 		);
 	}
-	children.push(
-		h("path", {
-			class: "bd-connector-line",
-			d,
-			style: styleAttr({
-				fill: "none",
-				stroke: color,
-				"stroke-width": threeD ? sw + 1 : sw,
-				"stroke-dasharray": dash,
-				"stroke-linecap": "round",
-				"stroke-linejoin": "round",
-			}),
-		}),
-	);
-	if (threeD) {
+	for (const s of strands) {
 		children.push(
 			h("path", {
-				class: "bd-connector-sheen",
-				d,
-				"pointer-events": "none",
+				class: lanes ? "bd-connector-line bd-flow-lane" : "bd-connector-line",
+				d: s.d,
 				style: styleAttr({
 					fill: "none",
-					stroke: "#ffffff",
-					"stroke-opacity": 0.45,
-					"stroke-width": r2(Math.max(0.8, sw * 0.35)),
-					"stroke-dasharray": dash,
+					stroke: color,
+					"stroke-width": threeD ? s.w + 1 : s.w,
+					"stroke-dasharray": lanes ? dashArray(conn.style.strokeStyle, s.w) : dash,
 					"stroke-linecap": "round",
 					"stroke-linejoin": "round",
 				}),
 			}),
 		);
+	}
+	if (threeD) {
+		for (const s of strands) {
+			children.push(
+				h("path", {
+					class: "bd-connector-sheen",
+					d: s.d,
+					"pointer-events": "none",
+					style: styleAttr({
+						fill: "none",
+						stroke: "#ffffff",
+						"stroke-opacity": 0.45,
+						"stroke-width": r2(Math.max(0.8, s.w * 0.35)),
+						"stroke-dasharray": lanes ? dashArray(conn.style.strokeStyle, s.w) : dash,
+						"stroke-linecap": "round",
+						"stroke-linejoin": "round",
+					}),
+				}),
+			);
+		}
 	}
 	const endHead = arrowHead(conn.style.endArrow, route.end, route.endDir, color, sw);
 	if (endHead) children.push(endHead);

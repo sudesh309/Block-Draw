@@ -5,10 +5,14 @@ import { traceDependencies, traceMembers } from "../src/model/graph";
 import { applyDrawingTheme, DRAWING_THEMES, drawingThemeById } from "../src/model/themes";
 import type { BlockElement, ConnectorElement, DrawElement } from "../src/model/types";
 import { LIGHT_THEME, PALETTES, paletteById, shadeColor } from "../src/render/colors";
-import { blockDepth, blockPaintBounds } from "../src/render/elements";
+import { blockDepth, blockPaintBounds, flowDirection, renderConnector, type RenderOptions } from "../src/render/elements";
+import { toSvgString, type VNode } from "../src/render/vnode";
 import { fontDefinitionById, fontStack, PRESENTATION_FONTS } from "../src/render/fonts";
 import { contentBounds, sceneToSvg } from "../src/render/scene";
-import { layoutBlockText, useEstimatedTextMeasure } from "../src/render/text";
+import { layoutBlockText, titleWeight, useEstimatedTextMeasure } from "../src/render/text";
+import { buildWorkbook } from "../src/export/workbook/layout";
+import type { SheetModel } from "../src/export/workbook/model";
+import { sampleDrawing } from "./fixtures/sample";
 import { block, connector, frame } from "./helpers";
 
 beforeAll(() => useEstimatedTextMeasure());
@@ -244,3 +248,157 @@ describe("presentation fonts", () => {
 	});
 });
 
+
+describe("hiding a block's description", () => {
+	const withDescription = (open: boolean) => block("a", 0, 0, { title: "Orders", description: "Handles checkout", descriptionOpen: open });
+
+	it("is shown for drawings saved before the toggle existed", () => {
+		const d = parseDrawing(
+			JSON.stringify({ type: "block-draw", version: 1, elements: [{ type: "block", id: "a", title: "A", description: "text" }] }),
+		);
+		expect((d.elements[0] as BlockElement).descriptionOpen).toBe(true);
+	});
+
+	it("round-trips through the file format", () => {
+		const elements: DrawElement[] = [withDescription(false), block("b", 300, 0, { description: "x" })];
+		const back = parseDrawing(serializeDrawing({ ...createEmptyDrawing(), elements }));
+		expect(back.elements).toEqual(elements);
+		expect((back.elements[0] as BlockElement).descriptionOpen).toBe(false);
+	});
+
+	it("lays out the title alone, exactly like a block without a description", () => {
+		const shown = layoutBlockText(withDescription(true));
+		const hidden = layoutBlockText(withDescription(false));
+		expect(shown.lines.map((l) => l.text)).toEqual(["Orders", "Handles checkout"]);
+		expect(hidden.lines.map((l) => l.text)).toEqual(["Orders"]);
+		expect(hidden.requiredHeight).toBeLessThan(shown.requiredHeight);
+		expect(hidden).toEqual(layoutBlockText(block("a", 0, 0, { title: "Orders" })));
+		expect(titleWeight(withDescription(true))).toBe(600);
+		expect(titleWeight(withDescription(false))).toBe(500);
+	});
+
+	it("keeps the text but does not draw it in SVG exports", () => {
+		expect(sceneToSvg([withDescription(true)], { theme: LIGHT_THEME }).svg).toContain("Handles checkout");
+		expect(sceneToSvg([withDescription(false)], { theme: LIGHT_THEME }).svg).not.toContain("Handles checkout");
+		expect(withDescription(false).description).toBe("Handles checkout");
+	});
+
+	it("is still exported as data in the JSON", () => {
+		const json = exportStructuredJson({ ...createEmptyDrawing(), elements: [withDescription(false)] }, { name: "x" });
+		expect(json.unframed.blocks[0]).toMatchObject({ description: "Handles checkout", descriptionOpen: false });
+	});
+
+	it("leaves the workbook's drawn grid but stays in its tables", () => {
+		const frameSheet = (open: boolean): SheetModel => {
+			const d = sampleDrawing();
+			d.elements = d.elements.map((e) => (e.id === "pay" ? { ...e, descriptionOpen: open } : e));
+			const wb = buildWorkbook(d, { title: "Checkout", now: new Date("2026-10-01T12:00:00Z") });
+			return wb.sheets.find((s) => s.key === "frame:f1") as SheetModel;
+		};
+		const values = (s: SheetModel) => [...s.cells.values()].map((c) => String(c.value ?? ""));
+		const drawn = (s: SheetModel) => values(s).filter((v) => v.includes("\nCard, wallet or invoice"));
+		const tabled = (s: SheetModel) => values(s).filter((v) => v === "Card, wallet or invoice");
+		const shown = frameSheet(true);
+		expect(drawn(shown)).toHaveLength(1);
+		expect(tabled(shown)).toHaveLength(1);
+		const hidden = frameSheet(false);
+		expect(drawn(hidden)).toHaveLength(0);
+		expect(tabled(hidden)).toHaveLength(1);
+	});
+});
+
+describe("flow direction on links", () => {
+	const a = block("a", 0, 0);
+	const b = block("b", 400, 0);
+	const flowing = (patch: Partial<ConnectorElement["style"]>, extra: Partial<ConnectorElement> = {}) =>
+		connector("c", "a", "b", { style: { ...connector("x", "a", "b").style, flow: true, ...patch }, ...extra });
+	const draw = (conn: ConnectorElement, o: Partial<RenderOptions> = {}) =>
+		renderConnector(conn, a, b, { theme: LIGHT_THEME, zoom: 1, interactive: false, ...o });
+	const find = (node: VNode, cls: string): VNode[] => {
+		const own = String(node.attrs.class ?? "").split(" ").includes(cls) ? [node] : [];
+		return [...own, ...node.children.flatMap((c) => (typeof c === "string" ? [] : find(c, cls)))];
+	};
+	/** Numbers of a path's data, as [x, y] pairs. */
+	const points = (n: VNode): [number, number][] => {
+		const nums = String(n.attrs.d).match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
+		return Array.from({ length: nums.length / 2 }, (_, i) => [nums[2 * i], nums[2 * i + 1]]);
+	};
+
+	it("follows the arrowheads", () => {
+		const s = connector("x", "a", "b").style;
+		expect(flowDirection({ ...s, startArrow: "none", endArrow: "arrow" })).toBe("forward");
+		expect(flowDirection({ ...s, startArrow: "none", endArrow: "none" })).toBe("forward");
+		expect(flowDirection({ ...s, startArrow: "dot", endArrow: "none" })).toBe("backward");
+		expect(flowDirection({ ...s, startArrow: "triangle", endArrow: "arrow" })).toBe("both");
+	});
+
+	it("draws a one-way link start to end, and a start-only link end to start", () => {
+		const forward = find(draw(flowing({})), "bd-connector-line");
+		expect(forward).toHaveLength(1);
+		const [first, last] = [points(forward[0])[0], points(forward[0]).at(-1) as [number, number]];
+		expect(first[0]).toBeLessThan(last[0]);
+
+		const backward = find(draw(flowing({ startArrow: "arrow", endArrow: "none" })), "bd-connector-line");
+		expect(backward).toHaveLength(1);
+		const pts = points(backward[0]);
+		expect(pts[0][0]).toBeGreaterThan((pts.at(-1) as [number, number])[0]);
+		// the arrowheads are drawn separately, so reversing the path moves nothing visible
+		expect(toSvgString(draw(flowing({ startArrow: "arrow", endArrow: "none" })))).toContain("bd-flow");
+	});
+
+	it("gives a two-way link two lanes that run against each other", () => {
+		const node = draw(flowing({ startArrow: "arrow", endArrow: "arrow" }));
+		const lanes = find(node, "bd-flow-lane");
+		expect(lanes).toHaveLength(2);
+		expect(find(node, "bd-connector-line")).toHaveLength(2);
+		const [there, back] = lanes.map(points);
+		// one lane runs left to right, the other right to left
+		expect(there[0][0]).toBeLessThan((there.at(-1) as [number, number])[0]);
+		expect(back[0][0]).toBeGreaterThan((back.at(-1) as [number, number])[0]);
+		// on either side of the centre line (y = 40), the same distance away
+		expect(there[0][1]).toBeGreaterThan(40);
+		expect(back[0][1]).toBeLessThan(40);
+		expect(there[0][1] - 40).toBeCloseTo(40 - back[0][1], 5);
+		// and thinner than the single line, so the pair still reads as one link
+		const w = (n: VNode) => Number(/stroke-width:([\d.]+)/.exec(String(n.attrs.style))?.[1]);
+		expect(w(lanes[0])).toBeLessThan(2);
+	});
+
+	it("keeps a plain two-way link as one line unless it is flowing or traced", () => {
+		const twoWay = { startArrow: "arrow", endArrow: "arrow" } as const;
+		const still = draw(flowing({ ...twoWay, flow: false }));
+		expect(find(still, "bd-connector-line")).toHaveLength(1);
+		expect(find(still, "bd-flow-lane")).toHaveLength(0);
+		const traced = draw(flowing({ ...twoWay, flow: false }), { tracedLinks: new Set(["c"]) });
+		expect(find(traced, "bd-flow-lane")).toHaveLength(2);
+		const elsewhere = draw(flowing({ ...twoWay, flow: false }), { tracedLinks: new Set(["other"]) });
+		expect(find(elsewhere, "bd-flow-lane")).toHaveLength(0);
+	});
+
+	it("leaves one-way links exactly as they were drawn before", () => {
+		const plain = toSvgString(draw(flowing({ flow: false })));
+		const flowOn = toSvgString(draw(flowing({})));
+		expect(plain.replace("bd-connector", "bd-connector bd-flow")).toBe(flowOn);
+		expect(plain).not.toContain("bd-flow-lane");
+	});
+
+	it("shades and highlights both lanes of a raised link", () => {
+		const raised = draw(flowing({ startArrow: "arrow", endArrow: "arrow", threeD: true }));
+		expect(find(raised, "bd-flow-lane")).toHaveLength(2);
+		expect(find(raised, "bd-connector-sheen")).toHaveLength(2);
+		const shadow = find(raised, "bd-connector-shadow")[0];
+		const width = Number(/stroke-width:([\d.]+)/.exec(String((shadow.children[0] as VNode).attrs.style))?.[1]);
+		expect(width).toBeGreaterThan(5);
+	});
+
+	it("follows a curved route", () => {
+		const curved = draw(flowing({ startArrow: "arrow", endArrow: "arrow" }, { routing: "curved" }));
+		const lanes = find(curved, "bd-flow-lane");
+		expect(lanes).toHaveLength(2);
+		for (const lane of lanes) {
+			const pts = points(lane);
+			expect(pts.length).toBeGreaterThan(10);
+			expect(pts.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))).toBe(true);
+		}
+	});
+});

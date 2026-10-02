@@ -1,7 +1,7 @@
 import { add, expand, scale, SIDE_DIR, SIDES, unionBounds } from "../geometry/geom";
 import { routePathData, type Route } from "../geometry/routing";
 import { sideAnchor } from "../geometry/shapes";
-import { traceMembers } from "../model/graph";
+import { traceMembers, type DependencyTrace } from "../model/graph";
 import { parseFrameLink } from "../model/links";
 import { isBlock, isBox, isConnector, isFrame, type BlockElement, type ConnectorElement } from "../model/types";
 import { SCREEN_THEME } from "../render/colors";
@@ -14,6 +14,7 @@ import {
 	renderConnectorLabel,
 	renderFrame,
 	routeFor,
+	flowDirection,
 	type RenderOptions,
 } from "../render/elements";
 import { h, toDom, type VNode } from "../render/vnode";
@@ -130,11 +131,13 @@ export class SceneRenderer {
 	render(): void {
 		const ed = this.ed;
 		const zoom = ed.vp.zoom;
+		const trace = ed.currentTrace();
 		const opts: RenderOptions = {
 			theme: SCREEN_THEME,
 			zoom,
 			interactive: true,
 			editingId: ed.editingId,
+			tracedLinks: trace?.connectors,
 			frameTitle: (id) => {
 				const f = ed.byId.get(id);
 				return isFrame(f) ? f.title : null;
@@ -153,17 +156,21 @@ export class SceneRenderer {
 			} else if (isBlock(el)) {
 				const target = parseFrameLink(el.link);
 				const linked = target ? ed.byId.get(target) : null;
-				blocks.push({ id: el.id, deps: [el, editing, linked], build: () => renderBlock(el, opts) });
-				if (el.comment.trim() && el.commentOpen) {
-					comments.push({ id: el.id, deps: [el], build: () => renderBlockCommentCallout(el, opts) ?? h("g", {}) });
+				const open = ed.presenter.commentOpen(el);
+				const shown = open === el.commentOpen ? el : { ...el, commentOpen: open };
+				blocks.push({ id: el.id, deps: [el, editing, linked, open], build: () => renderBlock(shown, opts) });
+				if (el.comment.trim() && open) {
+					comments.push({ id: el.id, deps: [el, open], build: () => renderBlockCommentCallout(shown, opts) ?? h("g", {}) });
 				}
 			} else {
 				const entry = this.route(el);
 				if (!entry) continue;
 				live.add(el.id);
+				// Only links that flow both ways or backwards look different while a trace animates them.
+				const traced = !!trace?.connectors.has(el.id) && flowDirection(el.style) !== "forward";
 				connectors.push({
 					id: el.id,
-					deps: [el, entry.from, entry.to],
+					deps: [el, entry.from, entry.to, traced],
 					build: () => renderConnector(el, entry.from, entry.to, opts, entry.route),
 				});
 				if (el.label.trim()) {
@@ -174,16 +181,18 @@ export class SceneRenderer {
 					});
 				}
 				if (el.comment.trim()) {
+					const open = ed.presenter.commentOpen(el);
+					const shown = open === el.commentOpen ? el : { ...el, commentOpen: open };
 					labels.push({
 						id: `${el.id}:comment`,
-						deps: [el, entry.from, entry.to],
-						build: () => renderConnectorCommentBadge(el, entry.route, opts) ?? h("g", {}),
+						deps: [el, entry.from, entry.to, open],
+						build: () => renderConnectorCommentBadge(shown, entry.route, opts) ?? h("g", {}),
 					});
-					if (el.commentOpen) {
+					if (open) {
 						comments.push({
 							id: el.id,
-							deps: [el, entry.from, entry.to],
-							build: () => renderConnectorCommentCallout(el, entry.route, opts) ?? h("g", {}),
+							deps: [el, entry.from, entry.to, open],
+							build: () => renderConnectorCommentCallout(shown, entry.route, opts) ?? h("g", {}),
 						});
 					}
 				}
@@ -195,13 +204,12 @@ export class SceneRenderer {
 		this.labels.sync(labels);
 		this.blocks.sync(blocks);
 		this.comments.sync(comments);
-		this.applyTrace();
+		this.applyTrace(trace);
 		this.renderOverlay();
 	}
 
 	/** Dims everything outside the active dependency trace and marks the paths in it. */
-	private applyTrace(): void {
-		const trace = this.ed.currentTrace();
+	private applyTrace(trace: DependencyTrace | null): void {
 		const members = trace ? traceMembers(trace) : null;
 		this.ed.svg.classList.toggle("bd-tracing", !!trace);
 		const mark = (rawId: string, node: Element) => {

@@ -14,7 +14,14 @@ const print = (line) => process.stdout.write(`${line}\n`);
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
-const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+
+/** styles.css @imports web fonts; answer that locally so the tests never touch the network. */
+async function hermetic(ctx) {
+	await ctx.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
+	return ctx;
+}
+
+const context = await hermetic(await browser.newContext({ viewport: { width: 1280, height: 800 } }));
 
 let page;
 let errors = [];
@@ -600,7 +607,7 @@ test("3D effect: panel toggle raises blocks and links, and context menu toggles 
 	await page.evaluate((id) => window.bd.editor.setSelection([id]), conn.id);
 	await frame();
 	await page.click('.bd-props .bd-seg-btn[title="Raised 3D line with shadow"]');
-	await page.click('.bd-props .bd-seg-btn[title="Animated flow in the line\'s direction"]');
+	await page.click('.bd-props .bd-seg-btn[title="Animated flow along the arrowheads (both ways when there are two)"]');
 	await frame();
 	const after = (await els()).find((e) => e.id === conn.id);
 	assert.equal(after.style.threeD, true);
@@ -714,6 +721,186 @@ test("presentation: overview then frames, spotlight on click, Esc restores the e
 	assert.deepEqual(after, before);
 });
 
+/** A → B on one row with a link between them; returns the ids. */
+async function linkedPair(style = {}) {
+	const ids = await page.evaluate((style) => {
+		const ed = window.bd.editor;
+		const a = ed.makeBlock({ x: 100, y: 200, width: 160, height: 80 }, { title: "Service A" });
+		const b = ed.makeBlock({ x: 500, y: 200, width: 160, height: 80 }, { title: "Service B" });
+		ed.insertBlocks([a, b]);
+		const c = ed.connect(a.id, b.id, { select: true });
+		ed.updateElement(c.id, { style: { ...c.style, ...style } });
+		ed.zoomToFit({ animate: false });
+		return { a: a.id, b: b.id, c: c.id };
+	}, style);
+	await frame();
+	return ids;
+}
+
+/** Direction (+1 left to right, -1 right to left) and animation of each strand of a link. */
+const strands = (id) =>
+	page.evaluate((id) => {
+		return [...document.querySelectorAll(`.bd-connector[data-id="${id}"] .bd-connector-line`)].map((el) => {
+			const nums = el.getAttribute("d").match(/-?\d+(?:\.\d+)?/g).map(Number);
+			return { dir: Math.sign(nums[nums.length - 2] - nums[0]), anim: getComputedStyle(el).animationName };
+		});
+	}, id);
+
+const FLOW_BUTTON = '.bd-props .bd-seg-btn[title="Animated flow along the arrowheads (both ways when there are two)"]';
+
+test("flow on a two-way link animates two lanes in opposite directions", async () => {
+	const ids = await linkedPair({ startArrow: "arrow", endArrow: "arrow" });
+	const conn = `.bd-connector[data-id="${ids.c}"]`;
+	assert.equal((await strands(ids.c)).length, 1, "a plain two-way link is one line");
+	await page.click(FLOW_BUTTON);
+	await frame();
+	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 2);
+	const lanes = await strands(ids.c);
+	assert.ok(lanes.every((l) => l.anim === "bd-flow-dash"), "both lanes animate");
+	assert.deepEqual(lanes.map((l) => l.dir).sort(), [-1, 1], "one lane runs each way");
+	await shot("15-two-way-flow");
+	// the animation really moves each lane's dashes along its own direction
+	const offsets = await page.evaluate((sel) => {
+		const lanes = [...document.querySelectorAll(`${sel} .bd-flow-lane`)];
+		const anims = document.getAnimations().filter((a) => lanes.includes(a.effect?.target));
+		for (const a of anims) {
+			a.pause();
+			a.currentTime = 450;
+		}
+		return lanes.map((el) => parseFloat(getComputedStyle(el).strokeDashoffset));
+	}, conn);
+	assert.ok(offsets.length === 2 && offsets.every((o) => o < -5), `dashes advance along each path: ${offsets}`);
+	// switching Flow off restores the single line
+	await page.click('.bd-props .bd-seg-btn[title="Static line"]');
+	await frame();
+	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 0);
+	assert.equal((await strands(ids.c)).length, 1);
+});
+
+test("flow follows the arrowheads: end-only runs forward, start-only runs backward", async () => {
+	const ids = await linkedPair({ flow: true });
+	assert.deepEqual((await strands(ids.c)).map((l) => l.dir), [1], "default arrow at the end: left to right");
+	await page.evaluate((id) => {
+		const ed = window.bd.editor;
+		const c = ed.byId.get(id);
+		ed.updateElement(id, { style: { ...c.style, startArrow: "arrow", endArrow: "none" } });
+	}, ids.c);
+	await frame();
+	assert.deepEqual((await strands(ids.c)).map((l) => l.dir), [-1], "arrow at the start: right to left");
+	assert.equal((await strands(ids.c)).length, 1);
+});
+
+test("tracing a block animates two-way links in both directions, and only while traced", async () => {
+	const ids = await linkedPair({ startArrow: "arrow", endArrow: "arrow" });
+	const conn = `.bd-connector[data-id="${ids.c}"]`;
+	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 0);
+	await page.evaluate((id) => window.bd.editor.traceBlock(id), ids.a);
+	await frame();
+	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 2, "lanes while the link is on the trace");
+	assert.deepEqual((await strands(ids.c)).map((l) => l.dir).sort(), [-1, 1]);
+	assert.ok((await strands(ids.c)).every((l) => l.anim === "bd-flow-dash"));
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 0, "back to one line afterwards");
+});
+
+test("description: Shown/Hidden toggle in the panel and the right-click menu", async () => {
+	const b = await addBlock(400, 300, "Orders service");
+	const field = '.bd-props textarea[placeholder^="Optional details"]';
+	await page.fill(field, "Handles checkout and refunds");
+	await page.evaluate(() => document.activeElement.blur());
+	await frame();
+	const textOf = () => page.evaluate((id) => document.querySelector(`.bd-block[data-id="${id}"] .bd-text`)?.textContent ?? "", b.id);
+	const current = async () => (await els()).find((e) => e.id === b.id);
+	assert.equal((await current()).descriptionOpen, true, "shown by default");
+	assert.match(await textOf(), /Handles checkout/);
+	// panel: Hidden
+	await page.click('.bd-props .bd-seg-btn[title="Hide the description on the block"]');
+	await frame();
+	assert.equal((await current()).descriptionOpen, false);
+	assert.doesNotMatch(await textOf(), /Handles checkout/);
+	assert.match(await textOf(), /Orders service/);
+	assert.equal((await current()).description, "Handles checkout and refunds", "the text is kept");
+	assert.equal(await page.inputValue(field), "Handles checkout and refunds", "and still editable in the panel");
+	assert.equal(await page.locator('.bd-props .bd-seg-btn[title="Hide the description on the block"].is-active').count(), 1);
+	await shot("14-description-hidden");
+	// right-click menu offers the opposite action
+	const c = await centerOf(b.id);
+	await page.mouse.click(c.x, c.y, { button: "right" });
+	const menus = await page.evaluate(() => window.bd.menus);
+	assert.ok(menus[menus.length - 1].includes("Show description"));
+	await page.evaluate(() => window.bd.clickMenu("Show description"));
+	await frame();
+	assert.equal((await current()).descriptionOpen, true);
+	assert.match(await textOf(), /Handles checkout/);
+	assert.equal(await page.locator('.bd-props .bd-seg-btn[title="Show the description on the block"].is-active').count(), 1);
+	// one undo step per toggle
+	await page.keyboard.press("Control+z");
+	await frame();
+	assert.equal((await current()).descriptionOpen, false);
+	// a block without a description has nothing to hide, so the menu does not offer it
+	const plain = await addBlock(700, 300, "Plain");
+	const pc = await centerOf(plain.id);
+	await page.mouse.click(pc.x, pc.y, { button: "right" });
+	const plainMenu = (await page.evaluate(() => window.bd.menus)).at(-1);
+	assert.ok(!plainMenu.some((t) => /description/i.test(t)));
+	await page.keyboard.press("Escape");
+});
+
+test("presenting: clicking a comment badge shows or hides the comment, and the drawing is left alone", async () => {
+	const ids = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const a = ed.makeBlock({ x: 40, y: 100, width: 160, height: 80 }, { title: "Web app", comment: "Owned by the web team" });
+		const b = ed.makeBlock({ x: 400, y: 100, width: 160, height: 80 }, { title: "API", comment: "Rate limited", commentOpen: true });
+		ed.insertBlocks([a, b]);
+		const c = ed.connect(a.id, b.id);
+		ed.updateElement(c.id, { label: "calls", comment: "gRPC over TLS" });
+		ed.clearSelection();
+		ed.zoomToFit({ animate: false });
+		return { a: a.id, b: b.id, c: c.id };
+	});
+	await frame();
+	const savedBefore = await page.evaluate(() => window.bd.serialize());
+	await page.evaluate(() => window.bd.editor.presenter.start());
+	await page.waitForTimeout(450);
+	const callouts = () => page.locator(".bd-comment-callout").count();
+	const clickBadge = async (selector) => {
+		const box = await page.locator(selector).first().boundingBox();
+		assert.ok(box, `badge ${selector} is visible`);
+		await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+		await frame();
+	};
+	// as authored: only the API block's comment is open
+	assert.equal(await callouts(), 1);
+	// block badge: closed -> open
+	await clickBadge(`.bd-block[data-id="${ids.a}"] .bd-comment-badge`);
+	assert.equal(await callouts(), 2, "the first click shows the comment");
+	assert.equal(await page.locator(`.bd-block[data-id="${ids.a}"] .bd-comment-badge.is-open`).count(), 1);
+	// the click was a comment toggle, not a spotlight
+	assert.equal(await page.evaluate(() => window.bd.editor.traceRootId), null);
+	await shot("13-presenting-comment");
+	// block badge: open -> closed, and an authored-open comment can be hidden too
+	await clickBadge(`.bd-block[data-id="${ids.a}"] .bd-comment-badge`);
+	assert.equal(await callouts(), 1, "the second click hides it again");
+	await clickBadge(`.bd-block[data-id="${ids.b}"] .bd-comment-badge`);
+	assert.equal(await callouts(), 0, "an authored-open comment can be hidden while presenting");
+	// connector badge works the same way
+	await clickBadge(".bd-layer-labels .bd-comment-badge");
+	assert.equal(await callouts(), 1, "connector comment shown");
+	await clickBadge(".bd-layer-labels .bd-comment-badge");
+	assert.equal(await callouts(), 0, "connector comment hidden");
+	// the drawing itself never changed, so nothing was saved
+	assert.equal(await page.evaluate(() => window.bd.serialize()), savedBefore);
+	assert.equal(await page.evaluate((id) => window.bd.editor.byId.get(id).commentOpen, ids.b), true);
+	// leaving the presentation restores the saved state, whatever was clicked
+	await clickBadge(`.bd-block[data-id="${ids.a}"] .bd-comment-badge`);
+	await page.keyboard.press("Escape");
+	await frame();
+	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 0);
+	assert.equal(await callouts(), 1, "back to the authored state: only the API comment is open");
+	assert.equal(await page.evaluate(() => window.bd.serialize()), savedBefore);
+});
+
 test("themed diagram screenshots (executive, futuristic)", async () => {
 	await sampleChain();
 	await page.evaluate(() => {
@@ -743,7 +930,7 @@ test("themed diagram screenshots (executive, futuristic)", async () => {
 });
 
 test("double-tap on a touch screen adds a block", async () => {
-	const touch = await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true });
+	const touch = await hermetic(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
 	const tp = await touch.newPage();
 	try {
 		await tp.goto(url);

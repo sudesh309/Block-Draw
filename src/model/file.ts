@@ -52,6 +52,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 		height: Math.max(1, num(raw.height, 80)),
 		title: str(raw.title),
 		description: str(raw.description),
+		descriptionOpen: bool(raw.descriptionOpen, true),
 		shape: oneOf<BlockShape>(raw.shape, BLOCK_SHAPES, "rounded"),
 		frameId: typeof raw.frameId === "string" && raw.frameId ? raw.frameId : null,
 		link: typeof raw.link === "string" && raw.link.trim() ? raw.link.trim() : null,

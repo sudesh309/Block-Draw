@@ -565,11 +565,21 @@ export class Editor {
 		else this.host.openLink(block.link, newLeaf);
 	}
 
-	/** Shows or hides a block's or connector's comment callout on the canvas. */
+	/** Shows or hides a block's description on the canvas; the text itself is kept. */
+	toggleDescription(id: string): void {
+		const el = this.byId.get(id);
+		if (isBlock(el)) this.updateElement(id, { descriptionOpen: !el.descriptionOpen });
+	}
+
+	/**
+	 * Shows or hides a block's or connector's comment callout. While presenting this only
+	 * changes what is on screen; otherwise the open state is saved with the drawing.
+	 */
 	toggleComment(id: string): void {
 		const el = this.byId.get(id);
 		if (!isBlock(el) && !isConnector(el)) return;
-		this.updateElement(id, { commentOpen: !el.commentOpen });
+		if (this.presenter.isActive()) this.presenter.toggleComment(id);
+		else this.updateElement(id, { commentOpen: !el.commentOpen });
 	}
 
 	/* ===================================================== dependencies */
@@ -826,6 +836,7 @@ export class Editor {
 			height: Math.max(20, bounds.height),
 			title: "",
 			description: "",
+			descriptionOpen: true,
 			shape: this.toolShape,
 			frameId: null,
 			link: null,
@@ -1240,6 +1251,9 @@ export class Editor {
 				items.push({ title: "Edit text", icon: "edit", onClick: () => this.textEditor.start(b.id) });
 				items.push({ title: b.link ? "Change link…" : "Link to frame or note…", icon: "link", onClick: () => void this.editLink(b.id) });
 				if (b.link) items.push({ title: "Remove link", icon: "unlink", onClick: () => this.updateElement(b.id, { link: null }) });
+				if (b.description.trim()) {
+					items.push({ title: b.descriptionOpen ? "Hide description" : "Show description", onClick: () => this.toggleDescription(b.id) });
+				}
 				if (b.comment) {
 					items.push({ title: b.commentOpen ? "Hide comment" : "Show comment", onClick: () => this.toggleComment(b.id) });
 					items.push({ title: "Remove comment", onClick: () => this.updateElement(b.id, { comment: "", commentOpen: false }) });

@@ -491,7 +491,8 @@ function blockCells(b: BlockElement, k: number, ctx: Context): { main: CellModel
 	const titlePt = Math.max(6, Math.min(36, Math.round(b.style.fontSize * k * 0.75)));
 	const smallPt = Math.max(6, Math.round(titlePt * 0.85));
 	const title = b.title.trim();
-	const desc = b.description.trim();
+	// The grid mirrors the drawing, so a hidden description is left out here; the tables keep it.
+	const desc = b.descriptionOpen ? b.description.trim() : "";
 	const target = linkTargetFor(b, ctx);
 	const targetLabel = b.link ? linkLabel(b, ctx) : null;
 	const color = hex(resolveTextColor(b.style.textColor, b.style.fill, LIGHT_THEME), INK) as string;

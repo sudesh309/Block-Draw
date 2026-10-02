@@ -75,6 +75,8 @@ export interface BlockElement extends Bounds {
 	type: "block";
 	title: string;
 	description: string;
+	/** Whether the description is drawn on the block. A hidden description is kept and still exported. */
+	descriptionOpen: boolean;
 	shape: BlockShape;
 	/** Frame this block belongs to, or null when it sits directly on the canvas. */
 	frameId: string | null;
