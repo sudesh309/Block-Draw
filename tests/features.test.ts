@@ -6,6 +6,7 @@ import { applyDrawingTheme, DRAWING_THEMES, drawingThemeById } from "../src/mode
 import type { BlockElement, ConnectorElement, DrawElement } from "../src/model/types";
 import { LIGHT_THEME, PALETTES, paletteById, shadeColor } from "../src/render/colors";
 import { blockDepth, blockPaintBounds } from "../src/render/elements";
+import { fontDefinitionById, fontStack, PRESENTATION_FONTS } from "../src/render/fonts";
 import { contentBounds, sceneToSvg } from "../src/render/scene";
 import { layoutBlockText, useEstimatedTextMeasure } from "../src/render/text";
 import { block, connector, frame } from "./helpers";
@@ -35,6 +36,7 @@ describe("file format", () => {
 		const c = d.elements[2] as ConnectorElement;
 		expect(a.tag).toBe("");
 		expect(a.style.threeD).toBe(false);
+		expect(a.style.fontFamily).toBe("inter");
 		expect(c.style.threeD).toBe(false);
 		expect(c.style.flow).toBe(false);
 	});
@@ -185,3 +187,60 @@ describe("tags", () => {
 		expect(layout.requiredHeight).toBeGreaterThan(layoutBlockText(block("a", 0, 0, { title: "Orders" })).requiredHeight);
 	});
 });
+
+describe("presentation fonts", () => {
+	it("defines the 10 most used business presentation fonts", () => {
+		expect(PRESENTATION_FONTS).toHaveLength(10);
+		const ids = PRESENTATION_FONTS.map((f) => f.id);
+		expect(ids).toEqual([
+			"inter",
+			"segoe",
+			"roboto",
+			"arial",
+			"calibri",
+			"aptos",
+			"opensans",
+			"montserrat",
+			"lato",
+			"georgia",
+		]);
+		for (const f of PRESENTATION_FONTS) {
+			expect(f.name.length).toBeGreaterThan(0);
+			expect(f.stack.length).toBeGreaterThan(0);
+			expect(f.tagline.length).toBeGreaterThan(0);
+		}
+	});
+
+	it("resolves unknown font ids safely to inter", () => {
+		expect(fontDefinitionById("unknown").id).toBe("inter");
+		expect(fontDefinitionById(null).id).toBe("inter");
+		expect(fontStack("georgia")).toContain("Georgia");
+		expect(fontStack("aptos")).toContain("Aptos");
+	});
+
+	it("round-trips custom font families across serialization", () => {
+		const elements: DrawElement[] = [
+			block("a", 0, 0, { style: { ...block("x", 0, 0).style, fontFamily: "montserrat" } }),
+			block("b", 200, 0, { style: { ...block("x", 0, 0).style, fontFamily: "georgia" } }),
+		];
+		const parsed = parseDrawing(serializeDrawing({ ...createEmptyDrawing(), elements }));
+		const a = parsed.elements[0] as BlockElement;
+		const b = parsed.elements[1] as BlockElement;
+		expect(a.style.fontFamily).toBe("montserrat");
+		expect(b.style.fontFamily).toBe("georgia");
+	});
+
+	it("renders chosen font stack in SVG text elements", () => {
+		const b = block("a", 0, 0, {
+			title: "Quarterly Review",
+			description: "Revenue up 24%",
+			tag: "Finance",
+			style: { ...block("x", 0, 0).style, fontFamily: "georgia" },
+		});
+		const svg = sceneToSvg([b], { theme: LIGHT_THEME }).svg;
+		expect(svg).toContain("Georgia");
+		expect(svg).toContain("Quarterly Review");
+		expect(svg).toContain("Revenue up 24%");
+	});
+});
+

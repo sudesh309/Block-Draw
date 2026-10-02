@@ -46,6 +46,9 @@ export const COLOR_DEFAULT = "default";
 /** Text color derived from the fill (or theme ink when there is no fill). */
 export const COLOR_AUTO = "auto";
 
+import type { FontFamilyId } from "../render/fonts";
+export type { FontFamilyId } from "../render/fonts";
+
 export interface BlockStyle {
 	fill: string;
 	stroke: string;
@@ -56,6 +59,8 @@ export interface BlockStyle {
 	textAlign: TextAlign;
 	/** Draws the block as a raised 3D tile (extruded sides and a soft shadow). */
 	threeD: boolean;
+	/** Typography style for block Title, Description, Tag, and Link text. */
+	fontFamily: FontFamilyId;
 }
 
 export interface Bounds {
@@ -169,6 +174,7 @@ export const DEFAULT_BLOCK_STYLE: BlockStyle = {
 	fontSize: 16,
 	textAlign: "center",
 	threeD: false,
+	fontFamily: "inter",
 };
 
 export const DEFAULT_FRAME_STYLE: FrameStyle = {

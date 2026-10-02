@@ -1,4 +1,5 @@
 import { newId } from "./ids";
+import { FONT_IDS } from "../render/fonts";
 import {
 	BLOCK_SHAPES,
 	DEFAULT_BLOCK_STYLE,
@@ -66,6 +67,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 			fontSize: Math.max(4, num(s.fontSize, DEFAULT_BLOCK_STYLE.fontSize)),
 			textAlign: oneOf(s.textAlign, ALIGNS, DEFAULT_BLOCK_STYLE.textAlign),
 			threeD: bool(s.threeD, DEFAULT_BLOCK_STYLE.threeD),
+			fontFamily: oneOf(s.fontFamily, FONT_IDS, DEFAULT_BLOCK_STYLE.fontFamily),
 		},
 	};
 }

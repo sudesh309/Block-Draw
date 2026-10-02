@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap");
+
 /* Block Draw — styles. Everything is scoped under .bd-* classes and follows Obsidian's theme. */
 
 .bd-view-container {
@@ -533,6 +535,18 @@
 	min-width: 0;
 	font-size: 12px;
 	height: 30px;
+}
+
+.bd-font-row {
+	display: flex;
+	width: 100%;
+}
+
+.bd-font-select {
+	width: 100%;
+	font-size: 12px;
+	font-weight: 500;
+	cursor: pointer;
 }
 
 /* frames panel */

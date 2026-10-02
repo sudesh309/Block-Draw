@@ -1,5 +1,6 @@
 import { textInsets } from "../geometry/shapes";
 import type { BlockElement } from "../model/types";
+import { fontStack } from "./fonts";
 
 export const FONT_FAMILY =
 	'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -8,13 +9,13 @@ export const DESCRIPTION_SCALE = 0.8;
 /** Tag (stereotype) line above the title, relative to the title size. */
 export const TAG_SCALE = 0.62;
 
-type MeasureFn = (text: string, size: number, weight: number) => number;
+type MeasureFn = (text: string, size: number, weight: number, font?: string) => number;
 
 let measureImpl: MeasureFn | null = null;
 const cache = new Map<string, number>();
 
 /** Rough width estimate used when no canvas is available (tests, workers). */
-function estimate(text: string, size: number, weight: number): number {
+function estimate(text: string, size: number, weight: number, _font?: string): number {
 	let w = 0;
 	for (const ch of text) {
 		if (/[ilj.,:;'|!]/.test(ch)) w += 0.3;
@@ -33,8 +34,8 @@ function getMeasure(): MeasureFn {
 		try {
 			const ctx = document.createElement("canvas").getContext("2d");
 			if (ctx) {
-				measureImpl = (text, size, weight) => {
-					ctx.font = `${weight} ${size}px ${FONT_FAMILY}`;
+				measureImpl = (text, size, weight, font) => {
+					ctx.font = `${weight} ${size}px ${font || FONT_FAMILY}`;
 					return ctx.measureText(text).width;
 				};
 				return measureImpl;
@@ -57,11 +58,11 @@ export function useEstimatedTextMeasure(): void {
 	setTextMeasure(estimate);
 }
 
-export function measureText(text: string, size: number, weight = 400): number {
-	const key = `${weight}|${size}|${text}`;
+export function measureText(text: string, size: number, weight = 400, font?: string): number {
+	const key = `${weight}|${size}|${font ?? ""}|${text}`;
 	let w = cache.get(key);
 	if (w === undefined) {
-		w = getMeasure()(text, size, weight);
+		w = getMeasure()(text, size, weight, font);
 		if (cache.size > 5000) cache.clear();
 		cache.set(key, w);
 	}
@@ -69,7 +70,7 @@ export function measureText(text: string, size: number, weight = 400): number {
 }
 
 /** Greedy word wrap honoring explicit newlines; words longer than a line are broken. */
-export function wrapText(text: string, maxWidth: number, size: number, weight = 400): string[] {
+export function wrapText(text: string, maxWidth: number, size: number, weight = 400, font?: string): string[] {
 	const lines: string[] = [];
 	const width = Math.max(maxWidth, size);
 	for (const paragraph of text.split(/\r?\n/)) {
@@ -81,7 +82,7 @@ export function wrapText(text: string, maxWidth: number, size: number, weight = 
 		let line = "";
 		for (const token of tokens) {
 			const candidate = line + token;
-			if (measureText(candidate.trimEnd(), size, weight) <= width) {
+			if (measureText(candidate.trimEnd(), size, weight, font) <= width) {
 				line = candidate;
 				continue;
 			}
@@ -93,14 +94,14 @@ export function wrapText(text: string, maxWidth: number, size: number, weight = 
 			}
 			if (line.trim()) lines.push(line.trimEnd());
 			line = "";
-			if (measureText(token, size, weight) <= width) {
+			if (measureText(token, size, weight, font) <= width) {
 				line = token;
 				continue;
 			}
 			// break an over-long word into chunks
 			let chunk = "";
 			for (const ch of token) {
-				if (chunk && measureText(chunk + ch, size, weight) > width) {
+				if (chunk && measureText(chunk + ch, size, weight, font) > width) {
 					lines.push(chunk);
 					chunk = "";
 				}
@@ -138,16 +139,17 @@ export function titleWeight(block: BlockElement): number {
 
 export function layoutBlockText(block: BlockElement): BlockTextLayout {
 	const inner = textInsets(block.shape, block.width, block.height);
+	const font = fontStack(block.style.fontFamily);
 	const size = block.style.fontSize;
 	const dsize = Math.max(8, Math.round(size * DESCRIPTION_SCALE));
 	const weight = titleWeight(block);
 	const tsize = Math.max(8, Math.round(size * TAG_SCALE));
 	const tag = block.tag.trim().toUpperCase();
-	const tagLines = tag ? wrapText(tag, inner.width, tsize, 600) : [];
+	const tagLines = tag ? wrapText(tag, inner.width, tsize, 600, font) : [];
 	const tlh = tsize * LINE_HEIGHT;
-	const titleLines = block.title ? wrapText(block.title, inner.width, size, weight) : [];
+	const titleLines = block.title ? wrapText(block.title, inner.width, size, weight, font) : [];
 	const desc = block.description.trim();
-	const descLines = desc ? wrapText(desc, inner.width, dsize, 400) : [];
+	const descLines = desc ? wrapText(desc, inner.width, dsize, 400, font) : [];
 	const lh = size * LINE_HEIGHT;
 	const dlh = dsize * LINE_HEIGHT;
 	const gap = titleLines.length && descLines.length ? size * 0.35 : 0;
