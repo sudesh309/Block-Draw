@@ -4,6 +4,7 @@ import { updateElements, type ElementPatch } from "../../model/ops";
 import { isBlock, isConnector, isFrame } from "../../model/types";
 import { resolveTextColor, SCREEN_THEME, resolveStroke } from "../../render/colors";
 import { FRAME_TITLE_SIZE, frameTitleMetrics, LABEL_FONT_SIZE } from "../../render/elements";
+import { fontStack } from "../../render/fonts";
 import { FONT_FAMILY, LINE_HEIGHT, measureText, titleWeight } from "../../render/text";
 import { activeElementOf, el } from "../dom";
 import type { Editor } from "../Editor";
@@ -92,7 +93,7 @@ export class TextEditor {
 		if (!target) return;
 		const z = ed.vp.zoom;
 		const s = this.area.style;
-		s.fontFamily = FONT_FAMILY;
+		s.fontFamily = isBlock(target) ? fontStack(target.style.fontFamily) : FONT_FAMILY;
 		if (isBlock(target)) {
 			const inner = textInsets(target.shape, target.width, target.height);
 			const tl = ed.worldToScreen({ x: target.x + inner.x, y: target.y + inner.y });

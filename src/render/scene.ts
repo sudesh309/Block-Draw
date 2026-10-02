@@ -88,7 +88,13 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 		return isFrame(f) ? f.title : null;
 	} };
 
-	const layers: VNode[] = [];
+	const layers: VNode[] = [
+		h("defs", {}, [
+			h("style", {}, [
+				`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');`,
+			]),
+		]),
+	];
 	if (opts.background !== false) {
 		layers.push(
 			h("rect", {

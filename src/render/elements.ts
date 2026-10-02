@@ -11,6 +11,7 @@ import type {
 	StrokeStyle,
 } from "../model/types";
 import { isTransparent, parseColor, relativeLuminance, resolveFill, resolveStroke, resolveTextColor, shadeColor, toHex6, type RenderTheme } from "./colors";
+import { fontStack } from "./fonts";
 import { FONT_FAMILY, LINE_HEIGHT, layoutBlockText, measureText, wrapText } from "./text";
 import { h, type VChild, type VNode } from "./vnode";
 
@@ -347,7 +348,7 @@ export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 					{
 						class: "bd-text",
 						"text-anchor": layout.anchor,
-						style: styleAttr({ fill: color, "font-family": FONT_FAMILY }),
+						style: styleAttr({ fill: color, "font-family": fontStack(style.fontFamily) }),
 					},
 					layout.lines.map((line) =>
 						h(

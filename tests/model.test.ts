@@ -53,6 +53,7 @@ describe("file format", () => {
 		expect(a.frameId).toBeNull();
 		expect(a.width).toBe(160);
 		expect(a.style.fill).toBe("#a5d8ff");
+		expect(a.style.fontFamily).toBe("inter");
 		expect(a.comment).toBe("");
 		expect(a.commentOpen).toBe(false);
 		expect((data.elements[1] as BlockElement).shape).toBe("rounded");

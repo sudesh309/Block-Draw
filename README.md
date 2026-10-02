@@ -114,6 +114,18 @@ Themes keep your color coding: blocks that shared a color before still share one
 
 **3D effect**: set **Depth → 3D** for blocks or **Effect → 3D** for connectors in the properties panel, use **3D effect** in the right-click menu, or run *Toggle 3D effect* (selection, or the whole drawing when nothing is selected). 3D blocks are extruded tiles with a top-lit face and a calibrated soft shadow; on dark fills the sides take the block's edge color and the edge glows. 3D links get a drop shadow and a sheen. The effect is part of the drawing, so it shows in embeds and in SVG and PNG exports.
 
+**Presentation fonts**: choose from the **10 most used fonts in the world for business presentations** in the properties panel under **Text** (applied to block **Titles**, **Descriptions**, **Tags**, and **Links**):
+- **Inter**: Modern tech & clean digital UI standard (default)
+- **Segoe UI**: Microsoft corporate & enterprise standard (PowerPoint / Office)
+- **Roboto**: Google & Android clean geometric standard
+- **Arial / Helvetica**: Universal corporate boardroom classic
+- **Calibri**: Microsoft PowerPoint & Office classic default for 16+ years
+- **Aptos**: Microsoft 365 modern presentation default
+- **Open Sans**: High-legibility slide decks & consulting reports
+- **Montserrat**: High-impact startup pitch decks & geometric headings
+- **Lato**: Warm corporate & management consulting favorite
+- **Georgia**: Authoritative digital editorial & executive prestige serif
+
 ![The Futuristic theme with animated flow](docs/images/theme-futuristic.png)
 
 ## Presenting

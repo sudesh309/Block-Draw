@@ -17,6 +17,7 @@ import {
 } from "../../model/types";
 import { DRAWING_THEMES } from "../../model/themes";
 import { PALETTES, paletteById, type PaletteId } from "../../render/colors";
+import { PRESENTATION_FONTS, type FontFamilyId } from "../../render/fonts";
 import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton, section, segmented, swatches, textField } from "./controls";
@@ -262,6 +263,26 @@ export class PropsPanel {
 				(strokeStyle) => ed.applyBlockStyle({ strokeStyle }),
 			);
 			const textSec = section(this.body, "Text");
+			const fontRow = el("div", "bd-font-row", textSec);
+			const fontSelect = el("select", "bd-select bd-font-select dropdown", fontRow);
+			fontSelect.setAttribute("aria-label", "Font family");
+			for (const f of PRESENTATION_FONTS) {
+				const opt = el("option", null, fontSelect, `${f.name} — ${f.tagline}`);
+				opt.value = f.id;
+			}
+			const syncFont = () => {
+				const current = blockStyle().fontFamily;
+				if (activeElementOf(fontSelect) !== fontSelect) {
+					fontSelect.value = current;
+				}
+			};
+			fontSelect.addEventListener("change", () => {
+				const chosen = fontSelect.value as FontFamilyId;
+				ed.applyBlockStyle({ fontFamily: chosen });
+			});
+			syncFont();
+			this.syncers.push(syncFont);
+
 			this.syncers.push(
 				segmented(
 					textSec,
