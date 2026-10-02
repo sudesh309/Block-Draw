@@ -26,8 +26,46 @@ export function iconButton(
 
 export function section(parent: HTMLElement, label: string): HTMLDivElement {
 	const wrap = el("div", "bd-section", parent);
-	el("div", "bd-section-label", wrap, label);
+	const head = el("div", "bd-section-head", wrap);
+	el("div", "bd-section-label", head, label);
 	return el("div", "bd-section-body", wrap);
+}
+
+/**
+ * A section whose label row carries a small eye button that shows or hides the content on the
+ * canvas (a hidden description or comment is kept, just not drawn). Returns the section body and a
+ * function that re-syncs the button.
+ */
+export function sectionWithVisibility(
+	parent: HTMLElement,
+	label: string,
+	opts: { key: string; noun: string; where: string; get: () => boolean; set: (shown: boolean) => void },
+): { body: HTMLDivElement; sync: () => void } {
+	const wrap = el("div", "bd-section", parent);
+	wrap.dataset.section = opts.key;
+	const head = el("div", "bd-section-head", wrap);
+	el("div", "bd-section-label", head, label);
+	const btn = el("button", "bd-visibility-btn", head);
+	btn.type = "button";
+	// Keep keyboard focus on the canvas so shortcuts keep working.
+	btn.addEventListener("pointerdown", (e) => e.preventDefault());
+	btn.addEventListener("click", () => {
+		opts.set(!opts.get());
+		sync();
+	});
+	const body = el("div", "bd-section-body", wrap);
+	const sync = () => {
+		const shown = opts.get();
+		const action = `${shown ? "Hide" : "Show"} ${opts.noun} ${opts.where}`;
+		btn.title = action;
+		btn.setAttribute("aria-label", action);
+		btn.setAttribute("aria-pressed", String(shown));
+		btn.classList.toggle("is-on", shown);
+		wrap.classList.toggle("is-off", !shown);
+		btn.replaceChildren(createIcon(shown ? "eye" : "eye-off", 15));
+	};
+	sync();
+	return { body, sync };
 }
 
 export interface SegmentOption<T> {
@@ -46,7 +84,8 @@ export function segmented<T>(
 	get: () => T,
 	set: (value: T) => void,
 ): () => void {
-	const row = el("div", "bd-segmented", parent);
+	// A few options read best as one joined control; a long list (the shapes) stays a grid of tiles.
+	const row = el("div", options.length <= 4 ? "bd-segmented is-joined" : "bd-segmented", parent);
 	const buttons: [T, HTMLButtonElement][] = [];
 	for (const opt of options) {
 		const btn = el("button", "bd-seg-btn", row);

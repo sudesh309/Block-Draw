@@ -57,9 +57,8 @@ describe("file format", () => {
 	});
 
 	it("exports the tag in structured JSON", () => {
-		const json = exportStructuredJson({ ...createEmptyDrawing(), elements: [block("a", 0, 0, { tag: "PostgreSQL" })] }, { name: "x" });
+		const json = exportStructuredJson({ ...createEmptyDrawing(), elements: [block("a", 0, 0, { tag: "PostgreSQL" })] });
 		expect(json.unframed.blocks[0].tag).toBe("PostgreSQL");
-		expect(json.unframed.blocks[0].style.threeD).toBe(false);
 	});
 });
 
@@ -284,16 +283,17 @@ describe("hiding a block's description", () => {
 		expect(withDescription(false).description).toBe("Handles checkout");
 	});
 
-	it("is still exported as data in the JSON", () => {
-		const json = exportStructuredJson({ ...createEmptyDrawing(), elements: [withDescription(false)] }, { name: "x" });
-		expect(json.unframed.blocks[0]).toMatchObject({ description: "Handles checkout", descriptionOpen: false });
+	it("is still exported as data in the JSON, without the shown/hidden flag", () => {
+		const json = exportStructuredJson({ ...createEmptyDrawing(), elements: [withDescription(false)] });
+		expect(json.unframed.blocks[0].description).toBe("Handles checkout");
+		expect(json.unframed.blocks[0]).not.toHaveProperty("descriptionOpen");
 	});
 
 	it("leaves the workbook's drawn grid but stays in its tables", () => {
 		const frameSheet = (open: boolean): SheetModel => {
 			const d = sampleDrawing();
 			d.elements = d.elements.map((e) => (e.id === "pay" ? { ...e, descriptionOpen: open } : e));
-			const wb = buildWorkbook(d, { title: "Checkout", now: new Date("2026-10-01T12:00:00Z") });
+			const wb = buildWorkbook(d, { title: "Checkout" });
 			return wb.sheets.find((s) => s.key === "frame:f1") as SheetModel;
 		};
 		const values = (s: SheetModel) => [...s.cells.values()].map((c) => String(c.value ?? ""));
@@ -456,11 +456,11 @@ describe("vertical title alignment", () => {
 		d.elements = d.elements.map((e) =>
 			e.id === "cart" ? ({ ...e, style: { ...(e as BlockElement).style, textVAlign: "top" } } as DrawElement) : e,
 		);
-		const wb = buildWorkbook(d, { title: "Checkout", now: new Date("2026-10-01T12:00:00Z") });
+		const wb = buildWorkbook(d, { title: "Checkout" });
 		const sheet = wb.sheets.find((s) => s.key === "frame:f1") as SheetModel;
 		const cell = [...sheet.cells.values()].find((c) => c.value === "Cart" && c.style?.bg);
 		expect(cell?.style?.vAlign).toBe("top");
-		const payCell = [...sheet.cells.values()].find((c) => String(c.value).startsWith("Payment") && c.style?.bg);
+		const payCell = [...sheet.cells.values()].find((c) => String(c.value).includes("\nPayment\n") && c.style?.bg);
 		expect(payCell?.style?.vAlign).toBe("middle");
 	});
 });

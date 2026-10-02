@@ -28,7 +28,6 @@ beforeAll(() => useEstimatedTextMeasure());
 const workbook = () =>
 	buildWorkbook(sampleDrawing(), {
 		title: "Checkout",
-		now: new Date("2026-10-01T00:00:00Z"),
 		resolveNoteUrl: (t) => `obsidian://open?vault=V&file=${encodeURIComponent(t)}`,
 	});
 
@@ -112,7 +111,7 @@ describe("Google Sheets export flow", () => {
 		const svc = new FakeSheetsService();
 		const res = await exportWorkbookToGoogleSheets(workbook(), directTransport(svc));
 		expect(res.created).toBe(true);
-		expect(titlesOf(svc, res.spreadsheetId)).toEqual(["Index", "Checkout flow", "Payment details", "Canvas", "Blocks", "Connections"]);
+		expect(titlesOf(svc, res.spreadsheetId)).toEqual(["Index", "Checkout flow", "Payment details", "Unframed", "Blocks", "Connections"]);
 		const ss = svc.spreadsheets.get(res.spreadsheetId);
 		expect(ss?.title).toBe("Checkout");
 		expect(res.url).toBe(`https://docs.google.com/spreadsheets/d/${res.spreadsheetId}/edit#gid=${res.sheetIds[0]}`);
@@ -148,7 +147,7 @@ describe("Google Sheets export flow", () => {
 			"Index",
 			"Checkout flow",
 			"Payment details",
-			"Canvas",
+			"Unframed",
 			"Blocks",
 			"Connections",
 			"My notes",

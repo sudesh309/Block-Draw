@@ -141,7 +141,7 @@ window.bd = Object.assign(state, {
 		editor.load(parseDrawing(text).elements);
 	},
 	structuredJson() {
-		return exportStructuredJson({ type: "block-draw", version: 1, elements: [...editor.getElements()] }, { name: "Harness" });
+		return exportStructuredJson({ type: "block-draw", version: 1, elements: [...editor.getElements()] });
 	},
 	svg(frameId?: string) {
 		return sceneToSvg(editor.getElements(), { theme: LIGHT_THEME, frameId }).svg;

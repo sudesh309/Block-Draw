@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.6
+
+- The JSON, Excel and Google Sheets exports leave out what is not about the diagram. JSON (format version 2): no colors or other styles, no positions or sizes, no line routing or anchor sides, no shown/hidden flags, and no drawing name or timestamp. Excel and Google Sheets: the Blocks table no longer has Fill and Size columns, the Connections table no longer has a Line column, and the Index sheet no longer starts with the drawing's name and an export-date line. The sheet for blocks that are not in a frame is now called **Unframed** instead of Canvas. The raw JSON format is unchanged: it is still the drawing file.
+- Tags are in every table: a Tag column next to the title in each frame's text table (and the tag above the title in the drawn block), and next to Block in the Blocks table. They were already in the JSON.
+- A more compact side panel. The wide Hidden / Shown buttons for a block's description and comment are now a small eye button in the label row (the field is dimmed while hidden). Short option rows (palette, depth, text size and alignment, line type, arrowheads and so on) are one joined control, the section labels and dividers are tidier, and color swatches wrap into even rows so the custom color picker no longer sits alone.
+
 ## 0.4.5
 
 - No change in how Block Draw works. This release tidies what the community directory's automated review looks at: the message shown when the web fonts cannot be downloaded no longer starts with the plugin name, the web font loader uses async/await, and the project's lint now also runs the directory's stylesheet checks (no `!important`, no CSS that Obsidian 1.5 does not support).

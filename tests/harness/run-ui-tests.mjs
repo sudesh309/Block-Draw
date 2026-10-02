@@ -332,8 +332,8 @@ test("block comments: panel toggle and clicking the canvas badge", async () => {
 	await frame();
 	assert.equal(await page.locator(".bd-comment-badge").count(), 1);
 	assert.equal(await page.locator(".bd-comment-callout").count(), 0);
-	// the panel's Shown/Hidden toggle drives commentOpen
-	await page.click('.bd-props .bd-seg-btn[title="Show the comment on the canvas"]');
+	// the eye in the Comment label row drives commentOpen
+	await page.click('.bd-props .bd-visibility-btn[title="Show comment on the canvas"]');
 	await frame();
 	assert.equal((await els()).find((e) => e.id === a.id).commentOpen, true);
 	assert.equal(await page.locator(".bd-comment-callout").count(), 1);
@@ -914,7 +914,7 @@ test("vertical text alignment: top, middle and bottom from the panel", async () 
 	await page.keyboard.press("Escape");
 });
 
-test("description: Shown/Hidden toggle in the panel and the right-click menu", async () => {
+test("description: eye toggle in the panel and the right-click menu", async () => {
 	const b = await addBlock(400, 300, "Orders service");
 	const field = '.bd-props textarea[placeholder^="Optional details"]';
 	await page.fill(field, "Handles checkout and refunds");
@@ -925,14 +925,14 @@ test("description: Shown/Hidden toggle in the panel and the right-click menu", a
 	assert.equal((await current()).descriptionOpen, true, "shown by default");
 	assert.match(await textOf(), /Handles checkout/);
 	// panel: Hidden
-	await page.click('.bd-props .bd-seg-btn[title="Hide the description on the block"]');
+	await page.click('.bd-props .bd-visibility-btn[title="Hide description on the block"]');
 	await frame();
 	assert.equal((await current()).descriptionOpen, false);
 	assert.doesNotMatch(await textOf(), /Handles checkout/);
 	assert.match(await textOf(), /Orders service/);
 	assert.equal((await current()).description, "Handles checkout and refunds", "the text is kept");
 	assert.equal(await page.inputValue(field), "Handles checkout and refunds", "and still editable in the panel");
-	assert.equal(await page.locator('.bd-props .bd-seg-btn[title="Hide the description on the block"].is-active').count(), 1);
+	assert.equal(await page.locator('.bd-props .bd-visibility-btn[title="Show description on the block"][aria-pressed="false"]').count(), 1);
 	await shot("14-description-hidden");
 	// right-click menu offers the opposite action
 	const c = await centerOf(b.id);
@@ -943,7 +943,7 @@ test("description: Shown/Hidden toggle in the panel and the right-click menu", a
 	await frame();
 	assert.equal((await current()).descriptionOpen, true);
 	assert.match(await textOf(), /Handles checkout/);
-	assert.equal(await page.locator('.bd-props .bd-seg-btn[title="Show the description on the block"].is-active').count(), 1);
+	assert.equal(await page.locator('.bd-props .bd-visibility-btn[title="Hide description on the block"][aria-pressed="true"]').count(), 1);
 	// one undo step per toggle
 	await page.keyboard.press("Control+z");
 	await frame();
@@ -955,6 +955,55 @@ test("description: Shown/Hidden toggle in the panel and the right-click menu", a
 	const plainMenu = (await page.evaluate(() => window.bd.menus)).at(-1);
 	assert.ok(!plainMenu.some((t) => /description/i.test(t)));
 	await page.keyboard.press("Escape");
+});
+
+test("side panel: show/hide is a small eye in the label row, and rows stay tidy", async () => {
+	const b = await addBlock(400, 300, "Orders service");
+	await page.evaluate((id) => window.bd.editor.updateElement(id, { description: "Handles checkout", comment: "Owned by payments" }), b.id);
+	await frame();
+	const box = (sel) => page.evaluate((sel) => {
+		const el = document.querySelector(sel);
+		if (!el) return null;
+		const r = el.getBoundingClientRect();
+		return { top: Math.round(r.top), bottom: Math.round(r.bottom), left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width), height: Math.round(r.height) };
+	}, sel);
+	// no wide Hidden / Shown buttons any more
+	const texts = await page.$$eval(".bd-props .bd-seg-btn", (els) => els.map((e) => e.textContent.trim()));
+	assert.ok(!texts.includes("Hidden") && !texts.includes("Shown"), `old toggle buttons are gone (${texts.join(", ")})`);
+	for (const key of ["description", "comment"]) {
+		const section = `.bd-props .bd-section[data-section="${key}"]`;
+		const label = await box(`${section} .bd-section-label`);
+		const eye = await box(`${section} .bd-visibility-btn`);
+		const field = await box(`${section} .bd-textarea`);
+		assert.ok(eye.width <= 26 && eye.height <= 26, `${key}: the toggle is a small icon button (${eye.width}×${eye.height})`);
+		assert.ok(eye.top >= label.top - 6 && eye.bottom <= label.bottom + 6, `${key}: the toggle shares the label's row`);
+		assert.ok(eye.left > label.right, `${key}: and sits to its right`);
+		assert.ok(field.top - label.bottom < 12, `${key}: the field follows the label directly, with no extra row (${field.top - label.bottom}px)`);
+		// a description is shown by default, a comment starts collapsed
+		assert.equal(await page.getAttribute(`${section} .bd-visibility-btn`, "aria-pressed"), key === "description" ? "true" : "false");
+	}
+	// the icon changes with the state, and a hidden field reads as switched off
+	await page.click('.bd-props .bd-visibility-btn[title="Hide description on the block"]');
+	await frame();
+	assert.equal(await page.locator('.bd-props .bd-section[data-section="description"].is-off').count(), 1);
+	assert.equal(await page.locator('.bd-props .bd-section[data-section="description"] .bd-visibility-btn.is-on').count(), 0);
+	const opacity = await page.evaluate(() => getComputedStyle(document.querySelector('.bd-props [data-section="description"] .bd-textarea')).opacity);
+	assert.ok(Number(opacity) < 1, "the hidden description's field is dimmed");
+	assert.equal(await page.inputValue('.bd-props [data-section="description"] .bd-textarea'), "Handles checkout", "but it keeps its text and stays editable");
+	// color rows: the custom picker is never alone on a row
+	const rows = (title) =>
+		page.evaluate((title) => {
+			const sec = [...document.querySelectorAll(".bd-props .bd-section")].find((s) => s.querySelector(".bd-section-label")?.textContent === title);
+			const tops = [...sec.querySelectorAll(".bd-swatch, .bd-color-input")].map((e) => Math.round(e.getBoundingClientRect().top));
+			const counts = new Map();
+			for (const t of tops) counts.set(t, (counts.get(t) ?? 0) + 1);
+			return [...counts.values()];
+		}, title);
+	assert.deepEqual(await rows("Stroke"), [9], "stroke colors and the picker fit one row");
+	assert.ok((await rows("Fill")).every((n) => n >= 2), "no lone swatch on the last fill row");
+	// a few options read as one joined control
+	assert.ok((await page.locator(".bd-props .bd-segmented.is-joined").count()) >= 4);
+	await shot("18-side-panel");
 });
 
 test("presenting: clicking a comment badge shows or hides the comment, and the drawing is left alone", async () => {

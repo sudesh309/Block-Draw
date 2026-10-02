@@ -1,6 +1,6 @@
 {
   "name": "obsidian-block-draw",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Obsidian plugin for block diagrams: titled blocks, connections and linked frames, exportable to JSON, Google Sheets and Excel.",
   "main": "main.js",
   "private": true,

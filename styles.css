@@ -408,13 +408,14 @@
 /* properties panel */
 
 .bd-props {
+	box-sizing: border-box;
 	top: 60px;
 	left: 10px;
-	width: 228px;
+	width: 248px;
 	max-height: calc(100% - 120px);
 	overflow-y: auto;
 	display: none;
-	padding: 10px 12px 12px;
+	padding: 12px 12px 14px;
 }
 
 .bd-props::-webkit-scrollbar {
@@ -435,18 +436,72 @@
 }
 
 .bd-props-heading {
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--bd-panel-border);
+	font-size: 13px;
 	font-weight: 600;
-	margin-bottom: 4px;
+}
+
+/* Separates what the selected element says from how it looks. */
+.bd-props-divider {
+	height: 1px;
+	margin: 14px -12px 2px;
+	background: var(--bd-panel-border);
 }
 
 .bd-section {
 	margin-top: 10px;
 }
 
+/* Label on the left, an optional small control on the right. */
+.bd-section-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
 .bd-section-label {
 	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.01em;
 	color: var(--bd-muted);
-	margin-bottom: 4px;
+}
+
+/* The eye that shows or hides a description or comment on the canvas. */
+.bd-editor .bd-visibility-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	margin: 0 -3px 0 0;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	box-shadow: none;
+	color: var(--bd-muted);
+	cursor: pointer;
+}
+
+.bd-editor .bd-visibility-btn:hover {
+	background: var(--bd-hover);
+	color: var(--text-normal, #1e1e1e);
+}
+
+.bd-editor .bd-visibility-btn.is-on {
+	color: var(--bd-accent);
+}
+
+.bd-editor .bd-visibility-btn:focus-visible {
+	outline: 2px solid var(--bd-accent);
+	outline-offset: 1px;
+}
+
+/* Hidden content is kept and still editable; the field just reads as switched off. */
+.bd-section.is-off .bd-textarea {
+	opacity: 0.6;
 }
 
 .bd-section-body {
@@ -491,14 +546,45 @@
 	color: var(--bd-accent);
 }
 
+/* A few options as one joined control instead of separate boxes. */
+.bd-editor .bd-segmented.is-joined {
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 0;
+	width: 100%;
+	border: 1px solid var(--bd-panel-border);
+	border-radius: 7px;
+	overflow: hidden;
+}
+
+.bd-editor .bd-segmented.is-joined .bd-seg-btn {
+	flex: 1 1 auto;
+	min-width: 0;
+	height: 26px;
+	border: none;
+	border-radius: 0;
+}
+
+.bd-editor .bd-segmented.is-joined .bd-seg-btn + .bd-seg-btn {
+	border-left: 1px solid var(--bd-panel-border);
+}
+
 .bd-mini {
 	display: block;
 	pointer-events: none;
 }
 
+.bd-swatches {
+	display: grid;
+	/* Nine columns whatever the panel's width or scrollbar, so a row never ends in a lone swatch. */
+	grid-template-columns: repeat(9, minmax(0, 28px));
+	gap: 4px;
+}
+
 .bd-editor .bd-swatch {
-	width: 22px;
-	height: 22px;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1;
 	min-width: 0;
 	padding: 0;
 	margin: 0;
@@ -529,8 +615,9 @@
 }
 
 .bd-editor .bd-color-input {
-	width: 22px;
-	height: 22px;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1;
 	padding: 0;
 	border: none;
 	border-radius: 6px;
@@ -566,7 +653,7 @@
 }
 
 .bd-textarea {
-	min-height: 54px;
+	min-height: 48px;
 	resize: vertical;
 	font-family: inherit;
 }

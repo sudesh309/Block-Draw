@@ -75,7 +75,7 @@ const toArrayBuffer = (u8: Uint8Array): ArrayBuffer => u8.buffer.slice(u8.byteOf
 /* ------------------------------------------------------------------ JSON */
 
 export async function exportJsonFile(ctx: ExportContext, source: TFile, drawing: DrawingFile): Promise<TFile> {
-	const text = exportJsonText(drawing, ctx.settings.jsonFormat, source.basename);
+	const text = exportJsonText(drawing, ctx.settings.jsonFormat);
 	const path = await exportPath(ctx, source, `${safeName(source.basename)}.json`);
 	const file = await writeText(ctx.app, path, text);
 	new Notice(`Exported JSON to ${file.path}`);
@@ -83,7 +83,7 @@ export async function exportJsonFile(ctx: ExportContext, source: TFile, drawing:
 }
 
 export async function copyJson(ctx: ExportContext, source: TFile, drawing: DrawingFile): Promise<void> {
-	await navigator.clipboard.writeText(exportJsonText(drawing, ctx.settings.jsonFormat, source.basename));
+	await navigator.clipboard.writeText(exportJsonText(drawing, ctx.settings.jsonFormat));
 	new Notice("Drawing JSON copied to the clipboard.");
 }
 

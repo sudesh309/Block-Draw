@@ -80,11 +80,11 @@ height: 320
 
 ### Descriptions and comments
 
-Both are text you add in the properties panel (a description to a block, a comment to a block or a connector), and both have a **Hidden / Shown** switch.
+Both are text you add in the properties panel (a description to a block, a comment to a block or a connector), and both have a small eye button in their label row that shows or hides them on the canvas.
 
-A block's **description** is the text under its title. It is shown by default. Set it to **Hidden** (or choose **Hide description** / **Show description** in the right-click menu) to draw only the title and tag. A hidden description takes no room on the block and is left out of the canvas, embeds, SVG and PNG exports and the Excel and Sheets grid, but the text is kept: it is still in the JSON export (`descriptionOpen: false`), on the workbook's Blocks tab and in each frame's text table.
+A block's **description** is the text under its title. It is shown by default. Click the eye (or choose **Hide description** / **Show description** in the right-click menu) to draw only the title and tag. A hidden description takes no room on the block and is left out of the canvas, embeds, SVG and PNG exports and the Excel and Sheets grid, but the text is kept: it is still in the JSON export, on the workbook's Blocks tab and in each frame's text table, and it stays editable in the panel (dimmed while hidden).
 
-A **comment** is an aside on a block or a connector. A small badge on the canvas shows that one exists; click it (or use the panel's **Shown / Hidden** switch, or **Show comment** / **Hide comment** in the right-click menu) to expand or collapse the note. The open/closed state is saved with the drawing, so a comment left open stays visible in read-only embeds and in SVG/PNG exports. **Remove comment** clears it. Comments appear in the JSON, Excel and Google Sheets exports whether open or not. While [presenting](#presenting), clicking a badge shows or hides the comment for the presentation only, without changing the drawing.
+A **comment** is an aside on a block or a connector. A small badge on the canvas shows that one exists; click it (or the eye in the panel's Comment row, or **Show comment** / **Hide comment** in the right-click menu) to expand or collapse the note. The open/closed state is saved with the drawing, so a comment left open stays visible in read-only embeds and in SVG/PNG exports. **Remove comment** clears it. Comments appear in the JSON, Excel and Google Sheets exports whether open or not. While [presenting](#presenting), clicking a badge shows or hides the comment for the presentation only, without changing the drawing.
 
 The difference: a description is part of the block's content, while a comment stays out of the way until you open it.
 
@@ -169,10 +169,12 @@ Nothing can be edited while presenting, and your view is restored afterwards.
 
 The Google Sheets and Excel exports build the same workbook:
 
-- **Index** tab: every frame with a link to its tab, block and connection counts, the frames it links to and its description.
-- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections. Beside the grid, a plain table lists the frame's blocks as text — **Block Title**, **LinkTo** and **LinkFrom** (its outgoing and incoming connections), **Block Description** and **Notes** (its comment) — so the frame reads without the diagram too.
-- **Canvas** tab for blocks that are not in any frame, with the same textual table.
-- **Blocks** and **Connections** tabs listing every element across all frames as a filterable row (frame, title, description, shape or line, comment, tag, links, incoming and outgoing connections). Internal element ids are never shown.
+- **Index** tab: a table with every frame, a link to its tab, block and connection counts, the frames it links to and its description. It starts with the table: there is no title, drawing name or export date on it.
+- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections. A block's tag is drawn above its title, as on the canvas. Beside the grid, a plain table lists the frame's blocks as text — **Block Title**, **Tag**, **LinkTo** and **LinkFrom** (its outgoing and incoming connections), **Block Description** and **Notes** (its comment) — so the frame reads without the diagram too.
+- **Unframed** tab for blocks that are not in any frame, with the same textual table.
+- **Blocks** and **Connections** tabs listing every element across all frames as a filterable row. Blocks: frame, block, tag, description, shape, links to, outgoing, incoming, comment. Connections: from frame, from, label, to, to frame, comment. Internal element ids, colors, sizes and line styles are never shown.
+
+The workbook is about what the diagram says: the grid keeps the blocks' colors so a sheet still looks like the drawing, but no table lists color codes, sizes or line styles, and nothing names the drawing or the export date inside a sheet (the spreadsheet's own title is the drawing's file name).
 
 A block whose description is hidden is drawn without it on the grid, but its description still appears in the tables.
 
@@ -221,31 +223,26 @@ The sign-in token is stored on this device only (in Obsidian's secret storage wh
 
 ### JSON format
 
-The **structured** format (default) is meant for other tools: frames in order, each with its blocks in reading order and the connections inside it, block positions relative to their frame, and links resolved to frame titles.
+The **structured** format (default) is meant for other tools: frames in order, each with its blocks in reading order and the connections inside it, with links resolved to frame titles. It describes what the diagram says, not how it looks: there are no colors or other styles, no positions or sizes, no line routing, no shown/hidden flags and no drawing name or timestamp. Ids stay because connections and `outgoing` / `incoming` refer to them.
 
 ```json
 {
   "format": "block-draw/export",
-  "version": 1,
-  "name": "Checkout",
+  "version": 2,
   "frames": [
     {
       "id": "f1",
       "order": 1,
       "title": "Checkout flow",
       "description": "Happy path and the sign-in branch",
-      "bounds": { "x": 0, "y": 0, "width": 780, "height": 440 },
       "blocks": [
         {
           "id": "pay",
           "title": "Payment",
           "tag": "Service",
           "description": "Card, wallet or invoice",
-          "descriptionOpen": true,
           "comment": "",
-          "commentOpen": false,
           "shape": "rounded",
-          "bounds": { "x": 580, "y": 80, "width": 160, "height": 80 },
           "link": { "type": "frame", "frameId": "f2", "frameTitle": "Payment details" },
           "outgoing": [],
           "incoming": ["c2", "c4"]
@@ -254,12 +251,10 @@ The **structured** format (default) is meant for other tools: frames in order, e
       "connections": [
         {
           "id": "c2",
-          "from": { "blockId": "check", "blockTitle": "Logged in?", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
-          "to": { "blockId": "pay", "blockTitle": "Payment", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
+          "from": { "blockId": "check", "blockTitle": "Logged in?", "frameId": "f1", "frameTitle": "Checkout flow" },
+          "to": { "blockId": "pay", "blockTitle": "Payment", "frameId": "f1", "frameTitle": "Checkout flow" },
           "label": "yes",
-          "comment": "",
-          "commentOpen": false,
-          "routing": "elbow"
+          "comment": ""
         }
       ],
       "linksTo": [{ "frameId": "f2", "title": "Payment details" }],
@@ -272,7 +267,7 @@ The **structured** format (default) is meant for other tools: frames in order, e
 }
 ```
 
-(Styles, canvas positions and timestamps are included too; shortened here.) The **raw** format is the drawing file itself.
+Version 1 of this format also carried styles, canvas positions, shown/hidden flags and a timestamp. The **raw** format is the drawing file itself, with everything, for anything that needs those.
 
 ## The `.blockdraw` file
 

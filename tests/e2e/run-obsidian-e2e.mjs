@@ -103,7 +103,12 @@ for (let i = 0; i < 60 && !page; i++) {
 assert.ok(page, "Obsidian window not found");
 await page.setViewportSize({ width: 1440, height: 900 });
 const errors = [];
-page.on("pageerror", (e) => errors.push(`pageerror: ${e.message}\n${e.stack}`));
+page.on("pageerror", (e) => {
+	// Obsidian 1.13 itself throws this bare string now and then while it enables community plugins: the same
+	// plugin build passes and fails, and the text is not in main.js.
+	if (e.message.trim() === "illegal access") return;
+	errors.push(`pageerror: ${e.message}\n${e.stack}`);
+});
 page.on("console", (m) => {
 	if (m.type() !== "error") return;
 	const text = m.text();
@@ -353,9 +358,17 @@ test("exports JSON, Excel, SVG and PNG files", async () => {
 	const base = state.path.replace(/\.blockdraw$/, "");
 	const exists = (p) => page.evaluate((p) => window.app.vault.adapter.exists(p), p);
 	await waitFor(async () => (await exists(`${base}.json`)) && (await exists(`${base}.xlsx`)) && (await exists(`${base}.svg`)) && (await exists(`${base}.png`)), "export files");
-	const json = JSON.parse(await readFile(`${base}.json`));
+	const jsonText = await readFile(`${base}.json`);
+	const json = JSON.parse(jsonText);
 	assert.equal(json.format, "block-draw/export");
+	assert.equal(json.version, 2);
 	assert.equal(json.frames[0].title, "Overview");
+	// only what the diagram says: no colors or styles, positions, drawing name or timestamp
+	for (const gone of ['"style"', '"fill"', '"stroke"', '"bounds"', '"canvasBounds"', '"routing"', '"commentOpen"', '"exportedAt"', '"name"']) {
+		assert.ok(!jsonText.includes(gone), `the JSON export has no ${gone}`);
+	}
+	assert.ok(!/#[0-9a-f]{6}/i.test(jsonText), "and no color codes");
+	assert.ok(jsonText.includes('"tag"'), "but every block has its tag");
 	assert.equal(json.frames[0].linksTo[0].frameId, state.second.id);
 	const head = await page.evaluate(async (p) => {
 		const bin = new Uint8Array(await window.app.vault.adapter.readBinary(p));
@@ -534,6 +547,33 @@ test("nested blocks, text alignment and opt-in web fonts work in Obsidian", asyn
 	await page.mouse.click(inBox.x, inBox.y);
 	await frame();
 	assert.equal(await note(), true, "the font picker explains that Inter is a web font while they are off");
+	// the side panel: show/hide is a small eye in the label row, not a pair of wide buttons
+	const eyeSel = ".workspace-leaf.mod-active .bd-props .bd-section[data-section='description'] .bd-visibility-btn";
+	const eye = await page.locator(eyeSel).boundingBox();
+	const label = await page.locator(".workspace-leaf.mod-active .bd-props .bd-section[data-section='description'] .bd-section-label").boundingBox();
+	assert.ok(eye && eye.width <= 26 && eye.height <= 26, `the description toggle is a small icon button (${eye?.width}×${eye?.height})`);
+	assert.ok(eye.y >= label.y - 6 && eye.y + eye.height <= label.y + label.height + 6 && eye.x > label.x + label.width, "in the label's row, to its right");
+	// the color swatches wrap into even rows: the custom picker is not alone on the last row
+	const swatchRows = await page.evaluate(() => {
+		const panel = document.querySelector(".workspace-leaf.mod-active .bd-props");
+		const sec = [...panel.querySelectorAll(".bd-section")].find((s) => s.querySelector(".bd-section-label")?.textContent === "Stroke");
+		const counts = new Map();
+		for (const e of sec.querySelectorAll(".bd-swatch, .bd-color-input")) {
+			const top = Math.round(e.getBoundingClientRect().top);
+			counts.set(top, (counts.get(top) ?? 0) + 1);
+		}
+		return [...counts.values()];
+	});
+	assert.deepEqual(swatchRows, [9], "the stroke colors and the picker fit one row");
+	const shown = () => editorEval((ed, id) => ed.byId.get(id).descriptionOpen, ids.box);
+	assert.equal(await shown(), true);
+	await page.locator(eyeSel).click();
+	await frame();
+	assert.equal(await shown(), false, "the eye hides the description");
+	assert.equal(await page.locator(eyeSel).getAttribute("aria-pressed"), "false");
+	await page.locator(eyeSel).click();
+	await frame();
+	assert.equal(await shown(), true);
 
 	// switching them on adds the fonts (through the FontFace API, no <link> or <style>) …
 	await page.evaluate(async (css) => {

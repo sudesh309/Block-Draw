@@ -11,7 +11,8 @@ import {
 	type FrameElement,
 } from "../model/types";
 
-export interface ExportBounds {
+/** Position and size on the canvas; only used to put blocks in reading order, never exported. */
+interface Box {
 	x: number;
 	y: number;
 	width: number;
@@ -23,22 +24,20 @@ export type ExportLink =
 	| { type: "note"; target: string; display: string }
 	| { type: "url"; url: string };
 
+/*
+ * The structured export describes what the diagram says, not how it looks: no colors, line or font
+ * styles, positions, sizes, routing, shown/hidden flags or drawing name. The raw format is the drawing
+ * file itself for anything that needs those.
+ */
+
 export interface ExportBlock {
 	id: string;
 	title: string;
 	/** Stereotype / technology tag shown above the title (empty when none). */
 	tag: string;
 	description: string;
-	/** False when the description is hidden on the canvas (it is still exported). */
-	descriptionOpen: boolean;
 	comment: string;
-	commentOpen: boolean;
 	shape: string;
-	/** Position relative to the frame's top-left corner (canvas coordinates for unframed blocks). */
-	bounds: ExportBounds;
-	/** Absolute canvas position. */
-	canvasBounds: ExportBounds;
-	style: BlockElement["style"];
 	link: ExportLink | null;
 	/** Ids of connections leaving / entering this block. */
 	outgoing: string[];
@@ -50,7 +49,6 @@ export interface ExportConnectionEnd {
 	blockTitle: string;
 	frameId: string | null;
 	frameTitle: string | null;
-	side: string;
 }
 
 export interface ExportConnection {
@@ -59,9 +57,6 @@ export interface ExportConnection {
 	to: ExportConnectionEnd;
 	label: string;
 	comment: string;
-	commentOpen: boolean;
-	routing: string;
-	style: ConnectorElement["style"];
 }
 
 export interface ExportFrame {
@@ -69,8 +64,6 @@ export interface ExportFrame {
 	order: number;
 	title: string;
 	description: string;
-	bounds: ExportBounds;
-	style: FrameElement["style"];
 	blocks: ExportBlock[];
 	/** Connections whose two ends are inside this frame. */
 	connections: ExportConnection[];
@@ -82,30 +75,17 @@ export interface ExportFrame {
 
 export interface StructuredExport {
 	format: "block-draw/export";
-	version: 1;
-	name: string;
-	exportedAt: string;
+	version: 2;
 	frames: ExportFrame[];
 	/** Blocks that are not inside any frame. */
 	unframed: { blocks: ExportBlock[]; connections: ExportConnection[] };
-	/** Connections between blocks in different frames (or between a frame and the canvas). */
+	/** Connections between blocks in different frames (or between a frame and the unframed blocks). */
 	crossFrameConnections: ExportConnection[];
 	stats: { frames: number; blocks: number; connections: number };
 }
 
-const round = (n: number) => Math.round(n * 100) / 100;
-
-function bounds(b: ExportBounds, origin?: { x: number; y: number }): ExportBounds {
-	return {
-		x: round(b.x - (origin?.x ?? 0)),
-		y: round(b.y - (origin?.y ?? 0)),
-		width: round(b.width),
-		height: round(b.height),
-	};
-}
-
 /** Reading order: top to bottom, then left to right (rows grouped within half a block). */
-export function readingOrder<T extends ExportBounds>(items: T[]): T[] {
+export function readingOrder<T extends Box>(items: T[]): T[] {
 	return [...items].sort((a, b) => {
 		const rowTolerance = Math.min(a.height, b.height) / 2;
 		if (Math.abs(a.y - b.y) > rowTolerance) return a.y - b.y;
@@ -113,7 +93,7 @@ export function readingOrder<T extends ExportBounds>(items: T[]): T[] {
 	});
 }
 
-export function exportStructuredJson(file: DrawingFile, opts: { name: string; now?: Date }): StructuredExport {
+export function exportStructuredJson(file: DrawingFile): StructuredExport {
 	const els = file.elements;
 	const byId = indexById(els);
 	const frames = els.filter(isFrame);
@@ -133,7 +113,7 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 		incoming.get(c.to.id)?.push(c.id);
 	}
 
-	const exportBlock = (b: BlockElement, origin?: FrameElement): ExportBlock => {
+	const exportBlock = (b: BlockElement): ExportBlock => {
 		const parsed = parseLink(b.link);
 		let link: ExportLink | null = null;
 		if (parsed?.kind === "frame") link = { type: "frame", frameId: parsed.frameId, frameTitle: frameTitle(parsed.frameId) };
@@ -144,39 +124,31 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 			title: b.title,
 			tag: b.tag,
 			description: b.description,
-			descriptionOpen: b.descriptionOpen,
 			comment: b.comment,
-			commentOpen: b.commentOpen,
 			shape: b.shape,
-			bounds: bounds(b, origin),
-			canvasBounds: bounds(b),
-			style: { ...b.style },
 			link,
 			outgoing: outgoing.get(b.id) ?? [],
 			incoming: incoming.get(b.id) ?? [],
 		};
 	};
 
-	const end = (id: string, side: string): ExportConnectionEnd => {
+	const end = (id: string): ExportConnectionEnd => {
 		const b = byId.get(id) as BlockElement;
-		return { blockId: id, blockTitle: b.title, frameId: b.frameId, frameTitle: frameTitle(b.frameId), side };
+		return { blockId: id, blockTitle: b.title, frameId: b.frameId, frameTitle: frameTitle(b.frameId) };
 	};
 
 	const exportConnection = (c: ConnectorElement): ExportConnection => ({
 		id: c.id,
-		from: end(c.from.id, c.from.side),
-		to: end(c.to.id, c.to.side),
+		from: end(c.from.id),
+		to: end(c.to.id),
 		label: c.label,
 		comment: c.comment,
-		commentOpen: c.commentOpen,
-		routing: c.routing,
-		style: { ...c.style },
 	});
 
 	const frameOf = (blockId: string) => (byId.get(blockId) as BlockElement).frameId;
 	const valid = connectors.filter((c) => isBlock(byId.get(c.from.id)) && isBlock(byId.get(c.to.id)));
 
-	const exportFrames: ExportFrame[] = frames.map((f, i) => {
+	const exportFrames: ExportFrame[] = frames.map((f: FrameElement, i) => {
 		const own = readingOrder(blocks.filter((b) => b.frameId === f.id));
 		const linksTo = new Map<string, string>();
 		for (const b of own) {
@@ -198,9 +170,7 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 			order: i + 1,
 			title: f.title,
 			description: f.description,
-			bounds: bounds(f),
-			style: { ...f.style },
-			blocks: own.map((b) => exportBlock(b, f)),
+			blocks: own.map(exportBlock),
 			connections: valid.filter((c) => frameOf(c.from.id) === f.id && frameOf(c.to.id) === f.id).map(exportConnection),
 			linksTo: [...linksTo].map(([frameId, title]) => ({ frameId, title })),
 			linkedFrom: [...linkedFrom].map(([frameId, title]) => ({ frameId, title })),
@@ -210,12 +180,10 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 	const loose = readingOrder(blocks.filter((b) => !b.frameId));
 	return {
 		format: "block-draw/export",
-		version: 1,
-		name: opts.name,
-		exportedAt: (opts.now ?? new Date()).toISOString(),
+		version: 2,
 		frames: exportFrames,
 		unframed: {
-			blocks: loose.map((b) => exportBlock(b)),
+			blocks: loose.map(exportBlock),
 			connections: valid.filter((c) => !frameOf(c.from.id) && !frameOf(c.to.id)).map(exportConnection),
 		},
 		crossFrameConnections: valid.filter((c) => frameOf(c.from.id) !== frameOf(c.to.id)).map(exportConnection),
@@ -225,7 +193,7 @@ export function exportStructuredJson(file: DrawingFile, opts: { name: string; no
 
 export type JsonExportFormat = "structured" | "raw";
 
-export function exportJsonText(file: DrawingFile, format: JsonExportFormat, name: string): string {
+export function exportJsonText(file: DrawingFile, format: JsonExportFormat): string {
 	if (format === "raw") return serializeDrawing(file);
-	return JSON.stringify(exportStructuredJson(file, { name }), null, 2) + "\n";
+	return JSON.stringify(exportStructuredJson(file), null, 2) + "\n";
 }

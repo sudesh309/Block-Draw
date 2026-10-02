@@ -21,7 +21,7 @@ import { PALETTES, paletteById, type PaletteId } from "../../render/colors";
 import { fontDefinitionById, PRESENTATION_FONTS, type FontFamilyId } from "../../render/fonts";
 import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
-import { iconButton, section, segmented, swatches, textField } from "./controls";
+import { iconButton, section, sectionWithVisibility, segmented, swatches, textField } from "./controls";
 
 const SHAPE_LABELS: Record<BlockShape, string> = {
 	rounded: "Rounded",
@@ -154,6 +154,8 @@ export class PropsPanel {
 		const connStyle = () => connector()?.style ?? ed.current.connector;
 		const frameStyle = () => ed.selectedFrames()[0]?.style ?? ed.current.frame;
 		const palette = paletteById(ed.palette);
+		/** Separates what the selected element says from how it looks. */
+		const divide = () => void el("div", "bd-props-divider", this.body);
 
 		/* ---- frame details */
 		if (isFrame(single)) {
@@ -180,6 +182,7 @@ export class PropsPanel {
 					...this.textHandlers(id, "description"),
 				}),
 			);
+			divide();
 		}
 
 		/* ---- block details */
@@ -197,23 +200,19 @@ export class PropsPanel {
 				}),
 			);
 			this.buildLinkSection(id);
-			const d = section(this.body, "Description");
+			const desc = sectionWithVisibility(this.body, "Description", {
+				key: "description",
+				noun: "description",
+				where: "on the block",
+				get: () => {
+					const b = ed.byId.get(id);
+					return isBlock(b) ? b.descriptionOpen : true;
+				},
+				set: (descriptionOpen) => ed.updateElement(id, { descriptionOpen }),
+			});
+			this.syncers.push(desc.sync);
 			this.syncers.push(
-				segmented(
-					d,
-					[
-						{ value: false, label: "Hide the description on the block", text: "Hidden" },
-						{ value: true, label: "Show the description on the block", text: "Shown" },
-					],
-					() => {
-						const b = ed.byId.get(id);
-						return isBlock(b) ? b.descriptionOpen : true;
-					},
-					(descriptionOpen: boolean) => ed.updateElement(id, { descriptionOpen }),
-				),
-			);
-			this.syncers.push(
-				textField(d, {
+				textField(desc.body, {
 					multiline: true,
 					placeholder: "Optional details shown under the title",
 					get: () => {
@@ -224,6 +223,7 @@ export class PropsPanel {
 				}),
 			);
 			this.buildCommentSection(id);
+			divide();
 		}
 
 		/* ---- connector details */
@@ -242,6 +242,7 @@ export class PropsPanel {
 				}),
 			);
 			this.buildCommentSection(id);
+			divide();
 		}
 
 		/* ---- block style */
@@ -526,24 +527,20 @@ export class PropsPanel {
 	/** Comment section: a note shown via a small badge on the canvas, collapsed by default. */
 	private buildCommentSection(id: string): void {
 		const ed = this.ed;
-		const sec = section(this.body, "Comment");
 		const getter = (): { comment: string; commentOpen: boolean } => {
 			const e = ed.byId.get(id);
 			return isBlock(e) || isConnector(e) ? e : { comment: "", commentOpen: false };
 		};
+		const sec = sectionWithVisibility(this.body, "Comment", {
+			key: "comment",
+			noun: "comment",
+			where: "on the canvas",
+			get: () => getter().commentOpen,
+			set: (commentOpen) => ed.updateElement(id, { commentOpen }),
+		});
+		this.syncers.push(sec.sync);
 		this.syncers.push(
-			segmented(
-				sec,
-				[
-					{ value: false, label: "Hide the comment on the canvas", text: "Hidden" },
-					{ value: true, label: "Show the comment on the canvas", text: "Shown" },
-				],
-				() => getter().commentOpen,
-				(commentOpen: boolean) => ed.updateElement(id, { commentOpen }),
-			),
-		);
-		this.syncers.push(
-			textField(sec, {
+			textField(sec.body, {
 				multiline: true,
 				placeholder: "Add a note — shown via the comment badge",
 				get: () => getter().comment,
