@@ -85,6 +85,7 @@ export class BlockDrawView extends TextFileView {
 			gridSize: s.gridSize,
 			snapToGrid: s.snapToGrid,
 			showGrid: s.showGrid,
+			webFonts: s.webFonts,
 		});
 		this.editor.onChange = () => this.requestSave();
 		this.editor.onViewportChange = () => this.rememberViewport();
@@ -98,7 +99,7 @@ export class BlockDrawView extends TextFileView {
 	/** Re-applies plugin settings (grid etc.) after they change. */
 	applySettings(): void {
 		const s = this.plugin.settings;
-		this.editor?.setOptions({ gridSize: s.gridSize, snapToGrid: s.snapToGrid, showGrid: s.showGrid });
+		this.editor?.setOptions({ gridSize: s.gridSize, snapToGrid: s.snapToGrid, showGrid: s.showGrid, webFonts: s.webFonts });
 	}
 
 	/* --------------------------------------------------------- file data */

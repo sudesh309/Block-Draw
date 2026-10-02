@@ -30,9 +30,9 @@ function estimate(text: string, size: number, weight: number, _font?: string): n
 
 function getMeasure(): MeasureFn {
 	if (measureImpl) return measureImpl;
-	if (typeof document !== "undefined") {
+	if (typeof document !== "undefined" && typeof createEl === "function") {
 		try {
-			const ctx = document.createElement("canvas").getContext("2d");
+			const ctx = createEl("canvas").getContext("2d");
 			if (ctx) {
 				measureImpl = (text, size, weight, font) => {
 					ctx.font = `${weight} ${size}px ${font || FONT_FAMILY}`;
@@ -51,6 +51,11 @@ function getMeasure(): MeasureFn {
 /** Overrides text measurement (tests use a deterministic estimate). */
 export function setTextMeasure(fn: MeasureFn | null): void {
 	measureImpl = fn;
+	cache.clear();
+}
+
+/** Forgets measured widths, e.g. after web fonts arrived and the same text is wider or narrower. */
+export function clearTextMeasureCache(): void {
 	cache.clear();
 }
 
@@ -165,7 +170,9 @@ export function layoutBlockText(block: BlockElement): BlockTextLayout {
 	const anchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
 	const x = align === "left" ? inner.x : align === "right" ? inner.x + inner.width : inner.x + inner.width / 2;
 
-	let top = inner.y + Math.max(0, (inner.height - total) / 2);
+	const free = Math.max(0, inner.height - total);
+	const valign = block.style.textVAlign;
+	let top = inner.y + (valign === "top" ? 0 : valign === "bottom" ? free : free / 2);
 	const lines: LaidOutLine[] = [];
 	for (const t of tagLines) {
 		lines.push({ text: t, x, y: top + tlh / 2 + tsize * 0.35, size: tsize, weight: 600, muted: true, tag: true });

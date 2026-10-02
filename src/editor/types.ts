@@ -17,6 +17,8 @@ export interface EditorOptions {
 	gridSize: number;
 	snapToGrid: boolean;
 	showGrid: boolean;
+	/** The Google Fonts web fonts are being loaded (the font picker explains what happens when they are not). */
+	webFonts: boolean;
 	/** Read-only mode (embeds/previews): no editing UI. */
 	readOnly: boolean;
 }
@@ -25,6 +27,7 @@ export const DEFAULT_EDITOR_OPTIONS: EditorOptions = {
 	gridSize: 20,
 	snapToGrid: true,
 	showGrid: true,
+	webFonts: false,
 	readOnly: false,
 };
 

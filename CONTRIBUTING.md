@@ -33,4 +33,4 @@ token.
 
 ## Security
 
-Please report security issues privately via a [GitHub security advisory](https://github.com/sudesh309/Template-Generator/security/advisories/new) rather than a public issue.
+Please report security issues privately via a [GitHub security advisory](https://github.com/sudesh309/Block-Draw/security/advisories/new) rather than a public issue.

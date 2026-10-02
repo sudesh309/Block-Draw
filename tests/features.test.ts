@@ -7,6 +7,7 @@ import type { BlockElement, ConnectorElement, DrawElement } from "../src/model/t
 import { LIGHT_THEME, PALETTES, paletteById, shadeColor } from "../src/render/colors";
 import { blockDepth, blockPaintBounds, flowDirection, renderConnector, type RenderOptions } from "../src/render/elements";
 import { toSvgString, type VNode } from "../src/render/vnode";
+import { fileStamp } from "../src/model/ids";
 import { fontDefinitionById, fontStack, PRESENTATION_FONTS } from "../src/render/fonts";
 import { contentBounds, sceneToSvg } from "../src/render/scene";
 import { layoutBlockText, titleWeight, useEstimatedTextMeasure } from "../src/render/text";
@@ -400,5 +401,97 @@ describe("flow direction on links", () => {
 			expect(pts.length).toBeGreaterThan(10);
 			expect(pts.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y))).toBe(true);
 		}
+	});
+});
+
+describe("vertical title alignment", () => {
+	const styled = (v: "top" | "middle" | "bottom", extra: Partial<BlockElement> = {}) =>
+		block("a", 0, 0, { title: "Orders", ...extra, style: { ...block("x", 0, 0).style, textVAlign: v } });
+	const firstY = (b: BlockElement) => layoutBlockText(b).lines[0].y;
+
+	it("keeps the text centered for drawings saved before the option existed", () => {
+		const d = parseDrawing(JSON.stringify({ type: "block-draw", version: 1, elements: [{ type: "block", id: "a", title: "A" }] }));
+		expect((d.elements[0] as BlockElement).style.textVAlign).toBe("middle");
+		const bad = parseDrawing(JSON.stringify({ type: "block-draw", version: 1, elements: [{ type: "block", id: "a", style: { textVAlign: "sideways" } }] }));
+		expect((bad.elements[0] as BlockElement).style.textVAlign).toBe("middle");
+	});
+
+	it("round-trips through the file format", () => {
+		const elements: DrawElement[] = [styled("top"), styled("bottom", { id: "b", x: 300 })];
+		const back = parseDrawing(serializeDrawing({ ...createEmptyDrawing(), elements }));
+		expect(back.elements).toEqual(elements);
+	});
+
+	it("puts a one-line title at the top, middle or bottom of the block", () => {
+		// 160×80 rounded block: text area y 8..72, one 20-unit line, baseline 10 + 0.35 × 16 into the line
+		const baseline = 10 + 16 * 0.35;
+		expect(firstY(styled("top"))).toBeCloseTo(8 + baseline, 5);
+		expect(firstY(styled("middle"))).toBeCloseTo(8 + 22 + baseline, 5);
+		expect(firstY(styled("bottom"))).toBeCloseTo(72 - 20 + baseline, 5);
+	});
+
+	it("moves the whole text group, not just the title", () => {
+		const group = { tag: "Service", description: "Handles checkout" };
+		const lines = (v: "top" | "middle" | "bottom") => layoutBlockText(styled(v, group)).lines.map((l) => l.y);
+		const [top, middle, bottom] = [lines("top"), lines("middle"), lines("bottom")];
+		expect(top).toHaveLength(3);
+		for (let i = 0; i < 3; i++) {
+			expect(top[i]).toBeLessThan(middle[i]);
+			expect(middle[i]).toBeLessThan(bottom[i]);
+		}
+		// the spacing between the lines is the same for every alignment
+		expect(top[1] - top[0]).toBeCloseTo(bottom[1] - bottom[0], 5);
+		expect(top[2] - top[1]).toBeCloseTo(bottom[2] - bottom[1], 5);
+	});
+
+	it("starts at the top edge for every alignment when the text is taller than the block", () => {
+		const tall = { title: "Orders ".repeat(40) };
+		const ys = (["top", "middle", "bottom"] as const).map((v) => firstY(styled(v, tall)));
+		expect(ys[0]).toBeCloseTo(ys[1], 5);
+		expect(ys[1]).toBeCloseTo(ys[2], 5);
+	});
+
+	it("is applied to the block's cell in the workbook grid", () => {
+		const d = sampleDrawing();
+		d.elements = d.elements.map((e) =>
+			e.id === "cart" ? ({ ...e, style: { ...(e as BlockElement).style, textVAlign: "top" } } as DrawElement) : e,
+		);
+		const wb = buildWorkbook(d, { title: "Checkout", now: new Date("2026-10-01T12:00:00Z") });
+		const sheet = wb.sheets.find((s) => s.key === "frame:f1") as SheetModel;
+		const cell = [...sheet.cells.values()].find((c) => c.value === "Cart" && c.style?.bg);
+		expect(cell?.style?.vAlign).toBe("top");
+		const payCell = [...sheet.cells.values()].find((c) => String(c.value).startsWith("Payment") && c.style?.bg);
+		expect(payCell?.style?.vAlign).toBe("middle");
+	});
+});
+
+describe("links above blocks", () => {
+	const container = block("box", 0, 0, { title: "Platform", width: 500, height: 260 });
+	const els: DrawElement[] = [
+		container,
+		block("web", 40, 80, { title: "Web" }),
+		block("api", 300, 80, { title: "API" }),
+		connector("c", "web", "api", { label: "calls" }),
+	];
+
+	it("draws links and their labels after (above) every block in exports and embeds", () => {
+		const svg = sceneToSvg(els, { theme: LIGHT_THEME }).svg;
+		const at = (needle: string) => svg.lastIndexOf(needle);
+		expect(at('class="bd-block"')).toBeGreaterThan(-1);
+		// the last block comes before the first link, and the label after the link
+		expect(svg.indexOf('class="bd-connector"')).toBeGreaterThan(at('class="bd-block"'));
+		expect(svg.indexOf('class="bd-connector-label"')).toBeGreaterThan(svg.indexOf('class="bd-connector"'));
+	});
+
+	it("keeps frames at the very back", () => {
+		const svg = sceneToSvg([frame("f", -20, -20, 600, 320), ...els], { theme: LIGHT_THEME }).svg;
+		expect(svg.indexOf('class="bd-frame"')).toBeLessThan(svg.indexOf('class="bd-block"'));
+	});
+});
+
+describe("new drawing names", () => {
+	it("stamps local date and time with fixed widths", () => {
+		expect(fileStamp(new Date(2026, 9, 2, 9, 5, 7))).toBe("2026-10-02 09.05.07");
+		expect(fileStamp(new Date(2027, 11, 31, 23, 59, 59))).toBe("2027-12-31 23.59.59");
 	});
 });

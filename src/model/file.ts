@@ -18,6 +18,7 @@ import {
 	type Routing,
 	type StrokeStyle,
 	type TextAlign,
+	type TextVAlign,
 } from "./types";
 
 export class DrawingParseError extends Error {}
@@ -39,6 +40,7 @@ const STROKE_STYLES: StrokeStyle[] = ["solid", "dashed", "dotted"];
 const ROUTINGS: Routing[] = ["elbow", "straight", "curved"];
 const ARROWS: ArrowHead[] = ["none", "arrow", "triangle", "dot"];
 const ALIGNS: TextAlign[] = ["left", "center", "right"];
+const VALIGNS: TextVAlign[] = ["top", "middle", "bottom"];
 const ANCHORS: AnchorSide[] = ["auto", "top", "right", "bottom", "left"];
 
 function normalizeBlock(raw: Raw): BlockElement {
@@ -67,6 +69,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 			textColor: str(s.textColor, DEFAULT_BLOCK_STYLE.textColor),
 			fontSize: Math.max(4, num(s.fontSize, DEFAULT_BLOCK_STYLE.fontSize)),
 			textAlign: oneOf(s.textAlign, ALIGNS, DEFAULT_BLOCK_STYLE.textAlign),
+			textVAlign: oneOf(s.textVAlign, VALIGNS, DEFAULT_BLOCK_STYLE.textVAlign),
 			threeD: bool(s.threeD, DEFAULT_BLOCK_STYLE.threeD),
 			fontFamily: oneOf(s.fontFamily, FONT_IDS, DEFAULT_BLOCK_STYLE.fontFamily),
 		},

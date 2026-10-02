@@ -109,7 +109,9 @@ export class TextEditor {
 			const contentH = Math.max(this.area.scrollHeight, size * LINE_HEIGHT);
 			s.height = `${contentH}px`;
 			const innerH = inner.height * z;
-			s.top = `${tl.y + Math.max(0, (innerH - contentH) / 2)}px`;
+			const free = Math.max(0, innerH - contentH);
+			const valign = target.style.textVAlign;
+			s.top = `${tl.y + (valign === "top" ? 0 : valign === "bottom" ? free : free / 2)}px`;
 		} else if (isConnector(target)) {
 			const entry = ed.renderer.route(target);
 			if (!entry) return;

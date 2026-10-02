@@ -14,10 +14,11 @@ import {
 	type Routing,
 	type StrokeStyle,
 	type TextAlign,
+	type TextVAlign,
 } from "../../model/types";
 import { DRAWING_THEMES } from "../../model/themes";
 import { PALETTES, paletteById, type PaletteId } from "../../render/colors";
-import { PRESENTATION_FONTS, type FontFamilyId } from "../../render/fonts";
+import { fontDefinitionById, PRESENTATION_FONTS, type FontFamilyId } from "../../render/fonts";
 import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton, section, segmented, swatches, textField } from "./controls";
@@ -284,15 +285,23 @@ export class PropsPanel {
 				const opt = el("option", null, fontSelect, `${f.name} — ${f.tagline}`);
 				opt.value = f.id;
 			}
+			const fontNote = el(
+				"div",
+				"bd-field-note",
+				textSec,
+				"Shown in this font if it is installed on your device, otherwise in a similar one. To download it, turn on web fonts in Settings → Block Draw.",
+			);
 			const syncFont = () => {
 				const current = blockStyle().fontFamily;
 				if (activeElementOf(fontSelect) !== fontSelect) {
 					fontSelect.value = current;
 				}
+				fontNote.hidden = ed.options.webFonts || !fontDefinitionById(fontSelect.value).web;
 			};
 			fontSelect.addEventListener("change", () => {
 				const chosen = fontSelect.value as FontFamilyId;
 				ed.applyBlockStyle({ fontFamily: chosen });
+				syncFont();
 			});
 			syncFont();
 			this.syncers.push(syncFont);
@@ -315,6 +324,18 @@ export class PropsPanel {
 					],
 					() => blockStyle().textAlign,
 					(textAlign: TextAlign) => ed.applyBlockStyle({ textAlign }),
+				),
+			);
+			this.syncers.push(
+				segmented(
+					textSec,
+					[
+						{ value: "top", label: "Align text to the top", icon: "valign-top" },
+						{ value: "middle", label: "Align text to the middle", icon: "valign-middle" },
+						{ value: "bottom", label: "Align text to the bottom", icon: "valign-bottom" },
+					],
+					() => blockStyle().textVAlign,
+					(textVAlign: TextVAlign) => ed.applyBlockStyle({ textVAlign }),
 				),
 			);
 		}

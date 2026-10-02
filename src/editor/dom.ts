@@ -5,18 +5,18 @@ export function activeElementOf(node: Node): Element | null {
 	return node.ownerDocument?.activeElement ?? null;
 }
 
-/** Creates an HTML element (avoids depending on Obsidian's DOM helpers so the editor runs anywhere). */
+/**
+ * Creates an HTML element with Obsidian's `createEl` (on the parent, so it lands in the parent's
+ * window, popouts included). The browser test harness provides the same helper.
+ */
 export function el<K extends keyof HTMLElementTagNameMap>(
 	tag: K,
 	cls?: string | null,
 	parent?: HTMLElement | null,
 	text?: string,
 ): HTMLElementTagNameMap[K] {
-	const node = (parent?.ownerDocument ?? document).createElement(tag);
-	if (cls) node.className = cls;
-	if (text !== undefined) node.textContent = text;
-	if (parent) parent.appendChild(node);
-	return node;
+	const info = { cls: cls || undefined, text };
+	return parent ? parent.createEl(tag, info) : createEl(tag, info);
 }
 
 export function svgEl<K extends keyof SVGElementTagNameMap>(

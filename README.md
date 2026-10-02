@@ -1,18 +1,18 @@
 # Block Draw for Obsidian
 
-Draw block diagrams in Obsidian — titled blocks, connections, and frames that link to each other — then present them, or export to **Google Sheets**, **Excel**, **JSON**, **SVG** or **PNG**.
+Draw block diagrams in Obsidian: titled blocks, links and frames. Then present them, or export to **Google Sheets**, **Excel**, **JSON**, **SVG** or **PNG**.
 
 ![Block Draw in Obsidian: two frames, linked blocks and the frames panel](docs/images/editor.png)
 
 ## Features
 
-- **Canvas editor**: infinite canvas, grid and snapping, undo/redo, copy/paste, align, single-key shortcuts. Eight block shapes; elbow, straight or curved connections; frames that group blocks.
-- **Linked frames**: link a block to a frame, a note, another drawing or a URL, and jump there with Ctrl/Cmd+click. Show a drawing inside a note with a `blockdraw` code block or a `[[Drawing.blockdraw#Frame]]` link.
-- **Executive-ready look**: one-click themes (3D, Minimal, Futuristic, Classic), color palettes, a 3D effect for blocks and links, and ten business fonts.
-- **Presentation mode**: press **P** for a full-screen slideshow, one slide per frame.
-- **For architects and engineers**: dependency tracing, animated two-way flow on links, and tags such as “Service · Java”.
-- **Notes**: comments and descriptions that you can show or hide.
-- **Exports**: Google Sheets (one tab per frame), Excel, JSON, SVG and PNG.
+- **Draw fast**: infinite canvas, grid and snapping, undo/redo, single-key shortcuts. Eight shapes; elbow, straight or curved links; frames that group blocks; blocks that contain other blocks.
+- **Link everything**: link a block to a frame, a note, another drawing or a URL, and jump with Ctrl/Cmd+click. Show a drawing in a note with a `blockdraw` code block or a `[[Drawing.blockdraw#Frame]]` link.
+- **Look sharp**: one-click themes (3D, Minimal, Futuristic, Classic), palettes, a 3D effect, ten business fonts, and text aligned left, center or right, top, middle or bottom.
+- **Explain**: tags (“Service · Java”), plus comments and descriptions that you can show or hide, also while presenting.
+- **Present**: press **P** for a full-screen slideshow, one slide per frame, with a laser pointer. Click a block to spotlight what it depends on.
+- **Show data flow**: animated flow along links, running both ways on two-way links.
+- **Export**: Google Sheets (one tab per frame), Excel, JSON, SVG and PNG.
 - Works offline, follows your light or dark theme, and runs on desktop and mobile.
 
 ![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
@@ -22,8 +22,8 @@ Draw block diagrams in Obsidian — titled blocks, connections, and frames that 
 Block Draw needs Obsidian 1.5 or later.
 
 - **Community plugins**: open **Settings → Community plugins → Browse**, search for **Block Draw** and install it.
-- **Manual**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest) into `<your vault>/.obsidian/plugins/block-draw/`, then in Obsidian open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
-- **BRAT**: add `sudesh309/Template-Generator` as a beta plugin.
+- **Manual**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Block-Draw/releases/latest) into `<your vault>/.obsidian/plugins/block-draw/`, then in Obsidian open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
+- **BRAT**: add `sudesh309/Block-Draw` as a beta plugin.
 - **From source**: `npm install && npm run build`, then copy the three files as above.
 
 ## Quick start
@@ -43,7 +43,12 @@ Exports go through an Apps Script web app that you deploy in your own Google acc
 
 ## Network use and privacy
 
-Block Draw works offline. It contacts only Google, and only for the presentation fonts that its stylesheet imports (Google Fonts), and when you export to Google Sheets or test that connection (your own Apps Script web app, or Google sign-in and the Sheets API). There is no telemetry and there are no ads. Details: [network use and privacy](docs/DESIGN.md#network-use-and-privacy).
+Block Draw works offline and contacts nothing by default. It uses the network only to Google, and only when you ask:
+
+- **Google Sheets export**, and its connection test: your own Apps Script web app, or Google sign-in and the Sheets API.
+- **Web fonts**, if you turn on **Settings → Block Draw → Load web fonts from Google Fonts** (off by default): Inter, Roboto, Open Sans, Montserrat and Lato are downloaded from Google Fonts. Otherwise Block Draw uses the fonts installed on your device.
+
+There is no telemetry and there are no ads. Details: [network use and privacy](docs/DESIGN.md#network-use-and-privacy).
 
 ## More
 

@@ -498,7 +498,7 @@ function blockCells(b: BlockElement, k: number, ctx: Context): { main: CellModel
 	const color = hex(resolveTextColor(b.style.textColor, b.style.fill, LIGHT_THEME), INK) as string;
 	const bg = hex(b.style.fill);
 	const hAlign: HAlign = b.style.textAlign;
-	const vAlign: VAlign = "middle";
+	const vAlign: VAlign = b.style.textVAlign;
 
 	const { outgoing, incoming } = connectionSummary(b, ctx);
 	const noteLines: string[] = [];

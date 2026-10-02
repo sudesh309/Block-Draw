@@ -24,6 +24,8 @@ export interface PresentationFont {
 	label: string;
 	category: "sans-serif" | "serif";
 	tagline: string;
+	/** Served by Google Fonts (see WEB_FONTS_URL); the others are system fonts. */
+	web: boolean;
 	stack: string;
 }
 
@@ -34,6 +36,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Inter",
 		category: "sans-serif",
 		tagline: "Modern tech standard",
+		web: true,
 		stack: 'Inter, "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif',
 	},
 	{
@@ -42,6 +45,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Segoe UI",
 		category: "sans-serif",
 		tagline: "Microsoft enterprise",
+		web: false,
 		stack: '"Segoe UI", Tahoma, Geneva, Verdana, -apple-system, sans-serif',
 	},
 	{
@@ -50,6 +54,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Roboto",
 		category: "sans-serif",
 		tagline: "Google & Android clean",
+		web: true,
 		stack: 'Roboto, "Helvetica Neue", Arial, -apple-system, sans-serif',
 	},
 	{
@@ -58,6 +63,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Arial",
 		category: "sans-serif",
 		tagline: "Universal boardroom classic",
+		web: false,
 		stack: '"Helvetica Neue", Helvetica, Arial, -apple-system, sans-serif',
 	},
 	{
@@ -66,6 +72,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Calibri",
 		category: "sans-serif",
 		tagline: "Office & PowerPoint classic",
+		web: false,
 		stack: 'Calibri, Candara, "Segoe UI", Optima, Arial, sans-serif',
 	},
 	{
@@ -74,6 +81,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Aptos",
 		category: "sans-serif",
 		tagline: "Microsoft 365 modern",
+		web: false,
 		stack: 'Aptos, Calibri, "Segoe UI", sans-serif',
 	},
 	{
@@ -82,6 +90,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Open Sans",
 		category: "sans-serif",
 		tagline: "High-legibility decks",
+		web: true,
 		stack: '"Open Sans", "Helvetica Neue", Arial, sans-serif',
 	},
 	{
@@ -90,6 +99,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Montserrat",
 		category: "sans-serif",
 		tagline: "Executive pitch & headings",
+		web: true,
 		stack: 'Montserrat, "Segoe UI", Arial, sans-serif',
 	},
 	{
@@ -98,6 +108,7 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Lato",
 		category: "sans-serif",
 		tagline: "Corporate & consulting",
+		web: true,
 		stack: 'Lato, "Helvetica Neue", Arial, sans-serif',
 	},
 	{
@@ -106,9 +117,17 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
 		label: "Georgia",
 		category: "serif",
 		tagline: "Editorial & prestige serif",
+		web: false,
 		stack: 'Georgia, "Times New Roman", Times, serif',
 	},
 ];
+
+/**
+ * Google Fonts stylesheet for the web fonts above. Block Draw only requests it when the user
+ * turns on "Load web fonts from Google Fonts" in its settings.
+ */
+export const WEB_FONTS_URL =
+	"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap";
 
 export const FONT_IDS: readonly FontFamilyId[] = PRESENTATION_FONTS.map((f) => f.id);
 

@@ -59,7 +59,7 @@ import { applyDrawingTheme, DRAWING_THEMES, drawingThemeById, type DrawingThemeI
 import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
-import { layoutBlockText } from "../render/text";
+import { clearTextMeasureCache, layoutBlockText } from "../render/text";
 import { el, svgEl } from "./dom";
 import type { EditorHost, MenuItemSpec } from "./host";
 import { KeyboardController } from "./keyboard";
@@ -253,6 +253,13 @@ export class Editor {
 		if (opts.resetHistory !== false) this.selection.clear();
 		this.renderer.reset();
 		if (opts.fit !== false) this.whenSized(() => this.zoomToFit({ animate: false, maxZoom: 1 }));
+		this.requestRender();
+	}
+
+	/** Redraws every element from scratch, e.g. once web fonts changed how wide the text is. */
+	relayout(): void {
+		clearTextMeasureCache();
+		this.renderer.reset();
 		this.requestRender();
 	}
 
@@ -751,6 +758,7 @@ export class Editor {
 			}
 		}
 
+		let blockId: string | null = null;
 		for (let i = this.elements.length - 1; i >= 0; i--) {
 			const e = this.elements[i];
 			if (!isBlock(e)) continue;
@@ -763,7 +771,10 @@ export class Editor {
 					return { kind: "comment-badge", id: e.id };
 				}
 			}
-			if (shapeContains(e.shape, e, p)) return { kind: "block", id: e.id };
+			if (shapeContains(e.shape, e, p)) {
+				blockId = e.id;
+				break;
+			}
 		}
 
 		let bestConn: { id: string; d: number } | null = null;
@@ -774,7 +785,15 @@ export class Editor {
 			const d = distanceToRoute(r.route, p);
 			if (d <= Math.max(tolerance, e.style.strokeWidth) && (!bestConn || d < bestConn.d)) bestConn = { id: e.id, d };
 		}
-		if (bestConn) return { kind: "connector", id: bestConn.id, label: false };
+		if (bestConn) {
+			// Links are drawn above blocks, so one that runs across a block (such as the container around
+			// both of its ends) wins over it. Its own end blocks keep their clicks so they stay easy to grab.
+			const link = this.byId.get(bestConn.id);
+			if (blockId === null || (isConnector(link) && link.from.id !== blockId && link.to.id !== blockId)) {
+				return { kind: "connector", id: bestConn.id, label: false };
+			}
+		}
+		if (blockId !== null) return { kind: "block", id: blockId };
 
 		for (let i = this.elements.length - 1; i >= 0; i--) {
 			const e = this.elements[i];

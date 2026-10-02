@@ -17,6 +17,7 @@ import {
 	renderFrame,
 	routeFor,
 } from "./elements";
+import { WEB_FONTS_URL } from "./fonts";
 import { h, toSvgString, type VNode } from "./vnode";
 
 export interface SceneSvgOptions {
@@ -28,6 +29,8 @@ export interface SceneSvgOptions {
 	frameId?: string | null;
 	/** Output pixel scale (width/height attributes); the viewBox is unchanged. */
 	scale?: number;
+	/** Import the web fonts from Google Fonts, so the file shows them when opened in a browser. */
+	webFonts?: boolean;
 }
 
 export interface SceneSvg {
@@ -88,13 +91,7 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 		return isFrame(f) ? f.title : null;
 	} };
 
-	const layers: VNode[] = [
-		h("defs", {}, [
-			h("style", {}, [
-				`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');`,
-			]),
-		]),
-	];
+	const layers: VNode[] = opts.webFonts ? [h("defs", {}, [h("style", {}, [`@import url('${WEB_FONTS_URL}');`])])] : [];
 	if (opts.background !== false) {
 		layers.push(
 			h("rect", {
@@ -135,7 +132,8 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 			}
 		}
 	}
-	layers.push(h("g", {}, frames), h("g", {}, connectors), h("g", {}, labels), h("g", {}, blocks), h("g", {}, comments));
+	// Same order as the editor: links and labels above blocks, so a container block cannot hide them.
+	layers.push(h("g", {}, frames), h("g", {}, blocks), h("g", {}, connectors), h("g", {}, labels), h("g", {}, comments));
 
 	const k = opts.scale ?? 1;
 	const width = Math.max(1, Math.ceil(bounds.width * k));

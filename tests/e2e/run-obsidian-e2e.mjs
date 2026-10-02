@@ -10,7 +10,7 @@
 // and Obsidian profile are used; nothing else is touched.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,6 +110,12 @@ page.on("console", (m) => {
 	if (/net::|Failed to load resource|ERR_|obsidian\.md|sync/i.test(text)) return;
 	errors.push(text);
 });
+/** Renderer requests to Google's font hosts: there must be none until web fonts are switched on. */
+const fontRequests = [];
+let currentTest = "start-up";
+page.on("request", (r) => {
+	if (/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(r.url())) fontRequests.push(`${r.resourceType()} during "${currentTest}": ${r.url()}`);
+});
 await page.waitForFunction(() => window.app?.workspace?.layoutReady === true, null, { timeout: 60000 });
 
 /* ------------------------------------------------------------- helpers */
@@ -154,6 +160,17 @@ async function addBlock(x, y, title) {
 	const els = await elements();
 	return els[els.length - 1];
 }
+/** Waits until a locator stops moving: presenting animates the view when it starts and between slides. */
+async function settled(locator) {
+	let last = JSON.stringify(await locator.boundingBox());
+	for (let i = 0; i < 30; i++) {
+		await sleep(100);
+		const now = JSON.stringify(await locator.boundingBox());
+		if (now === last) return;
+		last = now;
+	}
+	throw new Error("the page kept moving");
+}
 const readFile = (path) => page.evaluate((p) => window.app.vault.adapter.read(p), path);
 const command = (id) => page.evaluate((id) => window.app.commands.executeCommandById(id), id);
 async function waitFor(fn, what, timeout = 15000) {
@@ -165,6 +182,8 @@ async function waitFor(fn, what, timeout = 15000) {
 		await sleep(250);
 	}
 }
+
+const FONTS_CSS = readFileSync(join(root, "tests", "fixtures", "google-fonts.css"), "utf8");
 
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
@@ -206,6 +225,19 @@ test("command palette creates and opens a drawing", async () => {
 	await frame();
 	assert.equal(await page.isVisible(".bd-empty-hint.is-visible"), true);
 	await shot("e2e-01-new-drawing");
+});
+
+test("the drawing fills its pane: Obsidian's padding is overridden without !important", async () => {
+	const pad = await page.evaluate(() => {
+		const view = window.app.workspace.getLeavesOfType("block-draw-view").find((l) => l.view.containerEl.isShown()).view;
+		const cs = getComputedStyle(view.contentEl);
+		return { sides: [cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft], overflow: cs.overflow, inPane: view.contentEl.matches(".workspace-leaf-content .view-content.bd-view-container") };
+	});
+	assert.deepEqual(pad.sides, ["0px", "0px", "0px", "0px"]);
+	assert.equal(pad.inPane, true);
+	const box = await editorEval((ed) => JSON.parse(JSON.stringify(ed.root.getBoundingClientRect())));
+	const pane = await page.evaluate(() => JSON.parse(JSON.stringify(window.app.workspace.getLeavesOfType("block-draw-view").find((l) => l.view.containerEl.isShown()).view.contentEl.getBoundingClientRect())));
+	assert.ok(Math.abs(box.width - pane.width) < 1.5 && Math.abs(box.height - pane.height) < 1.5, `canvas ${box.width}×${box.height} fills pane ${pane.width}×${pane.height}`);
 });
 
 test("draws blocks, connects them and saves to disk", async () => {
@@ -358,11 +390,17 @@ test("theme, 3D and presentation commands work in Obsidian", async () => {
 	const savedText = await readFile(state.path);
 	const callouts = () => page.locator(".bd-comment-callout").count();
 	assert.equal(await callouts(), 1, "the saved comment is open");
+	await settled(page.locator(".bd-block .bd-comment-badge").first());
 	for (const expected of [0, 1]) {
 		const box = await page.locator(".bd-block .bd-comment-badge").first().boundingBox();
 		await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
 		await frame();
-		assert.equal(await callouts(), expected, "each click on the badge toggles the comment");
+		const seen = await callouts();
+		const why = await page.evaluate(() => {
+			const ed = window.app.workspace.getLeavesOfType("block-draw-view").find((l) => l.view.containerEl.isShown())?.view?.editor;
+			return JSON.stringify({ overrides: ed ? [...ed.presenter.commentOverrides] : null, badges: document.querySelectorAll(".bd-comment-badge").length, views: window.app.workspace.getLeavesOfType("block-draw-view").length });
+		});
+		assert.equal(seen, expected, `each click on the badge toggles the comment (${why})`);
 	}
 	assert.equal(await readFile(state.path), savedText, "presenting does not change the drawing file");
 	const first = await page.textContent(".bd-present-counter");
@@ -419,6 +457,13 @@ test("settings tab renders and tests the bridge connection", async () => {
 		return null;
 	}, "settings window");
 	assert.deepEqual(await headingsOf(settingsPage), ["Drawings", "Export", "Google Sheets"]);
+	const fontsRow = await settingsPage.evaluate(() => {
+		const row = [...document.querySelectorAll(".setting-item")].find((r) => r.querySelector(".setting-item-name")?.textContent === "Load web fonts from Google Fonts");
+		return row ? { on: row.querySelector(".checkbox-container")?.classList.contains("is-enabled") ?? null, desc: row.querySelector(".setting-item-description")?.textContent ?? "" } : null;
+	});
+	assert.ok(fontsRow, "the web fonts setting is listed");
+	assert.equal(fontsRow.on, false, "web fonts are off by default");
+	assert.match(fontsRow.desc, /never contacts Google for fonts/);
 	await settingsPage.getByRole("button", { name: "Test" }).click();
 	const noticeShown = async () => {
 		for (const p of page.context().pages()) {
@@ -432,6 +477,94 @@ test("settings tab renders and tests the bridge connection", async () => {
 	await waitFor(noticeShown, "connection notice");
 	if (SHOTS) await settingsPage.screenshot({ path: join(SHOTS, "e2e-06-settings.png") });
 	await page.evaluate(() => window.app.setting.close());
+});
+
+test("nested blocks, text alignment and opt-in web fonts work in Obsidian", async () => {
+	await command("block-draw:create-drawing");
+	await waitFor(() => page.evaluate((p) => window.app.workspace.getActiveFile()?.path !== p, state.path), "a new drawing");
+	state.fontsPath = await page.evaluate(() => window.app.workspace.getActiveFile().path);
+	await waitFor(() => editorEval((ed) => ed.viewSize().width > 0 && ed.viewSize().height > 0).catch(() => false), "the new drawing's editor to be laid out");
+	const ids = await editorEval((ed) => {
+		const box = ed.makeBlock({ x: 60, y: 60, width: 520, height: 260 }, { title: "Platform", style: { ...ed.current.block, fill: "#e7f5ff", textVAlign: "top" } });
+		const web = ed.makeBlock({ x: 100, y: 140, width: 140, height: 70 }, { title: "Web" });
+		const api = ed.makeBlock({ x: 400, y: 140, width: 140, height: 70 }, { title: "API" });
+		ed.insertBlocks([box, web, api]);
+		const link = ed.connect(web.id, api.id);
+		ed.updateElement(link.id, { label: "calls" });
+		ed.clearSelection();
+		ed.zoomToFit({ animate: false });
+		return { box: box.id, web: web.id, api: api.id, link: link.id };
+	});
+	await frame();
+
+	// a link between two blocks inside another block is drawn above it
+	const onLink = await toPage({ x: 270, y: 175 });
+	const topmost = await page.evaluate(({ x, y }) => {
+		const el = document.elementFromPoint(x, y);
+		return { link: el?.closest(".bd-connector")?.getAttribute("data-id") ?? null, block: el?.closest(".bd-block")?.getAttribute("data-id") ?? null };
+	}, onLink);
+	assert.deepEqual(topmost, { link: ids.link, block: null });
+	await shot("e2e-10-nested-links");
+
+	// a block's title can sit at the top
+	const gap = await page.evaluate((id) => {
+		const g = [...document.querySelectorAll(`.bd-block[data-id="${id}"]`)].find((n) => n.getClientRects().length);
+		const shape = g.querySelector("rect, path, ellipse, polygon").getBoundingClientRect();
+		const title = g.querySelector("tspan").getBoundingClientRect();
+		return { above: title.top - shape.top, below: shape.bottom - title.bottom };
+	}, ids.box);
+	assert.ok(gap.above < 40 && gap.below > gap.above * 3, `title at the top (${JSON.stringify(gap)})`);
+
+	// web fonts: nothing is requested, added or imported while the setting is off
+	const fontState = () =>
+		page.evaluate(() => {
+			const p = window.app.plugins.plugins["block-draw"];
+			return {
+				on: p.settings.webFonts,
+				faces: p.webFonts.count(document),
+				link: !!document.querySelector('link[href*="fonts.googleapis.com"]'),
+				imported: [...document.querySelectorAll("style")].some((st) => /fonts\.(googleapis|gstatic)\.com/.test(st.textContent)),
+				montserrat: [...document.fonts].some((f) => f.family.replace(/["']/g, "") === "Montserrat"),
+			};
+		});
+	assert.deepEqual(await fontState(), { on: false, faces: 0, link: false, imported: false, montserrat: false });
+	assert.deepEqual(fontRequests, [], "no request to Google's font hosts so far");
+	const note = () => page.locator(".workspace-leaf.mod-active .bd-props .bd-field-note").isVisible();
+	const inBox = await toPage({ x: 150, y: 290 });
+	await page.mouse.click(inBox.x, inBox.y);
+	await frame();
+	assert.equal(await note(), true, "the font picker explains that Inter is a web font while they are off");
+
+	// switching them on adds the fonts (through the FontFace API, no <link> or <style>) …
+	await page.evaluate(async (css) => {
+		const p = window.app.plugins.plugins["block-draw"];
+		p.webFonts.fetchStylesheet = async () => css;
+		p.settings.webFonts = true;
+		await p.saveSettings();
+	}, FONTS_CSS);
+	await waitFor(async () => (await fontState()).faces === 7, "the web fonts to be added");
+	assert.deepEqual({ ...(await fontState()), faces: 0 }, { on: true, faces: 0, link: false, imported: false, montserrat: true });
+	await frame();
+	assert.equal(await note(), false, "nothing to explain once they are on");
+	// … and SVG exports then import them too
+	const svgPath = state.fontsPath.replace(/\.blockdraw$/, ".svg");
+	await command("block-draw:export-svg");
+	await waitFor(async () => (await readFile(svgPath).catch(() => "")).includes("@import url('https://fonts.googleapis.com/css2?family=Inter"), "SVG with the font import");
+	// switching them off removes them again
+	await page.evaluate(async () => {
+		const p = window.app.plugins.plugins["block-draw"];
+		p.settings.webFonts = false;
+		await p.saveSettings();
+	});
+	await waitFor(async () => {
+		const f = await fontState();
+		return f.faces === 0 && !f.montserrat;
+	}, "the web fonts to be removed");
+	await frame();
+	assert.equal(await note(), true);
+	await command("block-draw:export-svg");
+	await waitFor(async () => !(await readFile(svgPath)).includes("googleapis"), "SVG without the font import");
+	await shot("e2e-11-web-fonts-off");
 });
 
 test("code block embeds render a live preview", async () => {
@@ -462,11 +595,18 @@ test("no errors were logged", async () => {
 	assert.deepEqual(errors, []);
 });
 
+test("the plugin never asked Google's font hosts for anything itself", async () => {
+	// the stylesheet was stubbed, so a request here would mean a font file that text really used
+	const unexpected = fontRequests.filter((u) => !/ https:\/\/fonts\.gstatic\.com\/s\//.test(u));
+	assert.deepEqual(unexpected, [], "only font files that text really used may be requested, never the stylesheet");
+});
+
 /* -------------------------------------------------------------- runner */
 
 let failed = 0;
 for (const t of tests) {
 	const before = errors.length;
+	currentTest = t.name;
 	try {
 		await t.fn();
 		if (errors.length > before) print(`  !! new page errors during "${t.name}": ${JSON.stringify(errors.slice(before))}`);

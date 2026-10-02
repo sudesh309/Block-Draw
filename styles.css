@@ -1,9 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap");
-
 /* Block Draw — styles. Everything is scoped under .bd-* classes and follows Obsidian's theme. */
 
-.bd-view-container {
-	padding: 0 !important;
+/* Three classes beat Obsidian's own rules for .view-content (and most themes) on specificity alone. */
+.workspace-leaf-content .view-content.bd-view-container {
+	padding: 0;
 	overflow: hidden;
 	position: relative;
 }
@@ -62,19 +61,53 @@
 	-webkit-user-select: none;
 }
 
+/* The pointer controller reports the cursor for whatever is under the pointer as data-cursor. */
+.bd-svg[data-cursor="move"] {
+	cursor: move;
+}
+
+.bd-svg[data-cursor="pointer"] {
+	cursor: pointer;
+}
+
+.bd-svg[data-cursor="crosshair"] {
+	cursor: crosshair;
+}
+
+.bd-svg[data-cursor="nwse-resize"] {
+	cursor: nwse-resize;
+}
+
+.bd-svg[data-cursor="nesw-resize"] {
+	cursor: nesw-resize;
+}
+
+.bd-svg[data-cursor="ns-resize"] {
+	cursor: ns-resize;
+}
+
+.bd-svg[data-cursor="ew-resize"] {
+	cursor: ew-resize;
+}
+
+.bd-svg[data-cursor="none"] {
+	cursor: none;
+}
+
+/* The tools and panning choose the cursor themselves: one class more than the rules above. */
 .bd-editor[data-tool="block"] .bd-svg,
 .bd-editor[data-tool="frame"] .bd-svg,
 .bd-editor[data-tool="connector"] .bd-svg {
-	cursor: crosshair !important;
+	cursor: crosshair;
 }
 
 .bd-editor[data-tool="pan"] .bd-svg,
 .bd-editor.is-space-pan .bd-svg {
-	cursor: grab !important;
+	cursor: grab;
 }
 
 .bd-editor.is-panning .bd-svg {
-	cursor: grabbing !important;
+	cursor: grabbing;
 }
 
 .bd-link-badge,
@@ -249,7 +282,10 @@
 	padding: 4px;
 	max-width: calc(100% - 20px);
 	overflow-x: auto;
-	scrollbar-width: none;
+}
+
+.bd-toolbar::-webkit-scrollbar {
+	display: none;
 }
 
 .bd-toolbar-group {
@@ -379,7 +415,19 @@
 	overflow-y: auto;
 	display: none;
 	padding: 10px 12px 12px;
-	scrollbar-width: thin;
+}
+
+.bd-props::-webkit-scrollbar {
+	width: 8px;
+}
+
+.bd-props::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb-bg, rgba(128, 128, 128, 0.4));
+	border-radius: 4px;
+}
+
+.bd-props::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-active-thumb-bg, rgba(128, 128, 128, 0.6));
 }
 
 .bd-props.is-visible {
@@ -547,6 +595,17 @@
 	font-size: 12px;
 	font-weight: 500;
 	cursor: pointer;
+}
+
+.bd-field-note {
+	margin-top: 4px;
+	color: var(--text-muted);
+	font-size: 11px;
+	line-height: 1.35;
+}
+
+.bd-field-note[hidden] {
+	display: none;
 }
 
 /* frames panel */
@@ -720,7 +779,7 @@
 .bd-text-editor[data-kind="frame"] {
 	background: var(--bd-canvas-bg);
 	/* Same specificity as the :focus rule above and declared after it, so this wins the cascade
-	   on its own: no !important needed. */
+	   on its own. */
 	outline: 1px solid var(--bd-accent);
 	border-radius: 4px;
 }
@@ -730,7 +789,7 @@
 .bd-readonly .bd-props,
 .bd-readonly .bd-hint {
 	/* Same specificity as .bd-props.is-visible / .bd-hint.is-visible above and declared after
-	   them, so this wins the cascade on its own: no !important needed. */
+	   them, so this wins the cascade on its own. */
 	display: none;
 }
 

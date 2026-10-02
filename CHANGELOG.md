@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.4
+
+- Text alignment: a block's text can now sit at the **top**, **middle** or **bottom** of the block (a new row under **Text** in the properties panel), as well as left, center or right. Existing drawings keep their text in the middle.
+- Blocks inside another block: the links between them are now drawn above the container, so they stay visible, and they can be selected. A link never takes clicks away from the two blocks it connects.
+- Web fonts are now opt-in. Block Draw used to load Inter, Roboto, Open Sans, Montserrat and Lato from Google Fonts whenever Obsidian started, and again for every note embed. It now contacts Google for fonts only if you turn on **Load web fonts from Google Fonts** in **Settings → Block Draw** (off by default). Without it the fonts installed on your device are used, and the font picker says so. SVG exports import the fonts only when the setting is on, and text is measured and wrapped again once the fonts have arrived.
+- Fixes for the Obsidian plugin review: no `!important` in the stylesheet, Obsidian's `createEl` instead of `document.createElement`, scrollbars styled without `scrollbar-width` and `scrollbar-color` (Obsidian 1.4 only partly supports them), and no `moment` call.
+- Docs: a shorter README that lists the current features, with the detail in `docs/DESIGN.md`.
+
 ## 0.4.3
 
 - Presentation mode: clicking a comment badge now shows or hides that comment. It only changes what is on screen, so the drawing file is never modified, and the saved open/closed state is back when you leave the presentation.

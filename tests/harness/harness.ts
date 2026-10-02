@@ -8,6 +8,7 @@ import { parseDrawing, serializeDrawing } from "../../src/model/file";
 import { exportStructuredJson } from "../../src/export/json";
 import { sceneToSvg } from "../../src/render/scene";
 import { LIGHT_THEME } from "../../src/render/colors";
+import { setTextMeasure } from "../../src/render/text";
 
 interface HarnessState {
 	editor: Editor;
@@ -22,6 +23,8 @@ interface HarnessState {
 	load(text: string): void;
 	structuredJson(): unknown;
 	svg(frameId?: string): string;
+	/** Replaces how wide text is measured (what loading a different font does). */
+	setTextMeasure(fn: ((text: string, size: number) => number) | null): void;
 }
 
 declare global {
@@ -46,6 +49,25 @@ const state = {
 	changes: 0,
 	nextPick: undefined as string | null | undefined,
 	pickCalls: [] as LinkPickOptions[],
+};
+
+/* Obsidian provides createEl() (global, and on every node) and the editor builds its DOM with it. */
+interface ElInfo {
+	cls?: string | string[];
+	text?: string;
+}
+function makeEl(doc: Document, tag: string, info?: ElInfo | string): HTMLElement {
+	const o: ElInfo = typeof info === "string" ? { cls: info } : (info ?? {});
+	const node = doc.createElement(tag);
+	if (o.cls) node.className = Array.isArray(o.cls) ? o.cls.join(" ") : o.cls;
+	if (o.text !== undefined) node.textContent = o.text;
+	return node;
+}
+(globalThis as unknown as Record<string, unknown>).createEl = (tag: string, info?: ElInfo | string) => makeEl(document, tag, info);
+(Node.prototype as unknown as Record<string, unknown>).createEl = function (this: Node, tag: string, info?: ElInfo | string) {
+	const node = makeEl(this.ownerDocument ?? document, tag, info);
+	this.appendChild(node);
+	return node;
 };
 
 const host: EditorHost = {
@@ -123,5 +145,8 @@ window.bd = Object.assign(state, {
 	},
 	svg(frameId?: string) {
 		return sceneToSvg(editor.getElements(), { theme: LIGHT_THEME, frameId }).svg;
+	},
+	setTextMeasure(fn: ((text: string, size: number) => number) | null) {
+		setTextMeasure(fn);
 	},
 });

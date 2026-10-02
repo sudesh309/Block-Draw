@@ -99,10 +99,12 @@ export class SceneRenderer {
 		private readonly ed: Editor,
 		viewport: SVGGElement,
 	) {
+		// Links and their labels sit above the blocks, so a block drawn around other blocks (a container)
+		// never hides the links between the blocks inside it.
 		this.frames = new Layer(svgEl("g", { class: "bd-layer-frames" }, viewport));
+		this.blocks = new Layer(svgEl("g", { class: "bd-layer-blocks" }, viewport));
 		this.connectors = new Layer(svgEl("g", { class: "bd-layer-connectors" }, viewport));
 		this.labels = new Layer(svgEl("g", { class: "bd-layer-labels" }, viewport));
-		this.blocks = new Layer(svgEl("g", { class: "bd-layer-blocks" }, viewport));
 		this.comments = new Layer(svgEl("g", { class: "bd-layer-comments" }, viewport));
 		this.overlay = svgEl("g", { class: "bd-layer-overlay" }, viewport);
 	}

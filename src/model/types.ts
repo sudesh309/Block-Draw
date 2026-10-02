@@ -38,6 +38,8 @@ export type StrokeStyle = "solid" | "dashed" | "dotted";
 export type Routing = "elbow" | "straight" | "curved";
 export type ArrowHead = "none" | "arrow" | "triangle" | "dot";
 export type TextAlign = "left" | "center" | "right";
+/** Where a block's text sits between its top and bottom edge. */
+export type TextVAlign = "top" | "middle" | "bottom";
 
 /** Sentinel colors resolved at render time. */
 export const COLOR_TRANSPARENT = "transparent";
@@ -57,6 +59,8 @@ export interface BlockStyle {
 	textColor: string;
 	fontSize: number;
 	textAlign: TextAlign;
+	/** Vertical position of the text (tag, title and description) inside the block. */
+	textVAlign: TextVAlign;
 	/** Draws the block as a raised 3D tile (extruded sides and a soft shadow). */
 	threeD: boolean;
 	/** Typography style for block Title, Description, Tag, and Link text. */
@@ -175,6 +179,7 @@ export const DEFAULT_BLOCK_STYLE: BlockStyle = {
 	textColor: COLOR_AUTO,
 	fontSize: 16,
 	textAlign: "center",
+	textVAlign: "middle",
 	threeD: false,
 	fontFamily: "inter",
 };

@@ -165,8 +165,9 @@ export async function exportGoogleSheets(
 
 /* ------------------------------------------------------------- images */
 
-export function drawingSvg(drawing: DrawingFile, frameId?: string | null): { svg: string; width: number; height: number } {
-	const { svg, width, height } = sceneToSvg(drawing.elements, { theme: LIGHT_THEME, frameId, padding: 32 });
+/** `webFonts` makes the SVG load the Google Fonts stylesheet when it is opened, so only pass it for SVG files. */
+export function drawingSvg(drawing: DrawingFile, frameId?: string | null, webFonts = false): { svg: string; width: number; height: number } {
+	const { svg, width, height } = sceneToSvg(drawing.elements, { theme: LIGHT_THEME, frameId, padding: 32, webFonts });
 	return { svg, width, height };
 }
 
@@ -174,7 +175,7 @@ export async function exportSvgFile(ctx: ExportContext, source: TFile, drawing: 
 	const frame = frameId ? drawing.elements.find((e) => e.id === frameId) : null;
 	const suffix = isFrame(frame) ? ` - ${safeName(frame.title)}` : "";
 	const path = await exportPath(ctx, source, `${safeName(source.basename)}${suffix}.svg`);
-	const file = await writeText(ctx.app, path, drawingSvg(drawing, frameId).svg);
+	const file = await writeText(ctx.app, path, drawingSvg(drawing, frameId, ctx.settings.webFonts).svg);
 	new Notice(`Exported SVG to ${file.path}`);
 	return file;
 }

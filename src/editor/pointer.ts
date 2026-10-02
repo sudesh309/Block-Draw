@@ -454,7 +454,11 @@ export class PointerController {
 			else if (hit?.kind === "block" || hit?.kind === "frame") cursor = "move";
 		}
 		if (ed.presenter.laserVisible()) cursor = "none";
-		if (ed.svg.style.cursor !== cursor) ed.svg.style.cursor = cursor;
+		// CSS maps data-cursor to the real cursor, so the tool and panning rules can override it.
+		if ((ed.svg.dataset.cursor ?? "") !== cursor) {
+			if (cursor) ed.svg.dataset.cursor = cursor;
+			else delete ed.svg.dataset.cursor;
+		}
 	}
 
 	private idsInRect(rect: Bounds): string[] {

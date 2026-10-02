@@ -30,6 +30,8 @@ export interface BlockDrawSettings {
 	/** Folder for exported files; empty = next to the drawing. */
 	exportFolder: string;
 	jsonFormat: JsonExportFormat;
+	/** Download Inter, Roboto, Open Sans, Montserrat and Lato from Google Fonts. Off by default: nothing is requested. */
+	webFonts: boolean;
 	sheets: SheetsSettings;
 }
 
@@ -41,6 +43,7 @@ export const DEFAULT_SETTINGS: BlockDrawSettings = {
 	showGrid: true,
 	exportFolder: "",
 	jsonFormat: "structured",
+	webFonts: false,
 	sheets: {
 		method: "apps-script",
 		appsScriptUrl: "",
@@ -62,6 +65,8 @@ export function mergeSettings(saved: unknown): BlockDrawSettings {
 	return {
 		...DEFAULT_SETTINGS,
 		...s,
+		// Only a literal `true` may switch on anything that contacts a server.
+		webFonts: s.webFonts === true,
 		sheets: { ...DEFAULT_SETTINGS.sheets, ...(s.sheets ?? {}) },
 	};
 }

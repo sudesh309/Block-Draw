@@ -15,13 +15,17 @@ if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium" });
 
-/** styles.css @imports web fonts; answer that locally so the tests never touch the network. */
-async function hermetic(ctx) {
-	await ctx.route(/^https:\/\/fonts\.(googleapis|gstatic)\.com\//, (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
+/** Every request to a web address is refused and recorded: the editor must work entirely offline. */
+const external = [];
+async function offline(ctx) {
+	await ctx.route(/^https?:/, (route) => {
+		external.push(route.request().url());
+		return route.abort();
+	});
 	return ctx;
 }
 
-const context = await hermetic(await browser.newContext({ viewport: { width: 1280, height: 800 } }));
+const context = await offline(await browser.newContext({ viewport: { width: 1280, height: 800 } }));
 
 let page;
 let errors = [];
@@ -804,6 +808,112 @@ test("tracing a block animates two-way links in both directions, and only while 
 	assert.equal(await page.locator(`${conn} .bd-flow-lane`).count(), 0, "back to one line afterwards");
 });
 
+test("blocks inside another block: their links are drawn above it and can be selected", async () => {
+	const ids = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const box = ed.makeBlock({ x: 60, y: 60, width: 520, height: 260 }, { title: "Platform", style: { ...ed.current.block, fill: "#e7f5ff", textVAlign: "top" } });
+		const web = ed.makeBlock({ x: 100, y: 140, width: 140, height: 70 }, { title: "Web" });
+		const api = ed.makeBlock({ x: 400, y: 140, width: 140, height: 70 }, { title: "API" });
+		ed.insertBlocks([box, web, api]);
+		const link = ed.connect(web.id, api.id);
+		ed.updateElement(link.id, { label: "calls", comment: "over HTTPS" });
+		ed.clearSelection();
+		ed.zoomToFit({ animate: false });
+		return { box: box.id, web: web.id, api: api.id, link: link.id };
+	});
+	await frame();
+	// a point on the link, between "Web" and its label (the link is a straight line at y = 175)
+	const onLink = await toScreen({ x: 270, y: 175 });
+	const topmost = (p) =>
+		page.evaluate(({ x, y }) => {
+			const el = document.elementFromPoint(x, y);
+			return { link: el?.closest(".bd-connector")?.getAttribute("data-id") ?? null, block: el?.closest(".bd-block")?.getAttribute("data-id") ?? null };
+		}, p);
+	assert.deepEqual(await topmost(onLink), { link: ids.link, block: null }, "the link is the topmost thing at its own pixels, not hidden under the container");
+	// the label and the comment badge of that link are above the container as well
+	const label = await page.evaluate(() => {
+		const r = document.querySelector(".bd-connector-label rect").getBoundingClientRect();
+		const el = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+		return !!el?.closest(".bd-connector-label");
+	});
+	assert.equal(label, true, "the label is visible on top of the container");
+	await shot("17-nested-links");
+	// clicking the link selects it (not the container around it)
+	await page.mouse.click(onLink.x, onLink.y);
+	assert.deepEqual(await sel(), [ids.link]);
+	// the blocks keep their clicks: the container, and the inner blocks next to their own link
+	const inWeb = await centerOf(ids.web);
+	await page.mouse.click(inWeb.x, inWeb.y);
+	assert.deepEqual(await sel(), [ids.web]);
+	const inBox = await toScreen({ x: 150, y: 280 });
+	await page.mouse.click(inBox.x, inBox.y);
+	assert.deepEqual(await sel(), [ids.box]);
+	const nearWeb = await toScreen({ x: 236, y: 175 }); // just inside Web's right edge, where its link starts
+	await page.mouse.click(nearWeb.x, nearWeb.y);
+	assert.deepEqual(await sel(), [ids.web], "a link does not steal clicks from its own end blocks");
+});
+
+test("cursors: hover cursors come from data-cursor; tools and panning override them", async () => {
+	const b = await addBlock(400, 300, "Hover");
+	const cursor = () => page.evaluate(() => getComputedStyle(window.bd.editor.svg).cursor);
+	const c = await centerOf(b.id);
+	await page.mouse.move(c.x, c.y);
+	assert.equal(await cursor(), "move");
+	const se = await toScreen({ x: b.x + b.width + 4, y: b.y + b.height + 4 });
+	await page.mouse.move(se.x, se.y);
+	assert.equal(await cursor(), "nwse-resize", "a resize handle of the selected block");
+	await page.mouse.move(c.x, c.y);
+	await page.keyboard.down("Space");
+	assert.equal(await cursor(), "grab", "holding Space pans, even over a block");
+	await page.keyboard.up("Space");
+	assert.equal(await cursor(), "move");
+	await page.keyboard.press("b");
+	await page.mouse.move(c.x + 5, c.y);
+	assert.equal(await cursor(), "crosshair", "drawing tools show a crosshair");
+	await page.keyboard.press("h");
+	await page.mouse.move(c.x, c.y);
+	assert.equal(await cursor(), "grab", "the pan tool grabs");
+	await page.mouse.down();
+	assert.equal(await cursor(), "grabbing", "and grabs harder while dragging");
+	await page.mouse.up();
+	assert.equal(await cursor(), "grab");
+});
+
+test("vertical text alignment: top, middle and bottom from the panel", async () => {
+	const b = await addBlock(400, 300, "Orders");
+	const current = async () => (await els()).find((e) => e.id === b.id);
+	const textY = () => page.evaluate((id) => parseFloat(document.querySelector(`.bd-block[data-id="${id}"] .bd-text tspan`).getAttribute("y")), b.id);
+	assert.equal((await current()).style.textVAlign, "middle", "centered by default");
+	const middle = await textY();
+	await page.click('.bd-props .bd-seg-btn[title="Align text to the top"]');
+	await frame();
+	assert.equal((await current()).style.textVAlign, "top");
+	const top = await textY();
+	await page.click('.bd-props .bd-seg-btn[title="Align text to the bottom"]');
+	await frame();
+	assert.equal((await current()).style.textVAlign, "bottom");
+	const bottom = await textY();
+	assert.ok(top < middle && middle < bottom, `top ${top} < middle ${middle} < bottom ${bottom}`);
+	assert.ok(top < 30 && bottom > 50, "the title really sits near the top and the bottom edge of the 80 unit block");
+	await shot("16-title-bottom");
+	// new blocks start with the alignment that was chosen last
+	await page.click('.bd-props .bd-seg-btn[title="Align text to the top"]');
+	const next = await addBlock(800, 300, "Next");
+	assert.equal(next.style.textVAlign, "top");
+	// the inline editor opens where the text is, so editing does not make it jump
+	await page.evaluate((id) => window.bd.editor.textEditor.start(id), next.id);
+	await frame();
+	const where = await page.evaluate((id) => {
+		const ed = window.bd.editor;
+		const blk = ed.byId.get(id);
+		const area = document.querySelector(".bd-text-editor.is-active").getBoundingClientRect();
+		const svg = ed.svg.getBoundingClientRect();
+		return { areaTop: area.top - svg.top, blockTop: ed.worldToScreen({ x: blk.x, y: blk.y }).y, zoom: ed.vp.zoom };
+	}, next.id);
+	assert.ok(Math.abs(where.areaTop - where.blockTop - 8 * where.zoom) < 2, `editor sits at the top inset: ${JSON.stringify(where)}`);
+	await page.keyboard.press("Escape");
+});
+
 test("description: Shown/Hidden toggle in the panel and the right-click menu", async () => {
 	const b = await addBlock(400, 300, "Orders service");
 	const field = '.bd-props textarea[placeholder^="Optional details"]';
@@ -930,7 +1040,7 @@ test("themed diagram screenshots (executive, futuristic)", async () => {
 });
 
 test("double-tap on a touch screen adds a block", async () => {
-	const touch = await hermetic(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
+	const touch = await offline(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
 	const tp = await touch.newPage();
 	try {
 		await tp.goto(url);
@@ -945,6 +1055,51 @@ test("double-tap on a touch screen adds a block", async () => {
 	} finally {
 		await touch.close();
 	}
+});
+
+test("web fonts are opt-in: the font picker explains it, and nothing is requested", async () => {
+	const b = await addBlock(300, 250, "Fonts");
+	const c = await centerOf(b.id);
+	await page.mouse.click(c.x, c.y);
+	await frame();
+	const note = () =>
+		page.evaluate(() => {
+			const n = document.querySelector(".bd-props .bd-field-note");
+			return n ? !n.hidden : null;
+		});
+	const pick = async (id) => {
+		await page.selectOption(".bd-font-select", id);
+		await frame();
+	};
+	await pick("inter");
+	assert.equal(await note(), true, "Inter is a web font and web fonts are off");
+	await pick("segoe");
+	assert.equal(await note(), false, "Segoe UI is a system font");
+	await pick("roboto");
+	assert.equal(await note(), true);
+	await page.evaluate(() => window.bd.editor.setOptions({ webFonts: true }));
+	await frame();
+	assert.equal(await note(), false, "nothing to explain once web fonts are on");
+	assert.deepEqual(external, [], "no network request while editing");
+});
+
+test("relayout() wraps the text again after the fonts changed", async () => {
+	const b = await addBlock(300, 250, "alpha beta gamma delta");
+	const lines = () => page.evaluate((id) => document.querySelectorAll(`[data-id="${id}"] tspan`).length, b.id);
+	const before = await lines();
+	assert.ok(before >= 1);
+	// a much wider font: nothing changes on screen until the editor is told to measure again
+	await page.evaluate(() => window.bd.setTextMeasure((text, size) => text.length * size * 1.4));
+	await frame();
+	assert.equal(await lines(), before, "cached drawing is kept");
+	await page.evaluate(() => window.bd.editor.relayout());
+	await frame();
+	assert.ok((await lines()) > before, `wide text wraps onto more lines (${before} → ${await lines()})`);
+	await page.evaluate(() => window.bd.setTextMeasure(null));
+});
+
+test("the editor never requests anything from the network", async () => {
+	assert.deepEqual(external, [], `refused requests:\n${external.join("\n")}`);
 });
 
 /* ------------------------------------------------------------------ runner */

@@ -184,6 +184,17 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 						}),
 					),
 			},
+			{
+				name: "Load web fonts from Google Fonts",
+				desc: "Off: Block Draw never contacts Google for fonts, and uses the fonts installed on your device. On: Inter, Roboto, Open Sans, Montserrat and Lato are downloaded so they show everywhere, and exported SVG files load them too (PNG images always use installed fonts).",
+				render: (st) =>
+					st.addToggle((t) =>
+						t.setValue(s.webFonts).onChange(async (v) => {
+							s.webFonts = v;
+							await this.save();
+						}),
+					),
+			},
 		];
 	}
 

@@ -8,3 +8,10 @@ export function newId(): string {
 	for (const b of bytes) id += ALPHABET[b % ALPHABET.length];
 	return id;
 }
+
+/** Local date and time as "YYYY-MM-DD HH.mm.ss", used to name new drawings. */
+export function fileStamp(date: Date): string {
+	const p = (n: number) => String(n).padStart(2, "0");
+	const day = `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+	return `${day} ${p(date.getHours())}.${p(date.getMinutes())}.${p(date.getSeconds())}`;
+}

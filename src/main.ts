@@ -1,5 +1,6 @@
-import { moment, normalizePath, Notice, Plugin, TFile, TFolder, type Editor as MarkdownEditor } from "obsidian";
+import { normalizePath, Notice, Plugin, TFile, TFolder, type Editor as MarkdownEditor } from "obsidian";
 import { createEmptyDrawing, parseDrawing, serializeDrawing } from "./model/file";
+import { fileStamp } from "./model/ids";
 import { DRAWING_THEMES } from "./model/themes";
 import { FILE_EXTENSION, type DrawingFile } from "./model/types";
 import { BlockDrawView, VIEW_ICON, VIEW_TYPE } from "./obsidian/BlockDrawView";
@@ -16,12 +17,16 @@ import {
 import { GoogleAuth } from "./obsidian/googleAuth";
 import { BlockDrawSettingTab } from "./obsidian/SettingTab";
 import { mergeSettings, type BlockDrawSettings } from "./obsidian/settings";
+import { WebFontLoader } from "./obsidian/webFonts";
 
 export type ExportKind = "json" | "copy-json" | "xlsx" | "gsheet" | "gsheet-new" | "svg" | "png";
 
 export default class BlockDrawPlugin extends Plugin {
 	settings!: BlockDrawSettings;
 	auth!: GoogleAuth;
+	webFonts!: WebFontLoader;
+	/** Value of the "Load web fonts" setting that was last applied. */
+	private webFontsOn = false;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -39,6 +44,12 @@ export default class BlockDrawPlugin extends Plugin {
 		this.registerMenus();
 		this.addSettingTab(new BlockDrawSettingTab(this.app, this));
 
+		// Google Fonts are only requested while the setting is on; turning it off (or unloading the plugin) removes them.
+		this.webFonts = new WebFontLoader(this.app, () => this.relayoutViews());
+		this.app.workspace.onLayoutReady(() => this.syncWebFonts(false));
+		this.registerEvent(this.app.workspace.on("window-open", (_win, win) => void this.webFonts.windowOpened(win.document)));
+		this.register(() => this.webFonts.dispose());
+
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
 				if (leaf?.view instanceof BlockDrawView) leaf.view.editor?.focus();
@@ -52,8 +63,28 @@ export default class BlockDrawPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		if (this.settings.webFonts !== this.webFontsOn) this.syncWebFonts(true);
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
 			if (leaf.view instanceof BlockDrawView) leaf.view.applySettings();
+		}
+	}
+
+	/** Applies the "Load web fonts" setting; `notify` tells the user when the fonts cannot be downloaded. */
+	private syncWebFonts(notify: boolean): void {
+		this.webFontsOn = this.settings.webFonts;
+		this.webFonts
+			.setEnabled(this.webFontsOn)
+			.then(() => this.relayoutViews())
+			.catch((e: unknown) => {
+				console.error("Block Draw: web fonts not loaded", e);
+				if (notify) new Notice("Block Draw could not download the web fonts. Check your connection, then turn the setting off and on again.");
+			});
+	}
+
+	/** Measures and wraps the text of every open drawing again (the fonts it is set in changed). */
+	private relayoutViews(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
+			if (leaf.view instanceof BlockDrawView) leaf.view.editor?.relayout();
 		}
 	}
 
@@ -75,7 +106,7 @@ export default class BlockDrawPlugin extends Plugin {
 		if (folder && folder !== "/" && !(this.app.vault.getAbstractFileByPath(folder) instanceof TFolder)) {
 			await this.app.vault.createFolder(folder);
 		}
-		const base = `${this.settings.newFilePrefix || "Drawing"} ${moment().format("YYYY-MM-DD HH.mm.ss")}`;
+		const base = `${this.settings.newFilePrefix || "Drawing"} ${fileStamp(new Date())}`;
 		const dir = folder && folder !== "/" ? `${folder}/` : "";
 		let path = normalizePath(`${dir}${base}.${FILE_EXTENSION}`);
 		for (let i = 2; this.app.vault.getAbstractFileByPath(path); i++) path = normalizePath(`${dir}${base} ${i}.${FILE_EXTENSION}`);
