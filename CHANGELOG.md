@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Google Sheets export: when the Apps Script web app replies with something other than JSON — most often because its deployment's "Who has access" isn't set to "Anyone", or the web app address is the editor's `/dev` test link instead of the deployed `/exec` one — the error now says exactly what's wrong and how to fix it, instead of just "did not return JSON (HTTP 200)".
+
 ## 0.3.0
 
 - The Excel and Google Sheets exports no longer show internal element ids anywhere (the "ID" column on the Blocks and Connections tabs is gone).

@@ -250,8 +250,33 @@ describe("Apps Script bridge (Code.gs in a sandbox)", () => {
 	it("explains non-JSON responses", async () => {
 		const html = new AppsScriptTransport("u", "s", async () => ({ status: 200, text: "<html>Sign in</html>" }));
 		await expect(html.ping()).rejects.toThrow(/did not return JSON/);
+		await expect(html.ping()).rejects.toThrow(/Sign in/);
 		const denied = new AppsScriptTransport("u", "s", async () => ({ status: 403, text: "Forbidden" }));
 		await expect(denied.ping()).rejects.toThrow(/Who has access: Anyone/);
+	});
+
+	it("recognizes a Google sign-in page as an access-setting problem", async () => {
+		const signIn = new AppsScriptTransport(
+			"u",
+			"s",
+			async () => ({ status: 200, text: '<html><body><div id="ServiceLogin">Sign in - Google Accounts</div></body></html>' }),
+		);
+		await expect(signIn.ping()).rejects.toThrow(/Who has access.*Anyone/);
+	});
+
+	it("rejects a /dev URL before making a request", async () => {
+		let called = false;
+		const dev = new AppsScriptTransport("https://script.google.com/macros/s/x/dev", "s", async () => {
+			called = true;
+			return { status: 200, text: "{}" };
+		});
+		await expect(dev.ping()).rejects.toThrow(/\/dev/);
+		expect(called).toBe(false);
+	});
+
+	it("reports an empty response distinctly", async () => {
+		const empty = new AppsScriptTransport("u", "s", async () => ({ status: 200, text: "" }));
+		await expect(empty.ping()).rejects.toThrow(/empty response/);
 	});
 });
 

@@ -53,6 +53,43 @@ function parseJson(text: string): unknown {
 	}
 }
 
+/**
+ * The Apps Script bridge (see Code.gs) always replies with JSON, even on error — so a non-JSON
+ * body means Google itself intercepted the request before the script ran, almost always because
+ * the deployment isn't actually reachable anonymously. Recognize the common cases so the Notice
+ * tells people what to fix instead of just the HTTP status.
+ */
+function explainNonJson(text: string, status: number): string {
+	const head = text.slice(0, 4000);
+	if (!head.trim()) {
+		return (
+			`The Apps Script web app returned an empty response (HTTP ${status}). Open the web app URL ` +
+			"once in a browser while signed into the Google account you deployed it with — if that asks " +
+			"you to sign in or review permissions, finish that, then deploy a new version."
+		);
+	}
+	if (/accounts\.google\.com|ServiceLogin|Sign in - Google Accounts/i.test(head)) {
+		return (
+			`Google asked to sign in instead of running the script (HTTP ${status}). The deployment's ` +
+			'"Who has access" isn\'t set to "Anyone": open the Apps Script project → Deploy → Manage ' +
+			'deployments → edit the deployment → set "Who has access" to "Anyone" → deploy a new version.'
+		);
+	}
+	if (/Script function not found|TypeError:|ReferenceError:|We.re sorry, a server error/i.test(head)) {
+		return (
+			`Google Apps Script returned an error page instead of the bridge's reply (HTTP ${status}). ` +
+			"Check that Deploy → Manage deployments is running the latest code as a new version, and " +
+			"that the web app address in settings ends in /exec, not /dev."
+		);
+	}
+	const snippet = head
+		.replace(/<[^>]+>/g, " ")
+		.replace(/\s+/g, " ")
+		.trim()
+		.slice(0, 140);
+	return `The Apps Script URL did not return JSON (HTTP ${status}). Check the web app URL in settings.${snippet ? ` Google sent back: "${snippet}${head.trim().length > 140 ? "…" : ""}"` : ""}`;
+}
+
 interface RawSpreadsheet {
 	spreadsheetId?: string;
 	spreadsheetUrl?: string;
@@ -85,6 +122,13 @@ export class AppsScriptTransport implements SheetsTransport {
 	) {}
 
 	private async call<T>(action: string, payload: Record<string, unknown>): Promise<T> {
+		if (/\/dev\/?$/i.test(this.url.trim())) {
+			throw new SheetsError(
+				'The web app address ends in "/dev" — that is the editor\'s test link, which only works while ' +
+					'you are signed into Apps Script in a browser. Use the deployed address instead: Deploy → ' +
+					'Manage deployments (it ends in "/exec").',
+			);
+		}
 		const res = await this.http({
 			url: this.url,
 			method: "POST",
@@ -96,7 +140,7 @@ export class AppsScriptTransport implements SheetsTransport {
 			throw new SheetsError(
 				res.status === 401 || res.status === 403
 					? "The Apps Script web app refused the request. Re-deploy it with “Who has access: Anyone”."
-					: `The Apps Script URL did not return JSON (HTTP ${res.status}). Check the web app URL in settings.`,
+					: explainNonJson(res.text, res.status),
 				res.status,
 			);
 		}
