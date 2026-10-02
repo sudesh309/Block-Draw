@@ -58,8 +58,13 @@ export class WebFontLoader {
 	/** A pop-out window was opened: give it the fonts too. */
 	async windowOpened(doc: Document): Promise<void> {
 		if (!this.enabled) return;
-		const rules = await this.load().catch(() => null);
-		if (rules && this.enabled) this.addTo(doc, rules);
+		let rules: WebFontFace[];
+		try {
+			rules = await this.load();
+		} catch {
+			return; // the setting's own toggle reports download problems
+		}
+		if (this.enabled) this.addTo(doc, rules);
 	}
 
 	dispose(): void {
@@ -68,19 +73,18 @@ export class WebFontLoader {
 	}
 
 	private load(): Promise<WebFontFace[]> {
-		if (!this.rules) {
-			const pending = this.fetchStylesheet().then((css) => {
-				const faces = parseWebFontFaces(css);
-				if (!faces.length) throw new Error("Google Fonts sent no fonts Block Draw knows how to use.");
-				return faces;
-			});
-			// Remember only successes: turning the setting off and on again tries again.
-			pending.catch(() => {
-				if (this.rules === pending) this.rules = null;
-			});
-			this.rules = pending;
-		}
+		// Remember only successes: turning the setting off and on again tries again.
+		this.rules ??= this.download().catch((e: unknown) => {
+			this.rules = null;
+			throw e;
+		});
 		return this.rules;
+	}
+
+	private async download(): Promise<WebFontFace[]> {
+		const faces = parseWebFontFaces(await this.fetchStylesheet());
+		if (!faces.length) throw new Error("Google Fonts sent no fonts Block Draw knows how to use.");
+		return faces;
 	}
 
 	private addTo(doc: Document, rules: WebFontFace[]): void {

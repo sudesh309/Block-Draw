@@ -46,7 +46,7 @@ export default class BlockDrawPlugin extends Plugin {
 
 		// Google Fonts are only requested while the setting is on; turning it off (or unloading the plugin) removes them.
 		this.webFonts = new WebFontLoader(this.app, () => this.relayoutViews());
-		this.app.workspace.onLayoutReady(() => this.syncWebFonts(false));
+		this.app.workspace.onLayoutReady(() => void this.syncWebFonts(false));
 		this.registerEvent(this.app.workspace.on("window-open", (_win, win) => void this.webFonts.windowOpened(win.document)));
 		this.register(() => this.webFonts.dispose());
 
@@ -63,22 +63,22 @@ export default class BlockDrawPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
-		if (this.settings.webFonts !== this.webFontsOn) this.syncWebFonts(true);
+		if (this.settings.webFonts !== this.webFontsOn) void this.syncWebFonts(true);
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
 			if (leaf.view instanceof BlockDrawView) leaf.view.applySettings();
 		}
 	}
 
 	/** Applies the "Load web fonts" setting; `notify` tells the user when the fonts cannot be downloaded. */
-	private syncWebFonts(notify: boolean): void {
+	private async syncWebFonts(notify: boolean): Promise<void> {
 		this.webFontsOn = this.settings.webFonts;
-		this.webFonts
-			.setEnabled(this.webFontsOn)
-			.then(() => this.relayoutViews())
-			.catch((e: unknown) => {
-				console.error("Block Draw: web fonts not loaded", e);
-				if (notify) new Notice("Block Draw could not download the web fonts. Check your connection, then turn the setting off and on again.");
-			});
+		try {
+			await this.webFonts.setEnabled(this.webFontsOn);
+			this.relayoutViews();
+		} catch (e) {
+			console.error("Block Draw: web fonts not loaded", e);
+			if (notify) new Notice("Could not download the web fonts. Check your connection, then turn the setting off and on again.");
+		}
 	}
 
 	/** Measures and wraps the text of every open drawing again (the fonts it is set in changed). */

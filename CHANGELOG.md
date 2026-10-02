@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5
+
+- No change in how Block Draw works. This release tidies what the community directory's automated review looks at: the message shown when the web fonts cannot be downloaded no longer starts with the plugin name, the web font loader uses async/await, and the project's lint now also runs the directory's stylesheet checks (no `!important`, no CSS that Obsidian 1.5 does not support).
+
 ## 0.4.4
 
 - Text alignment: a block's text can now sit at the **top**, **middle** or **bottom** of the block (a new row under **Text** in the properties panel), as well as left, center or right. Existing drawings keep their text in the middle.
