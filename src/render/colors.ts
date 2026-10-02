@@ -41,7 +41,7 @@ export const SCREEN_THEME: RenderTheme = {
 	lightText: "#ffffff",
 };
 
-export type PaletteId = "classic" | "minimal" | "futuristic";
+export type PaletteId = "classic" | "minimal" | "futuristic" | "3d";
 
 export interface Palette {
 	id: PaletteId;
@@ -61,6 +61,13 @@ export const PALETTES: Palette[] = [
 		frameFills: [COLOR_TRANSPARENT, "#f8f9fa", "#fff5f5", "#fff9db", "#ebfbee", "#e7f5ff", "#f3f0ff"],
 	},
 	{
+		id: "3d",
+		name: "3D",
+		fills: [COLOR_TRANSPARENT, "#ffffff", "#e7f5ff", "#e6fcf5", "#fff4e6", "#f3f0ff", "#fff0f6", "#f8f9fa", "#d0ebff"],
+		strokes: [COLOR_DEFAULT, "#1f3a5f", "#1971c2", "#0ca678", "#f08c00", "#7048e8", "#d6336c"],
+		frameFills: [COLOR_TRANSPARENT, "#f8f9fa", "#e7f5ff", "#e6fcf5", "#fff4e6", "#f3f0ff"],
+	},
+	{
 		id: "minimal",
 		name: "Minimal",
 		fills: [COLOR_TRANSPARENT, "#ffffff", "#f8f9fa", "#f1f3f5", "#e9ecef", "#dee2e6", "#e7f5ff", "#495057", "#212529"],
@@ -77,7 +84,8 @@ export const PALETTES: Palette[] = [
 ];
 
 export function paletteById(id: string): Palette {
-	return PALETTES.find((p) => p.id === id) ?? PALETTES[0];
+	const normalized = id === "executive" ? "3d" : id;
+	return PALETTES.find((p) => p.id === normalized) ?? PALETTES[0];
 }
 
 export const FILL_SWATCHES = PALETTES[0].fills;

@@ -9,7 +9,7 @@ import {
 	type DrawElement,
 } from "./types";
 
-export type DrawingThemeId = "classic" | "minimal" | "futuristic" | "executive";
+export type DrawingThemeId = "classic" | "minimal" | "futuristic" | "executive" | "3d";
 
 export interface DrawingTheme {
 	id: DrawingThemeId;
@@ -31,7 +31,7 @@ export interface DrawingTheme {
 export const DRAWING_THEMES: DrawingTheme[] = [
 	{
 		id: "executive",
-		name: "Executive 3D",
+		name: "3D",
 		description: "Soft board-room colors, raised 3D blocks and links",
 		fills: ["#e7f5ff", "#e6fcf5", "#fff4e6", "#f3f0ff", "#fff0f6", "#f8f9fa"],
 		strokes: ["#1f3a5f"],
@@ -84,7 +84,8 @@ export const DRAWING_THEMES: DrawingTheme[] = [
 ];
 
 export function drawingThemeById(id: string): DrawingTheme | null {
-	return DRAWING_THEMES.find((t) => t.id === id) ?? null;
+	const key = id === "3d" ? "executive" : id;
+	return DRAWING_THEMES.find((t) => t.id === key) ?? null;
 }
 
 /**

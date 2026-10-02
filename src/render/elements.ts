@@ -236,19 +236,20 @@ export function renderConnectorCommentCallout(conn: ConnectorElement, route: Rou
 
 /* ---------------------------------------------------------------- 3D effect */
 
-/** Extrusion direction of 3D blocks: light comes from the top left. */
-const DEPTH_DX = 0.5;
+/** Extrusion direction of 3D blocks: light comes from top-left, tighter angle. */
+const DEPTH_DX = 0.38;
 
 /** Extrusion depth of a 3D block, in world units (0 when the block is flat). */
 export function blockDepth(block: BlockElement): number {
 	if (!block.style.threeD || block.shape === "text") return 0;
-	return Math.max(5, Math.min(14, Math.min(block.width, block.height) * 0.14));
+	return Math.max(4.5, Math.min(7.5, Math.min(block.width, block.height) * 0.08));
 }
 
 /** Everything a block paints, including its 3D sides and shadow. */
 export function blockPaintBounds(block: BlockElement): Bounds {
-	const d = blockDepth(block) * 1.6;
-	return { x: block.x, y: block.y, width: block.width + d * DEPTH_DX, height: block.height + d };
+	const d = blockDepth(block);
+	const shadowY = d * 1.2;
+	return { x: block.x, y: block.y, width: block.width + shadowY * DEPTH_DX, height: block.height + shadowY };
 }
 
 /** Dark tiles (navy, charcoal) get neon-tinted sides and a glow instead of near-black sides. */
@@ -262,14 +263,14 @@ function blockExtrusion(block: BlockElement, d: number, stroke: string | null, s
 	const path = shapePath(block.shape, block.width, block.height);
 	const at = (t: number) => `translate(${r2(t * DEPTH_DX)},${r2(t)})`;
 	const nodes: VChild[] = [
-		h("path", { d: path, transform: at(d * 1.6), style: "fill:#000000;fill-opacity:0.07", "pointer-events": "none" }),
-		h("path", { d: path, transform: at(d * 1.25), style: "fill:#000000;fill-opacity:0.09", "pointer-events": "none" }),
+		h("path", { d: path, transform: at(d * 1.2), style: "fill:#000000;fill-opacity:0.06", "pointer-events": "none" }),
+		h("path", { d: path, transform: at(d * 1.08), style: "fill:#000000;fill-opacity:0.08", "pointer-events": "none" }),
 	];
 	const fill = resolveFill(block.style.fill);
 	const neon = isDarkFill(fill) && stroke ? shadeColor(stroke, 0.55) : null;
 	const side = neon ?? (fill ? shadeColor(fill, 0.3) : null);
 	const sideStyle = side ? `fill:${side}` : `fill:${stroke ?? "#868e96"};fill-opacity:0.28`;
-	const steps = Math.ceil(d / 1.25);
+	const steps = Math.max(4, Math.ceil(d / 1.0));
 	for (let i = steps; i >= 1; i--) {
 		const deepest = i === steps;
 		nodes.push(

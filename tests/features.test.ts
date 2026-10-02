@@ -128,8 +128,12 @@ describe("drawing themes", () => {
 			expect(t.fills.length).toBeGreaterThan(0);
 			expect(t.strokes.length).toBeGreaterThan(0);
 		}
-		expect(PALETTES.map((p) => p.id)).toEqual(["classic", "minimal", "futuristic"]);
+		expect(PALETTES.map((p) => p.id)).toEqual(["classic", "3d", "minimal", "futuristic"]);
 		expect(paletteById("nope").id).toBe("classic");
+		expect(paletteById("3d").id).toBe("3d");
+		expect(paletteById("executive").id).toBe("3d");
+		expect(drawingThemeById("3d")?.name).toBe("3D");
+		expect(drawingThemeById("executive")?.name).toBe("3D");
 	});
 });
 
