@@ -1,328 +1,55 @@
 # Block Draw for Obsidian
 
-Draw block diagrams in Obsidian — titled blocks, connections, and frames that link to each other — then export them as **JSON**, an **Excel workbook**, or a **Google Sheets workbook with one tab per frame**.
+Draw block diagrams in Obsidian — titled blocks, connections, and frames that link to each other — then present them, or export to **Google Sheets**, **Excel**, **JSON**, **SVG** or **PNG**.
 
 ![Block Draw in Obsidian: two frames, linked blocks and the frames panel](docs/images/editor.png)
 
 ## Features
 
-- **Excalidraw-style canvas**: infinite canvas with pan and zoom, grid and snapping, undo/redo, copy/paste, duplicate (Ctrl/Cmd+D or Alt+drag), align and distribute, and single-key tool shortcuts.
-- **Blocks with titles**: every block has a title and an optional description. Eight shapes (rounded, rectangle, ellipse, decision, input/output, preparation, database, text only) with fill, stroke, text size and alignment. Blocks grow to fit their text.
-- **Connections**: hover a block and drag one of its edge dots onto another block. Drop on empty space to create a connected block, or click a dot to add one in that direction. Elbow, straight or curved lines, arrowheads, labels, and re-attachable ends. Connections follow their blocks.
-- **Frames**: group blocks into frames (F). Moving a frame moves its blocks. The frames panel lists them in export order; click to jump, double-click to rename, reorder with the arrows.
-- **Links between frames**: link any block to another frame (Ctrl/Cmd+K, the link dropdown, or right-click). Ctrl/Cmd+click the block or click its corner badge to jump there; **Back** (Alt+←) returns. Blocks can also link to notes, frames in other drawings, or URLs.
-- **Executive-ready looks**: one-click themes (3D, Minimal, Futuristic, Classic), 3D, minimalist and futuristic color palettes, and a **3D effect** for blocks and links — raised tiles with soft shadows, neon-edged tiles on dark fills, and tube-like links.
-- **Presentation mode** (P): full screen, an overview slide then one slide per frame, a laser pointer, a light or dark stage, and click-to-spotlight.
-- **For architects and engineers**: **dependency tracing** (T) highlights everything upstream and downstream of a block; **animated flow** shows data moving along a link; **tags** label a block with its technology or role (“Service · Java”, “PostgreSQL”) above the title.
-- **Comments**: add a note to any block or connector in the properties panel. A small badge shows it exists; click the badge (or the panel's Shown/Hidden toggle) to expand or collapse it on the canvas. Comments are included in every export.
-- **Deep links and embeds**: `[[Checkout.blockdraw#Payment details]]` opens a drawing at a frame, and a `blockdraw` code block shows a live preview of a drawing or of one frame inside a note.
-- **Exports**: Google Sheets, Excel (.xlsx), JSON (structured or raw), SVG and PNG (whole drawing or the selected frame).
-- **Follows your theme** (light and dark), works on desktop and mobile (tap, double-tap, pinch to zoom).
+- **Canvas editor**: infinite canvas, grid and snapping, undo/redo, copy/paste, align, single-key shortcuts. Eight block shapes; elbow, straight or curved connections; frames that group blocks.
+- **Linked frames**: link a block to a frame, a note, another drawing or a URL, and jump there with Ctrl/Cmd+click. Show a drawing inside a note with a `blockdraw` code block or a `[[Drawing.blockdraw#Frame]]` link.
+- **Executive-ready look**: one-click themes (3D, Minimal, Futuristic, Classic), color palettes, a 3D effect for blocks and links, and ten business fonts.
+- **Presentation mode**: press **P** for a full-screen slideshow, one slide per frame.
+- **For architects and engineers**: dependency tracing, animated two-way flow on links, and tags such as “Service · Java”.
+- **Notes**: comments and descriptions that you can show or hide.
+- **Exports**: Google Sheets (one tab per frame), Excel, JSON, SVG and PNG.
+- Works offline, follows your light or dark theme, and runs on desktop and mobile.
 
-![Dark theme with the properties panel showing a block's frame link](docs/images/editor-dark.png)
+![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
 
-## Installation
+## Install
 
 Block Draw needs Obsidian 1.5 or later.
 
-**From the community plugins list**: in Obsidian, open **Settings → Community plugins → Browse**, search for **Block Draw**, and install it from there.
+- **Community plugins**: open **Settings → Community plugins → Browse**, search for **Block Draw** and install it.
+- **Manual**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest) into `<your vault>/.obsidian/plugins/block-draw/`, then in Obsidian open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
+- **BRAT**: add `sudesh309/Template-Generator` as a beta plugin.
+- **From source**: `npm install && npm run build`, then copy the three files as above.
 
-**Manual install**: download `main.js`, `manifest.json` and `styles.css` from the [latest release](https://github.com/sudesh309/Template-Generator/releases/latest) into `<your vault>/.obsidian/plugins/block-draw/`, then in Obsidian open **Settings → Community plugins**, turn off restricted mode if needed, click the reload button next to **Installed plugins**, and enable **Block Draw**.
-
-**With BRAT**: add `sudesh309/Template-Generator` as a beta plugin.
-
-**From source**: `npm install && npm run build`, then copy the three files as above.
-
-## Getting started
+## Quick start
 
 1. Click the ribbon icon or run **Block Draw: Create new drawing**. Drawings are `.blockdraw` files.
 2. Double-click the canvas to add a block and type its title. Press Enter to finish.
 3. Hover the block, drag a dot from its edge and release on empty space: a connected block appears, ready for its title.
 4. Press **F** and drag around some blocks to put them in a frame. Name the frame right away.
 5. Select a block and pick a frame in **Link** (left panel) to link them. Ctrl/Cmd+click the block to jump.
-6. Open the **Export** menu (toolbar download icon, the tab's ⋯ menu, or the command palette).
+6. Open the **Export** menu (toolbar download icon, the tab's ⋯ menu, or the command palette), or press **P** to present.
 
-### Keyboard shortcuts
+Press **?** in the editor for all keyboard shortcuts.
 
-| Keys | Action |
-| --- | --- |
-| V / H (or hold Space) | Select / pan |
-| B, O, D | Block, ellipse block, decision block |
-| A | Connector tool |
-| F | Frame tool |
-| Double-click | Add a block, or edit the text under the pointer |
-| Enter | Edit the selected element's text (Shift+Enter for a new line) |
-| Ctrl/Cmd+K | Link the selected block |
-| Ctrl/Cmd+click | Follow a block's link |
-| [ and ] (or Page Up/Down) | Previous / next frame |
-| P | Present (see [Presenting](#presenting)) |
-| T | Trace the selected block's dependencies (Esc clears) |
-| Alt+← | Back to where you were before following a link |
-| Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z | Undo, redo |
-| Ctrl/Cmd+C / X / V / D | Copy, cut, paste, duplicate |
-| Arrows (Shift = 5 steps) | Nudge |
-| Shift+1 / Shift+2 / Shift+0 | Zoom to fit / to selection / 100% |
-| Ctrl/Cmd+] / [ (with Shift: to front / back) | Bring forward / send backward |
-| Delete | Delete the selection (a frame takes its blocks with it) |
-| ? | Show all shortcuts |
+## Google Sheets export
 
-## Frames and links
-
-A block belongs to the frame its center is in. Deleting a frame deletes its blocks (undo brings them back).
-
-A block's link can point to:
-
-- **a frame in the same drawing** — following it pans and zooms to the frame; the **Back** button returns;
-- **a note or file** — opens it (Ctrl/Cmd+click opens a new tab);
-- **a frame in another drawing** — stored as `[[Other.blockdraw#Frame title]]`;
-- **a URL** — opens in your browser.
-
-From any note, `[[My drawing.blockdraw#Frame title]]` opens the drawing at that frame. To show a drawing inside a note, add a code block (or run **Insert preview of a drawing**):
-
-````markdown
-```blockdraw
-file: Checkout.blockdraw
-frame: Payment details
-height: 320
-```
-````
-
-![A note with an embedded frame preview](docs/images/embed.png)
-
-## Comments
-
-Select a block or connector and type in the **Comment** field of the properties panel. A small badge appears on the canvas — click it (or the panel's **Shown** / **Hidden** toggle, or **Show comment** / **Hide comment** in the right-click menu) to expand or collapse the note. The open/closed state is saved with the drawing, so a comment left open stays visible in read-only embeds and in SVG/PNG exports; **Remove comment** clears it.
-
-A comment is separate from a block's description: the description is part of the block itself and is always shown under the title, while a comment is an aside that stays out of the way until you open it. Comments also appear in the JSON, Excel and Google Sheets exports — see below.
-
-## Themes, palettes and 3D
-
-![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
-
-**One-click themes** restyle the whole drawing — or just the selection — in a single undoable step. Right-click the empty canvas, use the **Quick theme** buttons in the properties panel, or run *Apply theme: …* from the command palette:
-
-| Theme | Look |
-| --- | --- |
-| 3D | Soft board-room colors, navy lines, raised 3D blocks and links |
-| Minimal | White and grey, fine lines, flat |
-| Futuristic | Deep navy tiles with neon edges and glow, in 3D |
-| Classic | The original pastel colors, flat |
-
-Themes keep your color coding: blocks that shared a color before still share one afterwards. Shapes, text, links and positions are never touched. The theme also becomes the style for blocks and connectors you add next.
-
-**Palettes**: the **Palette** row in the properties panel switches the swatches between *3D*, *Classic*, *Minimal* (neutrals with one accent) and *Futuristic* (navy and neon).
-
-**3D effect**: set **Depth → 3D** for blocks or **Effect → 3D** for connectors in the properties panel, use **3D effect** in the right-click menu, or run *Toggle 3D effect* (selection, or the whole drawing when nothing is selected). 3D blocks are extruded tiles with a top-lit face and a calibrated soft shadow; on dark fills the sides take the block's edge color and the edge glows. 3D links get a drop shadow and a sheen. The effect is part of the drawing, so it shows in embeds and in SVG and PNG exports.
-
-**Presentation fonts**: choose from the **10 most used fonts in the world for business presentations** in the properties panel under **Text** (applied to block **Titles**, **Descriptions**, **Tags**, and **Links**):
-- **Inter**: Modern tech & clean digital UI standard (default)
-- **Segoe UI**: Microsoft corporate & enterprise standard (PowerPoint / Office)
-- **Roboto**: Google & Android clean geometric standard
-- **Arial / Helvetica**: Universal corporate boardroom classic
-- **Calibri**: Microsoft PowerPoint & Office classic default for 16+ years
-- **Aptos**: Microsoft 365 modern presentation default
-- **Open Sans**: High-legibility slide decks & consulting reports
-- **Montserrat**: High-impact startup pitch decks & geometric headings
-- **Lato**: Warm corporate & management consulting favorite
-- **Georgia**: Authoritative digital editorial & executive prestige serif
-
-![The Futuristic theme with animated flow](docs/images/theme-futuristic.png)
-
-## Presenting
-
-![Presentation mode in Obsidian](docs/images/presentation.png)
-
-Press **P** (or the toolbar's screen icon, or *Present drawing* in the command palette). The drawing goes full screen with every panel hidden: first an overview of the whole drawing, then one slide per frame, in the frames panel's order, with an animated move between slides.
-
-| Keys | Action |
-| --- | --- |
-| → ↓ Space Page Down | Next slide |
-| ← ↑ Page Up | Previous slide |
-| 1–9, Home, End | Jump to a slide |
-| Click a block | Spotlight it and its dependencies with live legend; click empty space to clear |
-| Click a link badge | Jump to the linked frame's slide |
-| S | Switch between your theme and a dark stage |
-| L | Laser pointer on / off |
-| ? | Toggle presentation guide & shortcut cheat sheet |
-| Esc | Clear the spotlight, then end the presentation |
-
-Nothing can be edited while presenting, and your view is restored afterwards.
-
-## For architects and engineers
-
-![Tracing the dependencies of a block](docs/images/trace.png)
-
-- **Dependency tracing**: select a block and press **T** (or right-click → *Trace dependencies*). Blocks it depends on glow amber (upstream, against the arrows), blocks that depend on it glow green (downstream, along the arrows), the paths between them animate, and everything else fades. The hint bar counts both sides. Cycles are handled. Esc clears it.
-- **Animated flow**: set a connector's **Effect** to **Flow** and dashes march along it in its direction — on the canvas and in embedded previews (static in exported images). Respects the system's reduced-motion setting.
-- **Tags**: give a block a technology or role in the **Tag** field (“Service · Java”, “Queue · Kafka”, “PostgreSQL”). It is shown in small capitals above the title, like a C4 stereotype, and exported in the JSON (`tag`) and in the workbook's Blocks tab.
-
-## Exporting
-
-| Export | Where it goes |
-| --- | --- |
-| Google Sheets | A spreadsheet in your Google Drive (see setup below) |
-| Excel workbook (.xlsx) | Next to the drawing (or the export folder from settings) |
-| JSON | `<drawing>.json`, or **Copy JSON to clipboard** |
-| SVG / PNG | The whole drawing, or only the selected frame |
-
-### What the workbook looks like
-
-The Google Sheets and Excel exports build the same workbook:
-
-- **Index** tab: every frame with a link to its tab, block and connection counts, the frames it links to and its description.
-- **One tab per frame**, drawn on a grid of small square cells: blocks are filled, outlined cells; connections are routed along cell borders with arrowheads and labels; frame titles and descriptions sit on top with a link back to the index. A block that links to a frame gets a **→ Frame name** link that jumps to that frame's tab. Hover a block (or a labeled connection) for a note with its comment and connections. Beside the grid, a plain table lists the frame's blocks as text — **Block Title**, **LinkTo** and **LinkFrom** (its outgoing and incoming connections), **Block Description** and **Notes** (its comment) — so the frame reads without the diagram too.
-- **Canvas** tab for blocks that are not in any frame, with the same textual table.
-- **Blocks** and **Connections** tabs listing every element across all frames as a filterable row (frame, title, description, shape or line, comment, links, incoming and outgoing connections). Internal element ids are never shown.
-
-![A frame tab: blocks as cells, connections as borders, and a link to another frame's tab](docs/images/sheet-frame.png)
-
-![The index tab](docs/images/sheet-index.png)
-
-Exporting a drawing to Google Sheets again **updates the same spreadsheet**: the tabs it created are replaced, tabs you added yourself are kept. Use **Export to a new Google Sheet** to start over. Cell size, the extra tabs and this behavior can be changed in settings.
-
-### Setting up Google Sheets export
-
-Choose a connection method in **Settings → Block Draw → Google Sheets**.
-
-#### Apps Script web app (recommended, works on mobile)
-
-A tiny script in your own Google account receives the sheet data from Obsidian and writes it with the Google Sheets API. No Google Cloud project is needed.
-
-1. In the plugin settings, click **Generate** next to *Apps Script secret*, then **Copy code**. The code is also in [`apps-script/Code.gs`](apps-script/Code.gs).
-2. Open [script.google.com](https://script.google.com), create a project and replace the contents of `Code.gs` with the copied code. If you copied the file from this repository instead, set `SECRET` at the top to the secret from the settings.
-3. In the editor sidebar, click **Services (+)**, choose **Google Sheets API** and click **Add**.
-4. Click **Deploy → New deployment**, select the type **Web app**, set *Execute as* to **Me** and *Who has access* to **Anyone**, then **Deploy** and authorize the script.
-5. Copy the web app URL (it ends in `/exec`) into *Web app address* and click **Test**.
-
-"Anyone" is required because Obsidian cannot sign in to your Google account. The script rejects every request that does not carry your secret, and it only creates and updates spreadsheets. If you edit the script later, publish it with **Deploy → Manage deployments → Edit → Version: New version** so the URL stays the same. Some Google Workspace organizations do not allow "Anyone" access; use the Google account method there.
-
-#### Google account (desktop only)
-
-Calls the Google Sheets API directly after you sign in. It asks only for the `drive.file` permission: access to the spreadsheets Block Draw creates, nothing else in your Drive.
-
-1. In the [Google Cloud console](https://console.cloud.google.com/), create a project and enable the **Google Sheets API**.
-2. Configure the OAuth consent screen (user type *External*) and add yourself as a test user. Publishing the app avoids having to sign in again every 7 days.
-3. Create an **OAuth client ID** of type **Desktop app** and paste its client ID and client secret into the settings.
-4. Click **Sign in with Google** and approve access in your browser.
-
-The sign-in token is stored on this device only (in Obsidian's secret storage when available), never in the synced plugin settings.
-
-### JSON format
-
-The **structured** format (default) is meant for other tools: frames in order, each with its blocks in reading order and the connections inside it, block positions relative to their frame, and links resolved to frame titles.
-
-```json
-{
-  "format": "block-draw/export",
-  "version": 1,
-  "name": "Checkout",
-  "frames": [
-    {
-      "id": "f1",
-      "order": 1,
-      "title": "Checkout flow",
-      "description": "Happy path and the sign-in branch",
-      "bounds": { "x": 0, "y": 0, "width": 780, "height": 440 },
-      "blocks": [
-        {
-          "id": "pay",
-          "title": "Payment",
-          "tag": "Service",
-          "description": "Card, wallet or invoice",
-          "comment": "",
-          "commentOpen": false,
-          "shape": "rounded",
-          "bounds": { "x": 580, "y": 80, "width": 160, "height": 80 },
-          "link": { "type": "frame", "frameId": "f2", "frameTitle": "Payment details" },
-          "outgoing": [],
-          "incoming": ["c2", "c4"]
-        }
-      ],
-      "connections": [
-        {
-          "id": "c2",
-          "from": { "blockId": "check", "blockTitle": "Logged in?", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
-          "to": { "blockId": "pay", "blockTitle": "Payment", "frameId": "f1", "frameTitle": "Checkout flow", "side": "auto" },
-          "label": "yes",
-          "comment": "",
-          "commentOpen": false,
-          "routing": "elbow"
-        }
-      ],
-      "linksTo": [{ "frameId": "f2", "title": "Payment details" }],
-      "linkedFrom": [{ "frameId": "f2", "title": "Payment details" }]
-    }
-  ],
-  "unframed": { "blocks": [], "connections": [] },
-  "crossFrameConnections": [],
-  "stats": { "frames": 2, "blocks": 7, "connections": 6 }
-}
-```
-
-(Styles, canvas positions and timestamps are included too; shortened here.) The **raw** format is the drawing file itself.
-
-## The `.blockdraw` file
-
-Drawings are plain JSON with one element per line, so they diff nicely in git:
-
-```json
-{
-	"type": "block-draw",
-	"version": 1,
-	"elements": [
-		{"id":"f1","type":"frame","x":0,"y":0,"width":780,"height":440,"title":"Checkout flow","description":"","style":{"fill":"transparent","stroke":"default"}},
-		{"id":"pay","type":"block","x":580,"y":80,"width":160,"height":80,"title":"Payment","description":"","comment":"","commentOpen":false,"shape":"rounded","frameId":"f1","link":"frame:f2","tag":"Service","style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center","threeD":true}},
-		{"id":"c2","type":"connector","from":{"id":"check","side":"auto"},"to":{"id":"pay","side":"auto"},"label":"yes","comment":"","commentOpen":false,"routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow","threeD":false,"flow":true}}
-	]
-}
-```
-
-Block links are `frame:<frame id>`, `[[wikilink]]` or a URL. After a Google Sheets export the file also remembers the spreadsheet (`exports.googleSheet`) so the next export can update it. A file that cannot be read is shown as an error and never overwritten.
-
-If you use Obsidian Sync, turn on syncing of **other file types** in its settings so `.blockdraw` files are synced too.
+Exports go through an Apps Script web app that you deploy in your own Google account (works on desktop and mobile, no Google Cloud project needed), or through a Google sign-in on desktop. Set it up under **Settings → Block Draw → Google Sheets**; the steps are in the [design doc](docs/DESIGN.md#setting-up-google-sheets-export).
 
 ## Network use and privacy
 
-Block Draw works offline: drawing, saving and the JSON, Excel, SVG and PNG exports stay on your device. It connects to the network only when you export to Google Sheets or test that connection, and only to Google:
+Block Draw works offline. It contacts only Google, and only for the presentation fonts that its stylesheet imports (Google Fonts), and when you export to Google Sheets or test that connection (your own Apps Script web app, or Google sign-in and the Sheets API). There is no telemetry and there are no ads. Details: [network use and privacy](docs/DESIGN.md#network-use-and-privacy).
 
-- **Apps Script web app**: the workbook goes to the web app you deployed in your own Google account (`script.google.com`), which writes it to your Google Drive.
-- **Google account** (desktop): signing in goes through `accounts.google.com` and `oauth2.googleapis.com`, and the workbook goes straight to the Google Sheets API (`sheets.googleapis.com`), with access limited to the spreadsheets Block Draw creates.
+## More
 
-Only Google Sheets export needs a Google account. There is no telemetry and there are no ads, and no other servers are contacted.
-
-## Development
-
-```bash
-npm install
-npm run dev        # rebuild main.js on change
-npm run build      # type check and production build
-npm run lint       # ESLint with Obsidian's recommended rules
-npm test           # unit tests (model, routing, workbook layout, XLSX, Sheets requests, Apps Script bridge)
-npm run test:ui    # editor tests in Chromium (set CHROMIUM_PATH if Chromium is elsewhere)
-OBSIDIAN_BIN=/path/to/obsidian npm run test:e2e   # end-to-end tests in the Obsidian desktop app
-```
-
-The Google Sheets tests validate every generated request against Google's published Sheets API schema (a trimmed copy lives in `tests/fixtures`), and run the real `apps-script/Code.gs` against an in-memory Sheets service. The end-to-end tests drive the real Obsidian app: drawing, saving, frame links, exports, settings and embeds, with a local stand-in for the Apps Script web app. They pass on Obsidian 1.5.3 (the oldest version the manifest allows) and on current releases; set `PLUGIN_DIR` to test files downloaded from a release instead of the local build.
-
-Source layout:
-
-| Folder | Contents |
-| --- | --- |
-| `src/model` | Elements, file format, scene operations, undo history |
-| `src/geometry` | Shapes and connector routing |
-| `src/render` | SVG rendering shared by the editor, embeds and exports |
-| `src/editor` | The canvas editor (independent of Obsidian) |
-| `src/export` | JSON, workbook layout, XLSX writer, Google Sheets requests and transports |
-| `src/obsidian` | View, settings, link picker, exports, Google sign-in, embeds |
-| `apps-script` | The Google Apps Script bridge |
-
-Releasing a new version:
-
-1. Add a `## x.y.z` section to `CHANGELOG.md` and commit it.
-2. Run `npm version x.y.z`. It updates `package.json`, `manifest.json` and `versions.json`, commits, and creates the tag `x.y.z` (no `v`, as Obsidian requires).
-3. Run `git push --follow-tags`. The release workflow checks that the tag matches the manifest, runs the tests, and publishes a GitHub release with `main.js`, `manifest.json` and `styles.css`, signed with [artifact attestations](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds), using the changelog section as release notes. Obsidian, BRAT and the community directory pick up new versions from these releases.
-
-Instead of pushing a tag, you can push the version commit and run the **Release** workflow from the Actions tab; it tags the commit with the version from `manifest.json`.
+- [Design and reference](docs/DESIGN.md): how each feature works, the export and file formats, and the architecture
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## License
 

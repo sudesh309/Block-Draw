@@ -9,8 +9,9 @@ npm install
 npm run dev   # rebuilds main.js on change; load the vault it's symlinked/copied into and reload Obsidian
 ```
 
-See the [Development](README.md#development) section of the README for the full list of scripts
-(lint, unit tests, editor UI tests, end-to-end tests in real Obsidian) and the source layout.
+See the [Development](docs/DESIGN.md#development) section of the design doc for the full list of
+scripts (lint, unit tests, editor UI tests, end-to-end tests in real Obsidian), and its
+[Architecture](docs/DESIGN.md#architecture) section for how the code is laid out.
 
 ## Before opening a pull request
 
