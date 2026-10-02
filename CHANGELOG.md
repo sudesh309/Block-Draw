@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2
+
+- Added the **10 most used fonts in the world for business presentations** (Inter, Segoe UI, Roboto, Arial / Helvetica, Calibri, Aptos, Open Sans, Montserrat, Lato, Georgia) with cross-platform fallback stacks.
+- Typography styling applies to block **Titles**, **Descriptions**, **Tags**, and **Links**.
+- Added a Font Family dropdown in the properties panel under the **Text** section with font names and business role descriptions.
+- Dynamic font-aware text measurement and auto-fit block heights.
+- Live typography preview in the in-place text editor while editing.
+- Embedded font stylesheet in standalone SVG exports.
+- Maintained 100% backward compatibility with existing drawings defaulting safely to Inter.
+
 ## 0.4.1
 
 - Renamed the **Executive 3D** theme to **3D** across themes, context menus, and documentation while maintaining backward-compatible "executive" aliases.
