@@ -142,7 +142,12 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 			name: def.name,
 			desc: this.describe(def),
 			visible: opts.visible,
-			render: (st) => opts.extra?.(st, this.control(st, def, opts.changed)),
+			render: (st) => {
+				// Two statements on purpose: in `opts.extra?.(st, this.control(...))` a row without
+				// extras would never get its control, because an optional call skips its arguments.
+				const input = this.control(st, def, opts.changed);
+				opts.extra?.(st, input);
+			},
 		};
 	}
 
