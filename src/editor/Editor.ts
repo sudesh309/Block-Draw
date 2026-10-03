@@ -15,8 +15,6 @@ import {
 	expandMoveSet,
 	indexById,
 	insertClones,
-	makeClipboardPayload,
-	readClipboardPayload,
 	refreshFrameMembership,
 	reorderElements,
 	translateElements,
@@ -46,14 +44,16 @@ import {
 	type Routing,
 	type Side,
 } from "../model/types";
-import { applyDrawingTheme, DRAWING_THEMES, drawingThemeById, type DrawingThemeId } from "../model/themes";
+import { applyDrawingTheme, drawingThemeById, type DrawingThemeId } from "../model/themes";
 import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { frameTitleMetrics } from "../render/elements";
-import { clearTextMeasureCache, layoutBlockText } from "../render/text";
+import { clearTextMeasureCache } from "../render/text";
+import { ClipboardController } from "./clipboard";
 import { shortcut } from "./commands";
+import { showContextMenu } from "./contextMenu";
 import { el, svgEl } from "./dom";
-import type { EditorHost, MenuItemSpec } from "./host";
+import type { EditorHost } from "./host";
 import { blockAt, hitTest, sideNear } from "./hitTest";
 import { KeyboardController } from "./keyboard";
 import { PointerController } from "./pointer";
@@ -111,6 +111,7 @@ export class Editor {
 	readonly help: HelpPanel;
 	readonly presenter: Presenter;
 	readonly view: ViewportController;
+	readonly clipboard: ClipboardController;
 	private readonly hintEl: HTMLDivElement;
 	private readonly emptyEl: HTMLDivElement;
 
@@ -146,8 +147,6 @@ export class Editor {
 	/** Set once destroy() ran; pending animations and async work check it. */
 	destroyed = false;
 	private resizeObserver: ResizeObserver | null = null;
-	private internalClipboard: string | null = null;
-	private pasteCount = 0;
 	private readonly cleanup: (() => void)[] = [];
 	/** Document and window the editor lives in (may be an Obsidian popout window). */
 	readonly doc: Document;
@@ -189,9 +188,7 @@ export class Editor {
 		this.pointer = new PointerController(this);
 		this.keyboard = new KeyboardController(this);
 
-		this.listen(this.doc, "copy", (e) => this.onClipboardEvent(e as ClipboardEvent, "copy"));
-		this.listen(this.doc, "cut", (e) => this.onClipboardEvent(e as ClipboardEvent, "cut"));
-		this.listen(this.doc, "paste", (e) => this.onClipboardEvent(e as ClipboardEvent, "paste"));
+		this.clipboard = new ClipboardController(this);
 
 		if (typeof ResizeObserver !== "undefined") {
 			this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -777,74 +774,6 @@ export class Editor {
 		this.commit(next, { selection: newSel });
 	}
 
-	copySelectionText(): string | null {
-		if (!this.selection.size) return null;
-		const picked = collectForCopy(this.elements, this.selection);
-		const selectedConnectors = this.selectedConnectors().filter((c) => !picked.includes(c));
-		if (!picked.length && !selectedConnectors.length) return null;
-		const text = JSON.stringify(makeClipboardPayload(picked));
-		this.internalClipboard = text;
-		this.pasteCount = 0;
-		return text;
-	}
-
-	/** Pastes Block Draw elements or plain text (as a new block) at `at` (world). */
-	pasteText(text: string, at?: Point): void {
-		const els = readClipboardPayload(text);
-		if (els) {
-			const valid = els.filter((e) => e && typeof e === "object" && typeof e.id === "string");
-			const boxes = valid.filter(isBox);
-			const b = unionBounds(boxes);
-			let dx = 0;
-			let dy = 0;
-			if (b) {
-				if (at) {
-					const target = this.snapPoint({ x: at.x - b.width / 2, y: at.y - b.height / 2 });
-					dx = target.x - b.x;
-					dy = target.y - b.y;
-				} else {
-					this.pasteCount++;
-					dx = dy = (this.options.gridSize || 20) * this.pasteCount;
-				}
-			}
-			const { elements, idMap } = cloneElements(valid, dx, dy);
-			const next = insertClones(this.elements, elements, new Set(elements.map((e) => e.id)));
-			this.commit(next, { selection: [...idMap.values()].filter((id) => next.some((e) => e.id === id)) });
-			return;
-		}
-		const clean = text.trim().slice(0, 2000);
-		if (!clean) return;
-		const size = this.viewSize();
-		const p = at ?? this.screenToWorld({ x: size.width / 2, y: size.height / 2 });
-		const block = this.makeBlock({ x: 0, y: 0, ...DEFAULT_BLOCK_SIZE }, { title: clean, shape: this.current.shape });
-		const pos = this.snapPoint({ x: p.x - block.width / 2, y: p.y - block.height / 2 });
-		const grown = fitBlockHeight({ ...block, x: pos.x, y: pos.y });
-		this.insertBlocks([grown]);
-	}
-
-	pasteInternal(at?: Point): boolean {
-		if (!this.internalClipboard) return false;
-		this.pasteText(this.internalClipboard, at);
-		return true;
-	}
-
-	private onClipboardEvent(e: ClipboardEvent, kind: "copy" | "cut" | "paste"): void {
-		if (this.destroyed || this.options.readOnly) return;
-		if (this.doc.activeElement !== this.root) return;
-		if (kind === "paste") {
-			const text = e.clipboardData?.getData("text/plain") ?? "";
-			e.preventDefault();
-			if (text) this.pasteText(text);
-			else this.pasteInternal();
-			return;
-		}
-		const text = this.copySelectionText();
-		if (!text) return;
-		e.preventDefault();
-		e.clipboardData?.setData("text/plain", text);
-		if (kind === "cut") this.deleteSelection();
-	}
-
 	nudge(dx: number, dy: number): void {
 		const ids = [...this.selection];
 		if (!ids.length) return;
@@ -992,132 +921,7 @@ export class Editor {
 	/* ======================================================= context menu */
 
 	showContextMenu(screen: { x: number; y: number }, world: Point): void {
-		const items: MenuItemSpec[] = [];
-		const sel = this.selectedElements();
-		const blocks = sel.filter(isBlock);
-		const frames = sel.filter(isFrame);
-		const connectors = sel.filter(isConnector);
-		const ro = this.options.readOnly;
-
-		if (sel.length === 0) {
-			if (!ro) {
-				items.push({ title: "Add block here", icon: "block", onClick: () => this.addBlockAt(world) });
-				items.push({
-					title: "Add frame here",
-					icon: "frame",
-					onClick: () => {
-						const p = this.snapPoint(world);
-						this.addFrame({ x: p.x, y: p.y, width: 480, height: 320 }, { edit: true });
-					},
-				});
-				items.push({ title: "Paste", icon: "duplicate", onClick: () => void this.pasteFromSystem(world), separator: true });
-				items.push({ title: "Select all", onClick: () => this.selectAll() });
-			}
-			items.push({ title: "Zoom to fit", icon: "fit", onClick: () => this.zoomToFit({ animate: true }), separator: true });
-			items.push({ title: "Present", icon: "present", onClick: () => this.presenter.start() });
-			if (!ro) {
-				DRAWING_THEMES.forEach((t, i) => {
-					items.push({
-						title: `Theme: ${t.name}`,
-						icon: "palette",
-						onClick: () => this.applyTheme(t.id),
-						...(i === 0 ? { separator: true } : {}),
-					});
-				});
-				const allOn = this.elements.length > 0 && this.elements.filter((e) => isBlock(e) || isConnector(e)).every((e) => e.style.threeD);
-				items.push({ title: "3D effect", icon: "cube", checked: allOn, onClick: () => this.toggle3D() });
-			}
-			items.push({
-				separator: true,
-				title: "Show grid",
-				icon: "grid",
-				checked: this.options.showGrid,
-				onClick: () => this.setOptions({ showGrid: !this.options.showGrid }),
-			});
-			items.push({
-				title: "Snap to grid",
-				icon: "snap",
-				checked: this.options.snapToGrid,
-				onClick: () => this.setOptions({ snapToGrid: !this.options.snapToGrid }),
-			});
-			this.host.showMenu(items, screen);
-			return;
-		}
-
-		if (blocks.length === 1 && sel.length === 1) {
-			const b = blocks[0];
-			if (b.link) items.push({ title: `Open link (${this.describeLink(b.link)})`, icon: "follow-link", onClick: () => this.followLink(b.id) });
-			items.push({
-				title: this.traceRootId === b.id ? "Hide dependencies" : "Trace dependencies",
-				icon: "trace",
-				onClick: () => this.toggleTrace(b.id),
-			});
-			if (!ro) {
-				items.push({ title: "Edit text", icon: "edit", onClick: () => this.textEditor.start(b.id) });
-				items.push({ title: b.link ? "Change link…" : "Link to frame or note…", icon: "link", onClick: () => void this.editLink(b.id) });
-				if (b.link) items.push({ title: "Remove link", icon: "unlink", onClick: () => this.updateElement(b.id, { link: null }) });
-				if (b.description.trim()) {
-					items.push({ title: b.descriptionOpen ? "Hide description" : "Show description", onClick: () => this.toggleDescription(b.id) });
-				}
-				if (b.comment) {
-					items.push({ title: b.commentOpen ? "Hide comment" : "Show comment", onClick: () => this.toggleComment(b.id) });
-					items.push({ title: "Remove comment", onClick: () => this.updateElement(b.id, { comment: "", commentOpen: false }) });
-				}
-			}
-		}
-		if (frames.length === 1 && sel.length === 1) {
-			const f = frames[0];
-			items.push({ title: "Zoom to frame", icon: "fit", onClick: () => this.navigateToFrame(f.id) });
-			if (!ro) items.push({ title: "Rename frame", icon: "edit", onClick: () => this.textEditor.start(f.id) });
-		}
-		if (connectors.length === 1 && sel.length === 1 && !ro) {
-			const c = connectors[0];
-			items.push({ title: c.label ? "Edit label" : "Add label", icon: "edit", onClick: () => this.textEditor.start(c.id) });
-			if (c.comment) {
-				items.push({ title: c.commentOpen ? "Hide comment" : "Show comment", onClick: () => this.toggleComment(c.id) });
-				items.push({ title: "Remove comment", onClick: () => this.updateElement(c.id, { comment: "", commentOpen: false }) });
-			}
-			items.push({ title: "Reverse direction", onClick: () => this.reverseConnector(c.id) });
-			for (const r of ["elbow", "straight", "curved"] as Routing[]) {
-				items.push({
-					title: `${r[0].toUpperCase()}${r.slice(1)} line`,
-					checked: c.routing === r,
-					onClick: () => this.applyRouting(r),
-					separator: r === "elbow",
-				});
-			}
-		}
-		if (!ro) {
-			if (blocks.length || connectors.length) {
-				const allOn = [...blocks, ...connectors].every((e) => e.style.threeD);
-				items.push({ title: "3D effect", icon: "cube", checked: allOn, onClick: () => this.toggle3D(), separator: true });
-			}
-			items.push({ title: "Duplicate", icon: "duplicate", onClick: () => this.duplicateSelection(), separator: true });
-			items.push({
-				title: "Copy",
-				onClick: () => {
-					const text = this.copySelectionText();
-					if (text) void navigator.clipboard?.writeText(text).catch(() => undefined);
-				},
-			});
-			items.push({ title: "Bring to front", icon: "front", onClick: () => this.reorderSelection("front"), separator: true });
-			items.push({ title: "Send to back", icon: "back_layer", onClick: () => this.reorderSelection("back") });
-			items.push({ title: "Delete", icon: "trash", warning: true, onClick: () => this.deleteSelection(), separator: true });
-		}
-		this.host.showMenu(items, screen);
-	}
-
-	async pasteFromSystem(at?: Point): Promise<void> {
-		try {
-			const text = await navigator.clipboard.readText();
-			if (text) {
-				this.pasteText(text, at);
-				return;
-			}
-		} catch {
-			// clipboard API unavailable: fall back to the in-editor clipboard
-		}
-		if (!this.pasteInternal(at)) this.host.notice("Nothing to paste.");
+		showContextMenu(this, screen, world);
 	}
 
 	/* ========================================================== rendering */
@@ -1169,13 +973,6 @@ export class Editor {
 		if (this.hintEl.textContent !== text) this.hintEl.textContent = text;
 		this.hintEl.classList.toggle("is-visible", !!text);
 	}
-}
-
-/** Grows a block so its text fits (never shrinks it). */
-export function fitBlockHeight(block: BlockElement): BlockElement {
-	const need = layoutBlockText(block).requiredHeight;
-	if (need <= block.height) return block;
-	return { ...block, height: Math.ceil(need / 10) * 10 };
 }
 
 function sameElements(a: readonly DrawElement[], b: readonly DrawElement[]): boolean {

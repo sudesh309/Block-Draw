@@ -8,7 +8,7 @@ import { fontStack } from "../../render/fonts";
 import { FONT_FAMILY, LINE_HEIGHT, measureText, titleWeight } from "../../render/text";
 import { activeElementOf, el } from "../dom";
 import type { Editor } from "../Editor";
-import { fitBlockHeight } from "../Editor";
+import { fitBlockHeight } from "../blocks";
 
 /** In-place text editing (block titles, connector labels, frame titles) with a textarea overlay. */
 export class TextEditor {
