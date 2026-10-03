@@ -17,11 +17,16 @@ import {
 import { GoogleAuth } from "./obsidian/googleAuth";
 import type { BlockDrawHost, ExportKind } from "./obsidian/plugin";
 import { BlockDrawSettingTab } from "./obsidian/SettingTab";
-import { mergeSettings, type BlockDrawSettings } from "./obsidian/settings";
+import { loadSettings, settingsToSave, type SecretStore, type StoredSettings } from "./kernel/settings";
+import { deviceSecrets, vaultTag } from "./obsidian/secrets";
+import { SETTINGS, type BlockDrawSettings } from "./obsidian/settings";
 import { WebFontLoader } from "./obsidian/webFonts";
 
 export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 	settings!: BlockDrawSettings;
+	/** What data.json holds besides the settings, and which secrets could not leave it. */
+	private stored: StoredSettings = { unknown: {}, inVault: new Set() };
+	private secrets!: SecretStore;
 	auth!: GoogleAuth;
 	webFonts!: WebFontLoader;
 	/** Value of the "Load web fonts" setting that was last applied. */
@@ -57,15 +62,27 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = mergeSettings(await this.loadData());
+		this.secrets = deviceSecrets(this.app, `block-draw-${vaultTag(this.app)}-`);
+		const loaded = loadSettings<BlockDrawSettings>(SETTINGS, await this.loadData(), this.secrets);
+		this.settings = loaded.values;
+		this.stored = loaded;
+		if (loaded.migrated.length) {
+			// Secrets written by 0.4.x were in data.json, which syncs with the vault: take them out now.
+			await this.saveData(settingsToSave(SETTINGS, this.settings, this.stored, this.secrets));
+			new Notice("Your Google Sheets secrets were moved out of the vault into this device's secret storage. Enter them once on your other devices.", 12000);
+		}
 	}
 
 	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
+		await this.saveData(settingsToSave(SETTINGS, this.settings, this.stored, this.secrets));
 		if (this.settings.webFonts !== this.webFontsOn) void this.syncWebFonts(true);
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
 			if (leaf.view instanceof BlockDrawView) leaf.view.applySettings();
 		}
+	}
+
+	isSecretInVault(key: string): boolean {
+		return this.stored.inVault.has(key);
 	}
 
 	/** Applies the "Load web fonts" setting; `notify` tells the user when the fonts cannot be downloaded. */

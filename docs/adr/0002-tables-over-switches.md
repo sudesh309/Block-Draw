@@ -15,7 +15,7 @@ A concept with several variants is one table with one row per variant, and the c
 | Table | Home | Row |
 | --- | --- | --- |
 | `SHAPES` | `geometry/shapes/`, one file per shape | outline path, decoration, hit and link outline, side inset, text box, picker label |
-| `SETTINGS` | `kernel/settings.ts` | key, type, default, label, scope, whether it is secret, what it needs (network) |
+| `SETTINGS` | rows in `obsidian/settings.ts`, mechanism in `kernel/settings.ts` | key, type, default, name, description, whether it is secret, what it needs (network) |
 | `COMMANDS` | `kernel/commands.ts` | id, label, keys, when it applies, what it runs |
 | `EXPORTERS` | `obsidian/exporters.ts` | id, label, icon, what it needs, what it runs |
 | `PALETTES`, `DRAWING_THEMES` | `render/colors.ts`, `model/themes.ts` | already tables |

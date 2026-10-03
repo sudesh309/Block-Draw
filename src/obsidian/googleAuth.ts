@@ -1,4 +1,6 @@
 import { Platform, requestUrl, type App } from "obsidian";
+import type { SecretStore } from "../kernel/settings";
+import { deviceSecrets } from "./secrets";
 
 /** The parts of Node's `http` module used for the sign-in redirect (desktop only). */
 interface LocalServer {
@@ -40,17 +42,6 @@ interface StoredTokens {
 	clientId: string;
 }
 
-interface SecretStorageLike {
-	getSecret(id: string): string | null;
-	setSecret(id: string, secret: string): void;
-}
-
-interface AppWithStorage {
-	secretStorage?: SecretStorageLike;
-	loadLocalStorage?: (key: string) => unknown;
-	saveLocalStorage?: (key: string, data: unknown) => void;
-}
-
 function base64Url(bytes: Uint8Array): string {
 	let s = "";
 	bytes.forEach((b) => (s += String.fromCharCode(b)));
@@ -75,28 +66,21 @@ function form(body: Record<string, string>): string {
 }
 
 export class GoogleAuth {
+	/** Tokens live on this device (secret storage, or this vault's local storage), never in the synced settings. */
+	private readonly secrets: SecretStore;
+
 	constructor(
-		private readonly app: App,
+		app: App,
 		private readonly getClient: () => { clientId: string; clientSecret: string },
-	) {}
+	) {
+		this.secrets = deviceSecrets(app);
+	}
 
 	/* ------------------------------------------------------------ storage */
 
-	private storage(): AppWithStorage {
-		return this.app;
-	}
-
 	private read(): StoredTokens | null {
-		let raw: unknown = null;
-		const st = this.storage();
-		try {
-			if (st.secretStorage) raw = st.secretStorage.getSecret(STORE_KEY);
-			if (!raw && st.loadLocalStorage) raw = st.loadLocalStorage(STORE_KEY);
-			if (!raw) raw = window.localStorage.getItem(`${this.app.vault.getName()}:${STORE_KEY}`);
-		} catch {
-			raw = null;
-		}
-		if (!raw || typeof raw !== "string") return null;
+		const raw = this.secrets.get(STORE_KEY);
+		if (!raw) return null;
 		try {
 			const data = JSON.parse(raw) as StoredTokens;
 			return data && typeof data.refreshToken === "string" ? data : null;
@@ -106,16 +90,8 @@ export class GoogleAuth {
 	}
 
 	private write(tokens: StoredTokens | null): void {
-		const st = this.storage();
-		const value = tokens ? JSON.stringify(tokens) : "";
-		if (st.secretStorage) {
-			st.secretStorage.setSecret(STORE_KEY, value);
-		} else if (st.saveLocalStorage) {
-			st.saveLocalStorage(STORE_KEY, value || null);
-		} else {
-			const key = `${this.app.vault.getName()}:${STORE_KEY}`;
-			if (value) window.localStorage.setItem(key, value);
-			else window.localStorage.removeItem(key);
+		if (!this.secrets.set(STORE_KEY, tokens ? JSON.stringify(tokens) : "")) {
+			throw new Error("Could not save the Google sign-in on this device.");
 		}
 	}
 

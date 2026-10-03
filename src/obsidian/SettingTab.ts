@@ -10,10 +10,11 @@ import {
 } from "obsidian";
 import APPS_SCRIPT_CODE from "../../apps-script/Code.gs";
 import { AppsScriptTransport } from "../export/gsheets/transport";
+import { getPath, setPath, type SettingDef } from "../kernel/settings";
 import { GOOGLE_SCOPE } from "./googleAuth";
 import { obsidianHttp } from "./exports";
 import type { BlockDrawHost } from "./plugin";
-import type { BlockDrawSettings, SheetsMethod } from "./settings";
+import { settingDef, type BlockDrawSettings, type SettingKey } from "./settings";
 
 const DECLARATIVE_SETTINGS = "1.13.0";
 
@@ -29,6 +30,17 @@ interface Row {
 interface Group {
 	heading: string;
 	rows: Row[];
+}
+
+/** A text field the row's extra controls can update. */
+type TextInput = { setValue(v: string): unknown };
+
+interface RowOptions {
+	visible?: () => boolean;
+	/** Runs after the value changed and was saved. */
+	changed?: () => void;
+	/** Adds more controls, such as a button, after the setting's own control. */
+	extra?: (setting: Setting, input: TextInput | null) => void;
 }
 
 function randomSecret(): string {
@@ -122,202 +134,101 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 		];
 	}
 
+	/** A row whose name, description and control come from its entry in the SETTINGS table. */
+	private row(key: SettingKey, opts: RowOptions = {}): Row {
+		const def = settingDef(key);
+		return {
+			name: def.name,
+			desc: this.describe(def),
+			visible: opts.visible,
+			render: (st) => opts.extra?.(st, this.control(st, def, opts.changed)),
+		};
+	}
+
+	/** A secret's row also says where the secret is kept. */
+	private describe(def: SettingDef): string | undefined {
+		if (def.type !== "secret") return def.desc;
+		const where = this.plugin.isSecretInVault(def.key)
+			? "This device cannot keep secrets outside the vault, so it is saved in the plugin's data.json."
+			: "Kept on this device only, not in the vault: enter it once on each device.";
+		return def.desc ? `${def.desc} ${where}` : where;
+	}
+
+	private async changeSetting(def: SettingDef, value: unknown, changed?: () => void): Promise<void> {
+		setPath(this.s as unknown as Record<string, unknown>, def.key, value);
+		await this.save();
+		changed?.();
+	}
+
+	/** Adds the control for a setting's type. Returns the text field, for text-like settings. */
+	private control(st: Setting, def: SettingDef, changed?: () => void): TextInput | null {
+		const value = getPath(this.s, def.key);
+		switch (def.type) {
+			case "text":
+			case "folder":
+			case "secret": {
+				let input: TextInput | null = null;
+				st.addText((t) => {
+					input = t;
+					if (def.type === "secret") t.inputEl.type = "password";
+					else if (def.placeholder) t.setPlaceholder(def.placeholder);
+					const empty = def.type === "secret" ? "" : (def.emptyAs ?? "");
+					t.setValue(typeof value === "string" ? value : "").onChange((v) => this.changeSetting(def, v.trim() || empty, changed));
+				});
+				return input;
+			}
+			case "toggle":
+				st.addToggle((t) => t.setValue(value === true).onChange((v) => this.changeSetting(def, v, changed)));
+				return null;
+			case "slider":
+				st.addSlider((sl) => {
+					sl.setLimits(def.min, def.max, def.step)
+						.setValue(typeof value === "number" ? value : def.default)
+						.onChange((v) => this.changeSetting(def, v, changed));
+					showSliderValue(sl);
+				});
+				return null;
+			case "choice":
+				st.addDropdown((d) => {
+					for (const o of def.options) d.addOption(o.value, o.label);
+					d.setValue(typeof value === "string" ? value : def.default).onChange((v) => this.changeSetting(def, v, changed));
+				});
+				return null;
+		}
+	}
+
 	private drawingRows(): Row[] {
-		const s = this.s;
-		return [
-			{
-				name: "Folder for new drawings",
-				desc: "Leave empty to use the default location for new notes.",
-				render: (st) =>
-					st.addText((t) =>
-						t
-							.setPlaceholder("Drawings")
-							.setValue(s.newFileFolder)
-							.onChange(async (v) => {
-								s.newFileFolder = v.trim();
-								await this.save();
-							}),
-					),
-			},
-			{
-				name: "File name prefix",
-				desc: "New drawings are named with this prefix followed by the date and time.",
-				render: (st) =>
-					st.addText((t) =>
-						t.setValue(s.newFilePrefix).onChange(async (v) => {
-							s.newFilePrefix = v.trim() || "Drawing";
-							await this.save();
-						}),
-					),
-			},
-			{
-				name: "Grid size",
-				desc: "Spacing of the background grid and of snapping, in pixels at 100% zoom.",
-				render: (st) =>
-					st.addSlider((sl) => {
-						sl.setLimits(5, 50, 5)
-							.setValue(s.gridSize)
-							.onChange(async (v) => {
-								s.gridSize = v;
-								await this.save();
-							});
-						showSliderValue(sl);
-					}),
-			},
-			{
-				name: "Snap to grid",
-				render: (st) =>
-					st.addToggle((t) =>
-						t.setValue(s.snapToGrid).onChange(async (v) => {
-							s.snapToGrid = v;
-							await this.save();
-						}),
-					),
-			},
-			{
-				name: "Show grid",
-				render: (st) =>
-					st.addToggle((t) =>
-						t.setValue(s.showGrid).onChange(async (v) => {
-							s.showGrid = v;
-							await this.save();
-						}),
-					),
-			},
-			{
-				name: "Load web fonts from Google Fonts",
-				desc: "Off: Block Draw never contacts Google for fonts, and uses the fonts installed on your device. On: Inter, Roboto, Open Sans, Montserrat and Lato are downloaded so they show everywhere, and exported SVG files load them too (PNG images always use installed fonts).",
-				render: (st) =>
-					st.addToggle((t) =>
-						t.setValue(s.webFonts).onChange(async (v) => {
-							s.webFonts = v;
-							await this.save();
-						}),
-					),
-			},
-		];
+		return [this.row("newFileFolder"), this.row("newFilePrefix"), this.row("gridSize"), this.row("snapToGrid"), this.row("showGrid"), this.row("webFonts")];
 	}
 
 	private exportRows(): Row[] {
-		const s = this.s;
-		return [
-			{
-				name: "Export folder",
-				desc: "Where JSON, Excel, SVG and PNG exports are saved. Leave empty to save next to the drawing.",
-				render: (st) =>
-					st.addText((t) =>
-						t
-							.setPlaceholder("Exports")
-							.setValue(s.exportFolder)
-							.onChange(async (v) => {
-								s.exportFolder = v.trim();
-								await this.save();
-							}),
-					),
-			},
-			{
-				name: "JSON format",
-				desc: "Structured: frames with their blocks and connections, links resolved. Raw: the drawing file itself.",
-				render: (st) =>
-					st.addDropdown((d) =>
-						d
-							.addOption("structured", "Structured")
-							.addOption("raw", "Raw drawing")
-							.setValue(s.jsonFormat)
-							.onChange(async (v) => {
-								s.jsonFormat = v as typeof s.jsonFormat;
-								await this.save();
-							}),
-					),
-			},
-		];
+		return [this.row("exportFolder"), this.row("jsonFormat")];
 	}
 
 	private sheetsRows(): Row[] {
 		const s = this.s;
 		const appsScript = () => s.sheets.method === "apps-script";
 		const oauth = () => s.sheets.method === "oauth";
-		const toggle = (
-			name: string,
-			desc: string,
-			key: "includeIndex" | "includeDataSheets" | "includeUnframed" | "updateExisting" | "openAfterExport",
-		): Row => ({
-			name,
-			desc,
-			render: (st) =>
-				st.addToggle((t) =>
-					t.setValue(s.sheets[key]).onChange(async (v) => {
-						s.sheets[key] = v;
-						await this.save();
-					}),
-				),
-		});
 		return [
 			{
 				name: "How it works",
 				desc: "Every frame becomes a tab of one workbook: blocks are drawn with cells, connections with cell borders, and blocks that link to a frame link to that frame's tab. An index tab and tables of all blocks and connections are added too.",
 			},
-			{
-				name: "Connection method",
-				desc: "The Apps Script bridge needs no Google Cloud project and also works on mobile. Signing in with a Google account calls the Google Sheets API directly (desktop only).",
-				render: (st) =>
-					st.addDropdown((d) =>
-						d
-							.addOption("apps-script", "Apps Script web app")
-							.addOption("oauth", "Google account")
-							.setValue(s.sheets.method)
-							.onChange(async (v) => {
-								s.sheets.method = v as SheetsMethod;
-								await this.save();
-								this.refresh();
-							}),
-					),
-			},
+			this.row("sheets.method", { changed: () => this.refresh() }),
 			...this.appsScriptRows(appsScript),
 			...this.oauthRows(oauth),
-			{
-				name: "Cell size",
-				desc: "Canvas pixels represented by one spreadsheet cell. Larger values make smaller sheets.",
-				render: (st) =>
-					st.addSlider((sl) => {
-						sl.setLimits(10, 60, 5)
-							.setValue(s.sheets.cellSize)
-							.onChange(async (v) => {
-								s.sheets.cellSize = v;
-								await this.save();
-							});
-						showSliderValue(sl);
-					}),
-			},
-			{
-				name: "Cell width in the sheet",
-				desc: "Width and height of each grid cell in the spreadsheet, in pixels.",
-				render: (st) =>
-					st.addSlider((sl) => {
-						sl.setLimits(10, 40, 2)
-							.setValue(s.sheets.cellPixels)
-							.onChange(async (v) => {
-								s.sheets.cellPixels = v;
-								await this.save();
-							});
-						showSliderValue(sl);
-					}),
-			},
-			toggle("Index tab", "A first tab listing every frame with a link to its tab.", "includeIndex"),
-			toggle("Block and connection tables", "Tabs listing every block and connection as filterable rows.", "includeDataSheets"),
-			toggle("Blocks outside frames", "Put blocks that are not inside a frame on a separate tab named canvas.", "includeUnframed"),
-			toggle(
-				"Update the same spreadsheet",
-				"Exporting a drawing again replaces the tabs it created before instead of making a new spreadsheet. Tabs you added yourself are kept.",
-				"updateExisting",
-			),
-			toggle("Open after export", "Open the spreadsheet in your browser when the export finishes.", "openAfterExport"),
+			this.row("sheets.cellSize"),
+			this.row("sheets.cellPixels"),
+			this.row("sheets.includeIndex"),
+			this.row("sheets.includeDataSheets"),
+			this.row("sheets.includeUnframed"),
+			this.row("sheets.updateExisting"),
+			this.row("sheets.openAfterExport"),
 		];
 	}
 
 	private appsScriptRows(visible: () => boolean): Row[] {
 		const s = this.s;
-		let secretInput: { setValue(v: string): unknown } | null = null;
 		return [
 			{
 				name: "Apps Script setup",
@@ -330,29 +241,19 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 					"Paste the web app address below and test the connection.",
 				]),
 			},
-			{
-				name: "Apps Script secret",
+			this.row("sheets.appsScriptSecret", {
 				visible,
-				desc: "Shared with the bridge code so only this plugin can use your web app.",
-				render: (st) =>
-					st
-						.addText((t) => {
-							secretInput = t;
-							t.inputEl.type = "password";
-							t.setValue(s.sheets.appsScriptSecret).onChange(async (v) => {
-								s.sheets.appsScriptSecret = v.trim();
-								await this.save();
-							});
-						})
-						.addButton((b) =>
-							b.setButtonText("Generate").onClick(async () => {
-								s.sheets.appsScriptSecret = randomSecret();
-								secretInput?.setValue(s.sheets.appsScriptSecret);
-								await this.save();
-								new Notice("A new secret was generated. Copy the bridge code again so it includes it.");
-							}),
-						),
-			},
+				extra: (st, input) => {
+					st.addButton((b) =>
+						b.setButtonText("Generate").onClick(async () => {
+							s.sheets.appsScriptSecret = randomSecret();
+							input?.setValue(s.sheets.appsScriptSecret);
+							await this.save();
+							new Notice("A new secret was generated. Copy the bridge code again so it includes it.");
+						}),
+					);
+				},
+			}),
 			{
 				name: "Bridge code",
 				visible,
@@ -373,41 +274,29 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 							b.setButtonText("Open Apps Script").onClick(() => window.open("https://script.google.com/home/projects/create")),
 						),
 			},
-			{
-				name: "Web app address",
+			this.row("sheets.appsScriptUrl", {
 				visible,
-				desc: "The deployment URL, ending in /exec.",
-				render: (st) =>
-					st
-						.addText((t) =>
-							t
-								.setPlaceholder("https://script.google.com/macros/s/…/exec")
-								.setValue(s.sheets.appsScriptUrl)
-								.onChange(async (v) => {
-									s.sheets.appsScriptUrl = v.trim();
-									await this.save();
-								}),
-						)
-						.addButton((b) =>
-							b.setButtonText("Test").onClick(async () => {
-								if (!s.sheets.appsScriptUrl) {
-									new Notice("Enter the web app address first.");
-									return;
-								}
-								try {
-									const res = await new AppsScriptTransport(s.sheets.appsScriptUrl, s.sheets.appsScriptSecret, obsidianHttp).ping();
-									new Notice(`Connected to the Block Draw bridge${res.user ? ` as ${res.user}` : ""}.`);
-								} catch (e) {
-									new Notice(`Connection failed: ${(e as Error).message}`, 10000);
-								}
-							}),
-						),
-			},
+				extra: (st) => {
+					st.addButton((b) =>
+						b.setButtonText("Test").onClick(async () => {
+							if (!s.sheets.appsScriptUrl) {
+								new Notice("Enter the web app address first.");
+								return;
+							}
+							try {
+								const res = await new AppsScriptTransport(s.sheets.appsScriptUrl, s.sheets.appsScriptSecret, obsidianHttp).ping();
+								new Notice(`Connected to the Block Draw bridge${res.user ? ` as ${res.user}` : ""}.`);
+							} catch (e) {
+								new Notice(`Connection failed: ${(e as Error).message}`, 10000);
+							}
+						}),
+					);
+				},
+			}),
 		];
 	}
 
 	private oauthRows(visible: () => boolean): Row[] {
-		const s = this.s;
 		const auth = this.plugin.auth;
 		return [
 			{
@@ -429,29 +318,8 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 					],
 				),
 			},
-			{
-				name: "OAuth client ID",
-				visible,
-				render: (st) =>
-					st.addText((t) =>
-						t.setValue(s.sheets.oauthClientId).onChange(async (v) => {
-							s.sheets.oauthClientId = v.trim();
-							await this.save();
-						}),
-					),
-			},
-			{
-				name: "OAuth client secret",
-				visible,
-				render: (st) =>
-					st.addText((t) => {
-						t.inputEl.type = "password";
-						t.setValue(s.sheets.oauthClientSecret).onChange(async (v) => {
-							s.sheets.oauthClientSecret = v.trim();
-							await this.save();
-						});
-					}),
-			},
+			this.row("sheets.oauthClientId", { visible }),
+			this.row("sheets.oauthClientSecret", { visible }),
 			{
 				name: "Google account",
 				visible,

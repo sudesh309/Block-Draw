@@ -13,5 +13,7 @@ export interface BlockDrawHost extends Plugin {
 	settings: BlockDrawSettings;
 	readonly auth: GoogleAuth;
 	saveSettings(): Promise<void>;
+	/** True when this device could not take the secret and it stays in data.json. */
+	isSecretInVault(key: string): boolean;
 	runExport(view: BlockDrawView, kind: ExportKind, frameId?: string | null): Promise<void>;
 }

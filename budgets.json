@@ -8,7 +8,6 @@
 		"src/editor/ui/PropsPanel.ts": 607,
 		"src/export/workbook/layout.ts": 783,
 		"src/export/workbook/xlsx.ts": 476,
-		"src/obsidian/SettingTab.ts": 491,
 		"src/render/elements.ts": 670
 	},
 	"runtimeDependencies": 1,

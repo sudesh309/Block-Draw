@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS, mergeSettings } from "../src/obsidian/settings";
+import { loadSettings, type SecretStore } from "../src/kernel/settings";
+import { DEFAULT_SETTINGS, SETTINGS, type BlockDrawSettings } from "../src/obsidian/settings";
 import { PRESENTATION_FONTS, WEB_FONTS_URL } from "../src/render/fonts";
 import { LIGHT_THEME } from "../src/render/colors";
 import { sceneToSvg } from "../src/render/scene";
@@ -10,6 +11,9 @@ import { parseWebFontFaces } from "../src/render/webFontFaces";
 import { block } from "./helpers";
 
 const fixture = readFileSync(join(__dirname, "fixtures", "google-fonts.css"), "utf8");
+
+const noSecrets: SecretStore = { get: () => null, set: () => true };
+const mergeSettings = (saved: unknown) => loadSettings<BlockDrawSettings>(SETTINGS, saved, noSecrets).values;
 
 describe("web fonts are opt-in", () => {
 	it("are off by default, and only a literal true turns them on", () => {
