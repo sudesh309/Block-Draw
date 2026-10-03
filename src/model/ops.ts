@@ -1,6 +1,6 @@
-import { center, containsPoint, type Point } from "../geometry/geom";
 import { newId } from "./ids";
 import { parseFrameLink, frameLink } from "./links";
+import { center, containsPoint } from "./space";
 import {
 	isBlock,
 	isConnector,
@@ -9,6 +9,7 @@ import {
 	type ConnectorElement,
 	type DrawElement,
 	type FrameElement,
+	type Point,
 } from "./types";
 
 /* ------------------------------------------------------------------ queries */

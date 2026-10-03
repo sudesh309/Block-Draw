@@ -1,9 +1,7 @@
-import type { Bounds, Side } from "../model/types";
+import type { Bounds, Point, Side } from "../model/types";
 
-export interface Point {
-	x: number;
-	y: number;
-}
+export type { Point } from "../model/types";
+export { center, containsPoint } from "../model/space";
 
 export const SIDES: Side[] = ["top", "right", "bottom", "left"];
 
@@ -42,25 +40,12 @@ export function normalize(v: Point): Point {
 	return len === 0 ? { x: 0, y: 0 } : { x: v.x / len, y: v.y / len };
 }
 
-export function center(b: Bounds): Point {
-	return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-}
-
 export function right(b: Bounds): number {
 	return b.x + b.width;
 }
 
 export function bottom(b: Bounds): number {
 	return b.y + b.height;
-}
-
-export function containsPoint(b: Bounds, p: Point, margin = 0): boolean {
-	return (
-		p.x >= b.x - margin &&
-		p.x <= b.x + b.width + margin &&
-		p.y >= b.y - margin &&
-		p.y <= b.y + b.height + margin
-	);
 }
 
 /** True when `inner` lies completely inside `outer`. */

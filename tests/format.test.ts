@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeElements, parseDrawing, serializeDrawing } from "../src/model/file";
+import { FONT_IDS } from "../src/model/fonts";
 import type { DrawElement } from "../src/model/types";
+import { PRESENTATION_FONTS } from "../src/render/fonts";
 import { expectGolden } from "./golden";
 import { fullDrawing } from "./fixtures/full";
 
@@ -21,6 +23,10 @@ describe("the .blockdraw format", () => {
 
 	it("opens a 0.1.0 file, fills in every newer field and repairs bad values", () => {
 		expectGolden("legacy-0.1.0.normalized.blockdraw", serializeDrawing(parseDrawing(legacy)));
+	});
+
+	it("has a font stack for every font id a file may name, in picker order", () => {
+		expect(PRESENTATION_FONTS.map((f) => f.id)).toEqual([...FONT_IDS]);
 	});
 
 	it("keeps top-level keys it does not know", () => {

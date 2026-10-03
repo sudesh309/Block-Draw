@@ -48,8 +48,8 @@ export const COLOR_DEFAULT = "default";
 /** Text color derived from the fill (or theme ink when there is no fill). */
 export const COLOR_AUTO = "auto";
 
-import type { FontFamilyId } from "../render/fonts";
-export type { FontFamilyId } from "../render/fonts";
+import type { FontFamilyId } from "./fonts";
+export type { FontFamilyId } from "./fonts";
 
 export interface BlockStyle {
 	fill: string;
@@ -65,6 +65,11 @@ export interface BlockStyle {
 	threeD: boolean;
 	/** Typography style for block Title, Description, Tag, and Link text. */
 	fontFamily: FontFamilyId;
+}
+
+export interface Point {
+	x: number;
+	y: number;
 }
 
 export interface Bounds {

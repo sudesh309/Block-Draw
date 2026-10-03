@@ -1,5 +1,5 @@
 import { newId } from "./ids";
-import { FONT_IDS } from "../render/fonts";
+import { FONT_IDS } from "./fonts";
 import {
 	BLOCK_SHAPES,
 	DEFAULT_BLOCK_STYLE,

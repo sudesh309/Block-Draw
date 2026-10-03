@@ -6,17 +6,10 @@
  * fallback stacks for Windows, macOS, iOS, Android, and Linux.
  */
 
-export type FontFamilyId =
-	| "inter"
-	| "segoe"
-	| "roboto"
-	| "arial"
-	| "calibri"
-	| "aptos"
-	| "opensans"
-	| "montserrat"
-	| "lato"
-	| "georgia";
+import { FONT_IDS, type FontFamilyId } from "../model/fonts";
+
+export { FONT_IDS };
+export type { FontFamilyId };
 
 export interface PresentationFont {
 	id: FontFamilyId;
@@ -128,8 +121,6 @@ export const PRESENTATION_FONTS: readonly PresentationFont[] = [
  */
 export const WEB_FONTS_URL =
 	"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lato:wght@400;700&family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap";
-
-export const FONT_IDS: readonly FontFamilyId[] = PRESENTATION_FONTS.map((f) => f.id);
 
 export const DEFAULT_FONT_FAMILY: FontFamilyId = "inter";
 
