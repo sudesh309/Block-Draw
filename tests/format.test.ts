@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeElements, parseDrawing, serializeDrawing } from "../src/model/file";
 import { FONT_IDS } from "../src/model/fonts";
-import type { DrawElement } from "../src/model/types";
+import { BLOCK_SHAPES, type DrawElement } from "../src/model/types";
 import { PRESENTATION_FONTS } from "../src/render/fonts";
 import { expectGolden } from "./golden";
 import { fullDrawing } from "./fixtures/full";
@@ -101,6 +101,15 @@ describe("docs/FORMAT.md", () => {
 			}
 		});
 	}
+
+	it("lists every shape and font the file may name", () => {
+		const valueSet = (name: string) => {
+			const line = formatDoc.split("\n").find((l) => l.startsWith(`| ${name} |`)) ?? "";
+			return [...(line.split("|")[3] ?? "").matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+		};
+		expect(valueSet("shape")).toEqual([...BLOCK_SHAPES]);
+		expect(valueSet("font")).toEqual([...FONT_IDS]);
+	});
 
 	it("lists value sets that the parser accepts, and nothing else falls through", () => {
 		const start = formatDoc.indexOf("\n## Value sets\n");

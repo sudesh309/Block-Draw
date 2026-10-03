@@ -48,11 +48,12 @@ Block Draw works offline and contacts nothing by default. It uses the network on
 - **Google Sheets export**, and its connection test: your own Apps Script web app, or Google sign-in and the Sheets API.
 - **Web fonts**, if you turn on **Settings → Block Draw → Load web fonts from Google Fonts** (off by default): Inter, Roboto, Open Sans, Montserrat and Lato are downloaded from Google Fonts. Otherwise Block Draw uses the fonts installed on your device.
 
-There is no telemetry and there are no ads. Details: [network use and privacy](docs/DESIGN.md#network-use-and-privacy).
+The code enforces this: every request goes through one place and only to the hosts these features declare. Links in drawings open only for web and mail addresses (Obsidian links ask first), and your Google Sheets secrets stay on each device instead of in the synced settings. There is no telemetry and there are no ads. Details: [network use and privacy](docs/DESIGN.md#network-use-and-privacy) and [SECURITY.md](SECURITY.md).
 
 ## More
 
 - [Design and reference](docs/DESIGN.md): how each feature works, the export and file formats, and the architecture
+- [The `.blockdraw` file format](docs/FORMAT.md) and the [architecture decisions](docs/adr/README.md)
 - [Changelog](CHANGELOG.md)
 - [Contributing](CONTRIBUTING.md)
 

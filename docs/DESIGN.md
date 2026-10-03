@@ -341,52 +341,85 @@ If you use Obsidian Sync, turn on syncing of **other file types** in its setting
 Block Draw works offline: drawing, saving and the JSON, Excel, SVG and PNG exports stay on your device. It contacts nothing by default. It uses the network in these cases, and only to Google, and only when you ask for it:
 
 - **Web fonts** (off by default): if you turn on **Load web fonts from Google Fonts** in the settings, Block Draw downloads the stylesheet of the five web fonts from Google Fonts (`fonts.googleapis.com`) and then their font files from `fonts.gstatic.com`, as text needs them. It asks again at each start while the setting is on, and nothing is requested once you turn it off. SVG files exported while it is on import the same stylesheet when they are opened. No cookies are sent by the plugin, but Google receives your IP address with each request, as for any web font.
-- **Google Sheets export, Apps Script web app**: the workbook goes to the web app you deployed in your own Google account (`script.google.com`), which writes it to your Google Drive.
-- **Google Sheets export, Google account** (desktop): signing in goes through `accounts.google.com` and `oauth2.googleapis.com`, and the workbook goes straight to the Google Sheets API (`sheets.googleapis.com`), with access limited to the spreadsheets Block Draw creates.
+- **Google Sheets export, Apps Script web app**: the workbook goes to the web app you deployed in your own Google account (`script.google.com`), which writes it to your Google Drive. An address on another domain is used only after you confirm it.
+- **Google Sheets export, Google account** (desktop): signing in goes through `accounts.google.com` (in your browser) and `oauth2.googleapis.com`, and the workbook goes straight to the Google Sheets API (`sheets.googleapis.com`), with access limited to the spreadsheets Block Draw creates.
 
 Only Google Sheets export needs a Google account. There is no telemetry and there are no ads, and no other servers are contacted.
 
+This is enforced in the code, not only promised ([ADR 0005](adr/0005-one-door-to-the-network.md)): every request goes through `src/obsidian/net.ts`, over https, to a host on an allow-list built from what the settings and exporters declare. A setting's hosts are on the list only while the setting is on, so with web fonts off even a bug could not reach Google Fonts. The build fails if any other file calls `requestUrl`. The hosts, as the tables declare them:
+
+<!-- network:start: generated from the SETTINGS and EXPORTERS tables by tests/docs.test.ts (UPDATE_GOLDEN=1 npm test) -->
+| Host | Contacted |
+| --- | --- |
+| `fonts.googleapis.com` | while **Load web fonts from Google Fonts** is on |
+| `fonts.gstatic.com` | while **Load web fonts from Google Fonts** is on |
+| `sheets.googleapis.com` | when you use **Export to Google Sheets**, or when you use **Export to a new Google Sheet** |
+| `oauth2.googleapis.com` | when you use **Export to Google Sheets**, or when you use **Export to a new Google Sheet** |
+| `script.google.com` | when you use **Export to Google Sheets**, or when you use **Export to a new Google Sheet** |
+<!-- network:end -->
+
+Links in drawings: a block's link opens only if it is a web or mail link (`http`, `https`, `mailto`). An `obsidian://` link opens after a confirmation that shows it, and any other kind (such as `file://`) is refused with a notice, because a drawing may come from someone else. Secrets (the Apps Script secret, the OAuth client secret and the Google sign-in) are kept in each device's secret storage, never in the synced settings file ([ADR 0004](adr/0004-secrets-stay-on-the-device.md)).
+
 ## Architecture
 
-Block Draw is a TypeScript Obsidian plugin, bundled by esbuild into a single `main.js` (plus `styles.css`). The code is layered so that everything that draws, edits and exports a diagram is independent of Obsidian; only `src/obsidian` and `src/main.ts` talk to the app.
+Block Draw is a TypeScript Obsidian plugin, bundled by esbuild into a single `main.js` (plus `styles.css`). The code is layered so that everything that draws, edits and exports a diagram is independent of Obsidian; only `src/obsidian` and `src/main.ts` talk to the app. The decisions behind the structure are recorded in [docs/adr](adr/README.md).
 
 ### Layers
 
-| Folder | Role | Uses |
-| --- | --- | --- |
-| `src/model` | Elements, file format, scene operations, undo history, themes, dependency graph | `geometry` (helpers), `render/fonts` (the list of font ids) |
-| `src/geometry` | Shapes, hit-testing helpers, connector routing, polyline math | `model` (types) |
-| `src/render` | Turns elements into a virtual SVG tree: blocks, connectors, frames, comments, text layout, colors, fonts | `geometry`, `model` |
-| `src/editor` | The canvas editor: pointer and keyboard handling, selection, viewport, panels, inline text editing, presentation | `render`, `geometry`, `model` |
-| `src/export` | JSON, workbook layout, XLSX writer, Google Sheets requests and transports | `render`, `geometry`, `model` |
-| `src/obsidian` | The Obsidian view, settings tab, link picker, exports, Google sign-in, embeds | `editor`, `export`, `render`, `model` |
-| `apps-script` | The Google Apps Script bridge for Sheets export (runs in Google, not in the plugin) | nothing |
+Each folder has a rank. A file may import only its own folder or folders with a lower rank: never upward, and never sideways (`editor` and `export` share a rank and stay apart). `scripts/check-layers.mjs` checks every import in `npm run lint`, so this table cannot quietly stop being true.
 
-`src/main.ts` is the plugin entry point (commands, menus, ribbon, file creation). It and the files in `src/obsidian` are the only code that imports Obsidian, so the editor, renderer and exporters run unchanged in the browser test harness. Dependencies run roughly downwards, from `obsidian` through `editor` and `export` to `render`, `geometry` and `model`; the exceptions are that `model` and `geometry` use each other's basic types and helpers, and that the model reads the font id list from `render/fonts`.
+| Rank | Folder | Role |
+| --- | --- | --- |
+| 0 | `src/model` | Elements, the `.blockdraw` file format, scene operations, undo history, themes, dependency graph. Imports nothing. |
+| 1 | `src/geometry` | Points and bounds, connector routing, polyline math, and the `SHAPES` table (one file per shape in `geometry/shapes/`) |
+| 2 | `src/render` | Turns elements into a virtual SVG tree: blocks, connectors, frames, comments, text layout, colors, font stacks |
+| 3 | `src/kernel` | The mechanism behind the tables: settings (defaults, validation, delta storage, secrets) and commands (key matching and formatting). Knows no particular setting or command. |
+| 4 | `src/editor` | The canvas editor and its `COMMANDS` table: pointer and keyboard handling, viewport, hit-testing, clipboard, edits, panels, inline text editing, presentation |
+| 4 | `src/export` | JSON, workbook layout, XLSX writer, Google Sheets requests and transports |
+| 5 | `src/obsidian` | The Obsidian view, the `SETTINGS` and `EXPORTERS` tables, settings tab, link picker, the network gateway, secret storage, Google sign-in, embeds |
+| 6 | `src/main.ts` | The plugin entry point: wires the tables into commands, menus, the ribbon and the network allow-list |
+| | `apps-script` | The Google Apps Script bridge for Sheets export (runs in Google, not in the plugin) |
+
+The editor's code is split by concern behind one `Editor` facade: `viewport.ts` (pan, zoom, coordinates), `hitTest.ts`, `clipboard.ts`, `contextMenu.ts`, `edits.ts` (each edit one undo step), `create.ts`, `navigation.ts` (frames and links), `commands.ts` and `keyboard.ts`. `Editor` keeps a method for each, so the rest of the code calls `editor.zoomToFit()` without knowing where it lives.
+
+### Tables
+
+A concept with several variants is one table with one row per variant ([ADR 0002](adr/0002-tables-over-switches.md)), and everything that lists or acts on the variants is derived from the rows:
+
+| Table | Rows | Derived from it |
+| --- | --- | --- |
+| `SHAPES` (`geometry/shapes/`) | path, decoration, outline, side inset, text box, picker label | drawing, hit-testing, link anchors, text placement, the shape picker |
+| `COMMANDS` (`editor/commands.ts`) | id, label, group, keys, whether it edits, what it runs | key dispatch, the help panel, tooltips, the shortcut table in this document |
+| `SETTINGS` (`obsidian/settings.ts`) | key, type, default, name, description, secret, needed hosts | defaults, validation, what `data.json` stores (only changes, never secrets), the settings tab controls, the network allow-list |
+| `EXPORTERS` (`obsidian/exporters.ts`) | label, icon, command, menus, needed hosts, what it runs | the export menu, the file explorer's menu, the command palette, the network allow-list |
+| `PALETTES`, `DRAWING_THEMES` | colors | the palette swatches and the themes |
 
 ### Design decisions
 
 - **Immutable elements.** Blocks, connectors and frames are plain objects; every edit produces a new object. Undo history stores snapshots of the element array that share all unchanged elements, so it is cheap, and the renderer can tell what changed with an identity check.
 - **One renderer for everything.** `src/render` builds a small virtual-node tree. The editor turns it into live SVG DOM, while exports and note embeds turn the same tree into an SVG string, so a drawing looks the same everywhere. Blocks, connectors, frames, comment callouts, 3D effects and flow lanes are all produced there.
 - **Keyed layers in the editor.** `SceneRenderer` keeps layers in a fixed order (frames, blocks, connectors, labels, comments, overlay). Each item declares the values it depends on and its DOM is rebuilt only when one of them changes. Connectors and their labels sit above the blocks, so a block drawn around other blocks never hides the links between them; comment callouts have their own layer above everything, so nothing is drawn over them.
-- **Hit testing by geometry, not by DOM.** `Editor.hitTest(point)` returns a tagged result (handle, badge, block, connector, frame). The pure helpers that decide where a badge or a label sits are shared by drawing and by interaction, which keeps them from drifting apart and lets the presenter reuse the same logic. A connector close to the pointer wins over a block, except over the two blocks it is attached to, so a link never steals clicks from its own ends.
+- **Hit testing by geometry, not by DOM.** `Editor.hitTest(point)` (in `editor/hitTest.ts`) returns a tagged result (handle, badge, block, connector, frame). The pure helpers that decide where a badge or a label sits are shared by drawing and by interaction, which keeps them from drifting apart and lets the presenter reuse the same logic. A connector close to the pointer wins over a block, except over the two blocks it is attached to, so a link never steals clicks from its own ends.
 - **Saved state versus view state.** What belongs to the drawing is in the elements and saved: positions, styles, theme, 3D, tags, `descriptionOpen`, `commentOpen`. What belongs to the view is not: selection, viewport, the dependency trace, and the comments a presenter opens or closes by clicking (`Presenter.commentOverrides`). Presenting therefore never modifies the file.
 - **Text layout in one place.** `layoutBlockText` wraps and positions a block's tag, title and visible description (at the top, middle or bottom of the block, per `textVAlign`) for both the renderer and the automatic block height, using canvas text measurement with a deterministic estimate when no canvas exists (tests). Measured widths are cached; `Editor.relayout()` clears the cache and redraws when web fonts arrive and change them.
-- **Web fonts without stylesheet elements.** Obsidian's review rules do not allow a plugin to attach `<link>` or `<style>` elements, and a stylesheet `@import` would load Google Fonts for everyone. `WebFontLoader` (`src/obsidian/webFonts.ts`) therefore runs only while the setting is on: it fetches Google's stylesheet with `requestUrl`, reads its `@font-face` rules (`parseWebFontFaces`, which accepts only the five families and single `https://fonts.gstatic.com/` sources), and adds them to each window's `document.fonts` through the FontFace API, including pop-out windows. Faces are added unloaded, so a file is downloaded only when text uses it. Turning the setting off removes them again.
+- **Web fonts without stylesheet elements.** Obsidian's review rules do not allow a plugin to attach `<link>` or `<style>` elements, and a stylesheet `@import` would load Google Fonts for everyone. `WebFontLoader` (`src/obsidian/webFonts.ts`) therefore runs only while the setting is on: it fetches Google's stylesheet through the network gateway, reads its `@font-face` rules (`parseWebFontFaces`, which accepts only the five families and single `https://fonts.gstatic.com/` sources), and adds them to each window's `document.fonts` through the FontFace API, including pop-out windows. Faces are added unloaded, so a file is downloaded only when text uses it. Turning the setting off removes them again.
 - **Stylesheet rules.** `styles.css` has no `!important` (specificity does the work, and the pointer cursor comes from a `data-cursor` attribute rather than an inline style), no `scrollbar-width` (Obsidian's older Chromium supports it only partly, so scrollbars use `::-webkit-scrollbar`), and nothing that loads from the network. `npm run lint` runs stylelint over `styles.css` with the community directory's checks (`stylelint.config.mjs`: no `!important`, and no CSS feature that Obsidian 1.5's Chromium, Chrome 114, lacks or only partly supports), and `tests/styles.test.ts` fails if any of that comes back, including the word `!important` in a comment.
 - **Connector routing.** Elbow routes try each pair of sides and several orthogonal candidate paths and keep the cheapest (short, few bends, not crossing the blocks); curved routes are cubic Béziers; `trimRoute` shortens a route for its arrowheads. The spreadsheet exporter reuses the router on a grid through its `quantize`, `anchor` and `extraCost` options. A two-way flowing link gets two lanes by offsetting the route's polyline (`offsetPolyline`) to either side, one drawn start to end and one end to start, so the same dash animation runs both ways.
 - **Editor host.** The editor never imports Obsidian. It talks to its environment through the `EditorHost` interface (menus, notices, link picker, opening links, export menu), which the Obsidian view and the browser test harness each implement.
 - **Export pipeline.** `buildWorkbook()` turns a drawing into a backend-neutral `WorkbookModel`: sheets of cells with styles, merges, borders, links and notes. `writeXlsx()` serializes it to a real `.xlsx` (zip and XML written by hand with `fflate`). `src/export/gsheets/requests.ts` converts the same model to Google Sheets `batchUpdate` requests, and `exporter.ts` creates or updates the spreadsheet, replacing only the tabs a previous export created.
-- **Two Sheets transports** behind one `SheetsTransport` interface: the Apps Script bridge (`AppsScriptTransport`) and the Sheets REST API with an OAuth token (`RestSheetsTransport`, PKCE loopback sign-in in `googleAuth.ts`). All HTTP goes through Obsidian's `requestUrl`, which has no CORS restrictions and works on mobile.
+- **Two Sheets transports** behind one `SheetsTransport` interface: the Apps Script bridge (`AppsScriptTransport`) and the Sheets REST API with an OAuth token (`RestSheetsTransport`, PKCE loopback sign-in in `googleAuth.ts`). All HTTP goes through `obsidian/net.ts`, which uses Obsidian's `requestUrl` (no CORS restrictions, works on mobile) and checks every address against the allow-list.
 - **Apps Script bridge.** `apps-script/Code.gs` always answers with JSON, even on errors, checks a shared secret and forwards `ping`, `create`, `get` and `batchUpdate` to the Sheets advanced service. Google answers a web-app POST with a redirect to a one-time content URL; `requestUrl` follows it. A reply that is not JSON therefore means Google answered before the script ran, and the transport explains the likely cause.
-- **Tolerant file format.** `parseDrawing` validates and repairs what it reads: it fills defaults for fields that older files lack, drops connectors whose ends are gone and frame references that point nowhere, and keeps unknown top-level keys.
+- **Tolerant file format, guarded like an interface.** `parseDrawing` validates and repairs what it reads: it fills defaults for fields that older files lack, drops connectors whose ends are gone and frame references that point nowhere, and keeps unknown top-level keys. [docs/FORMAT.md](FORMAT.md) lists every field, its default and the release that added it, and golden files lock the format and every export ([ADR 0001](adr/0001-the-file-is-the-abi.md)).
+- **Settings as data.** Each setting is a row; `data.json` keeps only the values that differ from the defaults (so a better default reaches everyone) and keys written by newer releases. A setting that reaches the network is on only when saved as a literal `true`.
+- **Budgets.** `budgets.json` caps file sizes (the large files may only shrink, new ones stay at or under 400 lines), runtime dependencies and the size of `main.js`; `npm run lint` and the build check them.
 
 ### Testing
 
+- **Golden files** (`tests/golden`, written by `UPDATE_GOLDEN=1 npm test`) hold the exact `.blockdraw` output for a drawing that uses every field, what a 0.1.0 file becomes, the structured JSON, the workbook layout, the Excel file parts, the Google Sheets requests, every shape and a full render. Refactors must leave them byte-identical.
 - **Unit tests** (`npm test`, Vitest) cover the model, geometry and routing, rendering, text layout, themes and tracing, the workbook layout and XLSX writer, the Sheets request builder (every request validated against a trimmed copy of Google's Sheets API schema in `tests/fixtures`), the real `apps-script/Code.gs`, run in a sandbox against an in-memory Sheets service, the web-font opt-in (the setting, the parser run on a real excerpt of Google's stylesheet, and `WebFontLoader` against fake windows) and the stylesheet rules.
 - **Editor UI tests** (`npm run test:ui`, `tests/harness`) run the editor in Chromium with real pointer and keyboard input, through a small harness that implements `EditorHost`. They never use the network: every request to a web address is refused, and the suite fails if the editor makes one.
-- **End-to-end tests** (`npm run test:e2e`, `tests/e2e`) drive the real Obsidian desktop app over the Chrome DevTools protocol: drawing, saving, frame links, nested blocks, text alignment, exports, themes, presenting, settings, the web-font opt-in and embeds, with a local stand-in for the Apps Script web app that behaves like Google's (POST answered with a redirect to a content URL). They pass on Obsidian 1.5.3, the oldest version the manifest allows, and on current releases.
-- **CI** (`.github/workflows/ci.yml`) runs lint (ESLint and stylelint), unit tests, the build and the UI tests on every push.
+- **End-to-end tests** (`npm run test:e2e`, `tests/e2e`) drive the real Obsidian desktop app over the Chrome DevTools protocol: drawing, saving, frame links, nested blocks, text alignment, exports, themes, presenting, settings, the web-font opt-in, embeds and secrets kept out of `data.json`, with a local stand-in for the Apps Script web app that behaves like Google's (POST answered with a redirect to a content URL). The stand-in serves https with a throwaway certificate, so the export also passes the network gateway and the confirmation for an address outside Google. They pass on Obsidian 1.5.3, the oldest version the manifest allows, and on current releases.
+- **CI** (`.github/workflows/ci.yml`) runs lint (ESLint, stylelint, the layer check and the budgets), unit tests, the build and the UI tests on every push, and reports known vulnerabilities in the runtime dependency. Actions are pinned to commits, and the job's token can only read the repository.
 
 ## Development
 
@@ -396,10 +429,11 @@ Block Draw is a TypeScript Obsidian plugin, bundled by esbuild into a single `ma
 npm install
 npm run dev        # rebuild main.js on change
 npm run build      # type check and production build
-npm run lint       # ESLint with Obsidian's recommended rules, then stylelint on styles.css (the directory's CSS checks)
-npm test           # unit tests (model, routing, workbook layout, XLSX, Sheets requests, Apps Script bridge)
+npm run lint       # ESLint (Obsidian's rules), stylelint on styles.css, the layer check and the budgets
+npm run lint:arch  # only the layer check and the budgets
+npm test           # unit tests and golden files (UPDATE_GOLDEN=1 npm test rewrites the golden files and generated doc tables)
 npm run test:ui    # editor tests in Chromium (set CHROMIUM_PATH if Chromium is elsewhere)
-OBSIDIAN_BIN=/path/to/obsidian npm run test:e2e   # end-to-end tests in the Obsidian desktop app
+OBSIDIAN_BIN=/path/to/obsidian npm run test:e2e   # end-to-end tests in the Obsidian desktop app (needs openssl)
 ```
 
 Set `SHOTS=<dir>` to save screenshots from the UI and end-to-end tests, and `PLUGIN_DIR` to run the end-to-end tests against files downloaded from a release instead of the local build. `OBSIDIAN_BIN` is the Obsidian executable, for example from `Obsidian-x.y.z.AppImage --appimage-extract`.
