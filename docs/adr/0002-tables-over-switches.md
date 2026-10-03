@@ -16,8 +16,8 @@ A concept with several variants is one table with one row per variant, and the c
 | --- | --- | --- |
 | `SHAPES` | `geometry/shapes/`, one file per shape | outline path, decoration, hit and link outline, side inset, text box, picker label |
 | `SETTINGS` | rows in `obsidian/settings.ts`, mechanism in `kernel/settings.ts` | key, type, default, name, description, whether it is secret, what it needs (network) |
-| `COMMANDS` | `kernel/commands.ts` | id, label, keys, when it applies, what it runs |
-| `EXPORTERS` | `obsidian/exporters.ts` | id, label, icon, what it needs, what it runs |
+| `COMMANDS` | rows in `editor/commands.ts`, mechanism in `kernel/commands.ts` | id, label, group, keys, whether it edits, what it runs |
+| `EXPORTERS` | `obsidian/exporters.ts` | label, icon, command, menus, the hosts it connects to, what it runs |
 | `PALETTES`, `DRAWING_THEMES` | `render/colors.ts`, `model/themes.ts` | already tables |
 
 The mechanism (how a table is read, validated and turned into UI) is written once. A row holds policy only. The places that list rows are explicit index files: easy to grep, review and order, with no discovery magic.

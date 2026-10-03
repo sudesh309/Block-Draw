@@ -1,9 +1,8 @@
 import type { Plugin } from "obsidian";
 import type { BlockDrawView } from "./BlockDrawView";
+import type { ExportKind } from "./exporters";
 import type { GoogleAuth } from "./googleAuth";
 import type { BlockDrawSettings } from "./settings";
-
-export type ExportKind = "json" | "copy-json" | "xlsx" | "gsheet" | "gsheet-new" | "svg" | "png";
 
 /**
  * What the drawing views, the note embeds and the settings tab need from the plugin. main.ts

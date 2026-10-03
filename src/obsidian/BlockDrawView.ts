@@ -6,6 +6,7 @@ import { createEmptyDrawing, DrawingParseError, parseDrawing, serializeDrawing }
 import { parseLink } from "../model/links";
 import { isFrame, type DrawingFile, type DrawingMeta } from "../model/types";
 import { LinkPickerModal } from "./LinkPickerModal";
+import { exporterRows } from "./exporters";
 import type { BlockDrawHost } from "./plugin";
 
 export const VIEW_TYPE = "block-draw-view";
@@ -212,23 +213,17 @@ export class BlockDrawView extends TextFileView {
 			const f = id ? this.editor?.byId.get(id) : null;
 			return isFrame(f) ? f.title : null;
 		};
-		const items: MenuItemSpec[] = [
-			{ title: "Export to Google Sheets", icon: "sheet", onClick: () => void p.runExport(this, "gsheet") },
-			{ title: "Export Excel workbook (.xlsx)", icon: "sheet", onClick: () => void p.runExport(this, "xlsx") },
-			{ title: "Export JSON", icon: "json", onClick: () => void p.runExport(this, "json"), separator: true },
-			{ title: "Copy JSON to clipboard", icon: "json", onClick: () => void p.runExport(this, "copy-json") },
-			{
-				title: frameTitle() ? `Export frame “${frameTitle()}” as PNG` : "Export as PNG",
-				icon: "image",
-				onClick: () => void p.runExport(this, "png", frameId()),
-				separator: true,
-			},
-			{
-				title: frameTitle() ? `Export frame “${frameTitle()}” as SVG` : "Export as SVG",
-				icon: "image",
-				onClick: () => void p.runExport(this, "svg", frameId()),
-			},
-		];
+		const items: MenuItemSpec[] = [];
+		for (const [kind, ex] of exporterRows()) {
+			if (!ex.menus.includes("view")) continue;
+			const title = ex.frameLabel ? frameTitle() : null;
+			items.push({
+				title: title && ex.frameLabel ? ex.frameLabel(title) : ex.label,
+				icon: ex.icon,
+				onClick: () => void p.runExport(this, kind, ex.frameLabel ? frameId() : null),
+				separator: ex.separator,
+			});
+		}
 		const info = this.meta.exports?.googleSheet;
 		if (info?.url) {
 			items.splice(1, 0, { title: "Open the exported Google Sheet", icon: "follow-link", onClick: () => window.open(info.url) });

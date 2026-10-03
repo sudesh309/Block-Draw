@@ -5,17 +5,10 @@ import { DRAWING_THEMES } from "./model/themes";
 import { FILE_EXTENSION, type DrawingFile } from "./model/types";
 import { BlockDrawView, VIEW_ICON, VIEW_TYPE } from "./obsidian/BlockDrawView";
 import { registerEmbeds } from "./obsidian/embed";
-import {
-	copyJson,
-	exportGoogleSheets,
-	exportJsonFile,
-	exportPngFile,
-	exportSvgFile,
-	exportXlsxFile,
-	type ExportContext,
-} from "./obsidian/exports";
+import { EXPORTERS, exporterRows, type ExportJob, type ExportKind } from "./obsidian/exporters";
+import type { ExportContext } from "./obsidian/exports";
 import { GoogleAuth } from "./obsidian/googleAuth";
-import type { BlockDrawHost, ExportKind } from "./obsidian/plugin";
+import type { BlockDrawHost } from "./obsidian/plugin";
 import { BlockDrawSettingTab } from "./obsidian/SettingTab";
 import { loadSettings, settingsToSave, type SecretStore, type StoredSettings } from "./kernel/settings";
 import { deviceSecrets, vaultTag } from "./obsidian/secrets";
@@ -147,12 +140,12 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 
 	async runExport(view: BlockDrawView, kind: ExportKind, frameId?: string | null): Promise<void> {
 		if (!view.file) return;
-		await this.exportDrawing(view.file, view.getDrawing(), kind, frameId, view);
+		await this.exportDrawing({ file: view.file, drawing: view.getDrawing(), frameId: frameId ?? null, view }, kind);
 	}
 
 	async exportFile(file: TFile, kind: ExportKind): Promise<void> {
 		const view = this.viewFor(file);
-		if (view) return this.exportDrawing(file, view.getDrawing(), kind, null, view);
+		if (view) return this.exportDrawing({ file, drawing: view.getDrawing(), frameId: null, view }, kind);
 		let drawing: DrawingFile;
 		try {
 			drawing = parseDrawing(await this.app.vault.read(file));
@@ -160,43 +153,12 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 			new Notice(`Cannot export “${file.basename}”: ${(e as Error).message}`);
 			return;
 		}
-		await this.exportDrawing(file, drawing, kind, null, null);
+		await this.exportDrawing({ file, drawing, frameId: null, view: null }, kind);
 	}
 
-	private async exportDrawing(file: TFile, drawing: DrawingFile, kind: ExportKind, frameId: string | null | undefined, view: BlockDrawView | null): Promise<void> {
-		const ctx = this.exportContext();
+	private async exportDrawing(job: ExportJob, kind: ExportKind): Promise<void> {
 		try {
-			switch (kind) {
-				case "json":
-					await exportJsonFile(ctx, file, drawing);
-					break;
-				case "copy-json":
-					await copyJson(ctx, file, drawing);
-					break;
-				case "xlsx":
-					await exportXlsxFile(ctx, file, drawing);
-					break;
-				case "svg":
-					await exportSvgFile(ctx, file, drawing, frameId);
-					break;
-				case "png":
-					await exportPngFile(ctx, file, drawing, frameId);
-					break;
-				case "gsheet":
-				case "gsheet-new": {
-					const info = await exportGoogleSheets(ctx, file, drawing, { forceNew: kind === "gsheet-new" });
-					// Remember the spreadsheet so the next export updates it in place.
-					if (view) {
-						view.updateMeta((m) => ({ ...m, exports: { ...m.exports, googleSheet: info } }));
-					} else {
-						await this.app.vault.process(file, (text) => {
-							const d = parseDrawing(text);
-							return serializeDrawing({ ...d, exports: { ...d.exports, googleSheet: info } });
-						});
-					}
-					break;
-				}
-			}
+			await EXPORTERS[kind].run(this.exportContext(), job);
 		} catch (e) {
 			console.error("Block Draw export failed", e);
 			new Notice(`Export failed: ${(e as Error).message}`, 12000);
@@ -244,19 +206,12 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 					return true;
 				},
 			});
-		withView("export-google-sheets", "Export to Google Sheets", (v) => void this.runExport(v, "gsheet"));
-		withView("export-google-sheets-new", "Export to a new Google Sheet", (v) => void this.runExport(v, "gsheet-new"));
-		withView("export-xlsx", "Export Excel workbook (.xlsx)", (v) => void this.runExport(v, "xlsx"));
-		withView("export-json", "Export JSON", (v) => void this.runExport(v, "json"));
-		withView("copy-json", "Copy JSON to clipboard", (v) => void this.runExport(v, "copy-json"));
-		withView("export-png", "Export as PNG (selected frame or whole drawing)", (v) => {
-			const f = v.editor?.selectedFrames() ?? [];
-			void this.runExport(v, "png", f.length === 1 ? f[0].id : null);
-		});
-		withView("export-svg", "Export as SVG (selected frame or whole drawing)", (v) => {
-			const f = v.editor?.selectedFrames() ?? [];
-			void this.runExport(v, "svg", f.length === 1 ? f[0].id : null);
-		});
+		for (const [kind, ex] of exporterRows()) {
+			withView(ex.command.id, ex.command.name, (v) => {
+				const frames = ex.frameLabel ? (v.editor?.selectedFrames() ?? []) : [];
+				void this.runExport(v, kind, frames.length === 1 ? frames[0].id : null);
+			});
+		}
 		withView("zoom-to-fit", "Zoom to fit", (v) => v.editor?.zoomToFit({ animate: true }));
 		withView("next-frame", "Go to next frame", (v) => v.editor?.stepFrame(1));
 		withView("previous-frame", "Go to previous frame", (v) => v.editor?.stepFrame(-1));
@@ -285,24 +240,15 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 							.onClick(() => void this.createDrawing(file.path)),
 					);
 				} else if (file instanceof TFile && file.extension === FILE_EXTENSION) {
-					menu.addItem((item) =>
-						item
-							.setTitle("Export to Google Sheets")
-							.setIcon("sheet")
-							.onClick(() => void this.exportFile(file, "gsheet")),
-					);
-					menu.addItem((item) =>
-						item
-							.setTitle("Export Excel workbook (.xlsx)")
-							.setIcon("sheet")
-							.onClick(() => void this.exportFile(file, "xlsx")),
-					);
-					menu.addItem((item) =>
-						item
-							.setTitle("Export JSON")
-							.setIcon("braces")
-							.onClick(() => void this.exportFile(file, "json")),
-					);
+					for (const [kind, ex] of exporterRows()) {
+						if (!ex.menus.includes("file")) continue;
+						menu.addItem((item) =>
+							item
+								.setTitle(ex.label)
+								.setIcon(ex.icon)
+								.onClick(() => void this.exportFile(file, kind)),
+						);
+					}
 				}
 			}),
 		);
