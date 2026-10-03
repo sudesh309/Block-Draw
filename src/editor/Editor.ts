@@ -1,6 +1,4 @@
 import {
-	center,
-	clamp,
 	dist,
 	snap,
 	SIDE_DIR,
@@ -73,11 +71,10 @@ import { PropsPanel } from "./ui/PropsPanel";
 import { TextEditor } from "./ui/TextEditor";
 import { Toolbar } from "./ui/Toolbar";
 import { ZoomControls } from "./ui/ZoomControls";
+import { ViewportController } from "./viewport";
 import {
 	DEFAULT_EDITOR_OPTIONS,
 	HANDLES,
-	MAX_ZOOM,
-	MIN_ZOOM,
 	type EditorOptions,
 	type Hit,
 	type Tool,
@@ -120,6 +117,7 @@ export class Editor {
 	readonly zoomControls: ZoomControls;
 	readonly help: HelpPanel;
 	readonly presenter: Presenter;
+	readonly view: ViewportController;
 	private readonly hintEl: HTMLDivElement;
 	private readonly emptyEl: HTMLDivElement;
 
@@ -152,12 +150,9 @@ export class Editor {
 	onViewportChange: ((vp: Viewport) => void) | null = null;
 
 	private renderQueued = false;
-	private destroyed = false;
-	private animation: number | null = null;
+	/** Set once destroy() ran; pending animations and async work check it. */
+	destroyed = false;
 	private resizeObserver: ResizeObserver | null = null;
-	private lastSize = { width: 0, height: 0 };
-	/** View change requested before the canvas had a size (applied on first layout). */
-	private pendingView: (() => void) | null = null;
 	private internalClipboard: string | null = null;
 	private pasteCount = 0;
 	private readonly cleanup: (() => void)[] = [];
@@ -180,6 +175,7 @@ export class Editor {
 		this.svg = svgEl("svg", { class: "bd-svg" }, this.canvas);
 		this.viewportG = svgEl("g", { class: "bd-viewport" }, this.svg);
 		this.renderer = new SceneRenderer(this, this.viewportG);
+		this.view = new ViewportController(this);
 		this.emptyEl = el("div", "bd-empty-hint", this.root);
 		el("div", "bd-empty-title", this.emptyEl, "Start your block drawing");
 		el(
@@ -210,7 +206,7 @@ export class Editor {
 		} else {
 			this.win.requestAnimationFrame(() => this.resize());
 		}
-		this.applyGridClass();
+		this.view.applyGridClass();
 		this.requestRender();
 	}
 
@@ -232,7 +228,7 @@ export class Editor {
 		this.presenter.stop();
 		this.destroyed = true;
 		this.resizeObserver?.disconnect();
-		if (this.animation !== null) this.win.cancelAnimationFrame(this.animation);
+		this.view.stopAnimation();
 		this.textEditor.cancel();
 		for (const fn of this.cleanup) fn();
 		this.root.remove();
@@ -264,18 +260,9 @@ export class Editor {
 		this.requestRender();
 	}
 
-	/**
-	 * Runs a viewport change now if the canvas is laid out, otherwise on its first layout.
-	 * Only the latest pending change is kept (e.g. "go to frame" wins over "zoom to fit").
-	 */
+	/** Runs a viewport change now if the canvas is laid out, otherwise on its first layout. */
 	whenSized(fn: () => void): void {
-		const r = this.svg.getBoundingClientRect();
-		if (r.width > 0 && r.height > 0 && this.lastSize.width > 0) {
-			this.pendingView = null;
-			fn();
-		} else {
-			this.pendingView = fn;
-		}
+		this.view.whenSized(fn);
 	}
 
 	getElements(): readonly DrawElement[] {
@@ -284,7 +271,7 @@ export class Editor {
 
 	setOptions(partial: Partial<EditorOptions>): void {
 		this.options = { ...this.options, ...partial };
-		this.applyGridClass();
+		this.view.applyGridClass();
 		this.requestRender();
 	}
 
@@ -374,141 +361,62 @@ export class Editor {
 		return null;
 	}
 
-	/* =========================================================== viewport */
+	/* ====================================================== viewport (view) */
 
 	viewSize(): { width: number; height: number } {
-		const r = this.svg.getBoundingClientRect();
-		return { width: r.width || this.root.clientWidth || 800, height: r.height || this.root.clientHeight || 600 };
+		return this.view.viewSize();
 	}
 
 	clientToScreen(clientX: number, clientY: number): Point {
-		const r = this.svg.getBoundingClientRect();
-		return { x: clientX - r.left, y: clientY - r.top };
+		return this.view.clientToScreen(clientX, clientY);
 	}
 
 	screenToWorld(p: Point): Point {
-		return { x: (p.x - this.vp.x) / this.vp.zoom, y: (p.y - this.vp.y) / this.vp.zoom };
+		return this.view.screenToWorld(p);
 	}
 
 	worldToScreen(p: Point): Point {
-		return { x: p.x * this.vp.zoom + this.vp.x, y: p.y * this.vp.zoom + this.vp.y };
+		return this.view.worldToScreen(p);
 	}
 
 	clientToWorld(clientX: number, clientY: number): Point {
-		return this.screenToWorld(this.clientToScreen(clientX, clientY));
+		return this.view.clientToWorld(clientX, clientY);
 	}
 
 	setViewport(vp: Viewport, opts: { silent?: boolean } = {}): void {
-		this.vp = { x: vp.x, y: vp.y, zoom: clamp(vp.zoom, MIN_ZOOM, MAX_ZOOM) };
-		this.applyGridClass();
-		this.textEditor.reposition();
-		if (!opts.silent) this.onViewportChange?.(this.vp);
-		this.requestRender();
+		this.view.setViewport(vp, opts);
 	}
 
 	panBy(dx: number, dy: number): void {
-		this.stopAnimation();
-		this.setViewport({ ...this.vp, x: this.vp.x + dx, y: this.vp.y + dy });
+		this.view.panBy(dx, dy);
 	}
 
 	zoomAt(factor: number, screen?: Point): void {
-		this.stopAnimation();
-		const size = this.viewSize();
-		const s = screen ?? { x: size.width / 2, y: size.height / 2 };
-		const zoom = clamp(this.vp.zoom * factor, MIN_ZOOM, MAX_ZOOM);
-		const w = this.screenToWorld(s);
-		this.setViewport({ zoom, x: s.x - w.x * zoom, y: s.y - w.y * zoom });
+		this.view.zoomAt(factor, screen);
 	}
 
 	zoomTo(zoom: number): void {
-		this.zoomAt(zoom / this.vp.zoom);
+		this.view.zoomTo(zoom);
 	}
 
-	/** Viewport that shows `b` centered with padding. */
 	viewportFor(b: Bounds, padding = 48, maxZoom = 2): Viewport {
-		const size = this.viewSize();
-		const zoom = clamp(
-			Math.min((size.width - padding * 2) / Math.max(b.width, 1), (size.height - padding * 2) / Math.max(b.height, 1)),
-			MIN_ZOOM,
-			maxZoom,
-		);
-		const c = center(b);
-		return { zoom, x: size.width / 2 - c.x * zoom, y: size.height / 2 - c.y * zoom };
+		return this.view.viewportFor(b, padding, maxZoom);
 	}
 
 	zoomToBounds(b: Bounds, opts: { animate?: boolean; padding?: number; maxZoom?: number } = {}): void {
-		const target = this.viewportFor(b, opts.padding ?? 48, opts.maxZoom ?? 2);
-		if (opts.animate === false) this.setViewport(target);
-		else this.animateTo(target);
+		this.view.zoomToBounds(b, opts);
 	}
 
 	zoomToFit(opts: { animate?: boolean; maxZoom?: number } = {}): void {
-		const b = contentBounds(this.elements);
-		if (!b) {
-			const size = this.viewSize();
-			this.setViewport({ x: size.width / 2, y: size.height / 2, zoom: 1 });
-			return;
-		}
-		this.zoomToBounds(b, { animate: opts.animate, maxZoom: opts.maxZoom ?? 1 });
+		this.view.zoomToFit(opts);
 	}
 
 	zoomToSelection(): void {
-		const b = this.selectionBounds();
-		if (b) this.zoomToBounds(b, { maxZoom: 1.5 });
-	}
-
-	private animateTo(target: Viewport, duration = 320): void {
-		this.stopAnimation();
-		const start = { ...this.vp };
-		const t0 = performance.now();
-		const step = (now: number) => {
-			if (this.destroyed) return;
-			const t = Math.min(1, (now - t0) / duration);
-			const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-			// interpolate zoom geometrically so the motion feels uniform
-			const zoom = start.zoom * Math.pow(target.zoom / start.zoom, e);
-			this.setViewport({ zoom, x: start.x + (target.x - start.x) * e, y: start.y + (target.y - start.y) * e }, { silent: t < 1 });
-			this.animation = t < 1 ? this.win.requestAnimationFrame(step) : null;
-		};
-		this.animation = this.win.requestAnimationFrame(step);
-	}
-
-	private stopAnimation(): void {
-		if (this.animation !== null) {
-			this.win.cancelAnimationFrame(this.animation);
-			this.animation = null;
-		}
+		this.view.zoomToSelection();
 	}
 
 	resize(): void {
-		const r = this.root.getBoundingClientRect();
-		if (r.width === 0 || r.height === 0) return;
-		const first = this.lastSize.width === 0;
-		// keep the center of the view stable when the pane is resized
-		if (!first) {
-			this.vp = {
-				...this.vp,
-				x: this.vp.x + (r.width - this.lastSize.width) / 2,
-				y: this.vp.y + (r.height - this.lastSize.height) / 2,
-			};
-		}
-		this.lastSize = { width: r.width, height: r.height };
-		if (first && this.pendingView) {
-			const apply = this.pendingView;
-			this.pendingView = null;
-			apply();
-		}
-		this.textEditor.reposition();
-		this.requestRender();
-	}
-
-	private applyGridClass(): void {
-		const gs = this.options.gridSize * this.vp.zoom;
-		const step = gs < 10 ? gs * 5 : gs;
-		this.canvas.style.setProperty("--bd-grid-step", `${step}px`);
-		this.canvas.style.setProperty("--bd-grid-x", `${this.vp.x}px`);
-		this.canvas.style.setProperty("--bd-grid-y", `${this.vp.y}px`);
-		this.canvas.classList.toggle("bd-show-grid", this.options.showGrid && step >= 6);
+		this.view.resize();
 	}
 
 	/* ============================================================ frames */
@@ -545,7 +453,7 @@ export class Editor {
 
 	navigateBack(): void {
 		const vp = this.navStack.pop();
-		if (vp) this.animateTo(vp);
+		if (vp) this.view.animateTo(vp);
 		this.requestRender();
 	}
 
@@ -1349,7 +1257,7 @@ export class Editor {
 	renderNow(): void {
 		this.svg.setAttribute("data-zoom", String(Math.round(this.vp.zoom * 100) / 100));
 		this.viewportG.setAttribute("transform", `translate(${this.vp.x},${this.vp.y}) scale(${this.vp.zoom})`);
-		this.applyGridClass();
+		this.view.applyGridClass();
 		this.renderer.render();
 		this.toolbar.update();
 		this.props.update();
