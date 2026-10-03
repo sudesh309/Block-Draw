@@ -1,7 +1,6 @@
 import { snap, unionBounds, type Point } from "../geometry/geom";
 import { traceDependencies, type DependencyTrace } from "../model/graph";
 import { History, type HistoryEntry } from "../model/history";
-import { frameLink, parseLink } from "../model/links";
 import { indexById, updateElements, type ElementPatch, type ZOrderMode } from "../model/ops";
 import {
 	DEFAULT_BLOCK_STYLE,
@@ -26,7 +25,6 @@ import {
 } from "../model/types";
 import type { DrawingThemeId } from "../model/themes";
 import type { PaletteId } from "../render/colors";
-import { frameTitleMetrics } from "../render/elements";
 import { clearTextMeasureCache } from "../render/text";
 import { ClipboardController } from "./clipboard";
 import { shortcut } from "./commands";
@@ -52,6 +50,7 @@ import { el, svgEl } from "./dom";
 import type { EditorHost } from "./host";
 import { blockAt, hitTest, sideNear } from "./hitTest";
 import { KeyboardController } from "./keyboard";
+import { describeLink, editLink, findFrame, followLink, linkToFrame, navigateBack, navigateToFrame, stepFrame } from "./navigation";
 import { PointerController } from "./pointer";
 import { Presenter } from "./Presenter";
 import { SceneRenderer } from "./renderer";
@@ -409,62 +408,26 @@ export class Editor {
 
 	/** Pans/zooms to a frame. Pushes the current view so "Back" can return to it. */
 	navigateToFrame(frameId: string, opts: { remember?: boolean; select?: boolean; animate?: boolean } = {}): boolean {
-		const frame = this.byId.get(frameId);
-		if (!isFrame(frame)) {
-			this.host.notice("That frame no longer exists.");
-			return false;
-		}
-		if (opts.remember !== false) {
-			this.navStack.push({ ...this.vp });
-			if (this.navStack.length > 50) this.navStack.shift();
-		}
-		const t = frameTitleMetrics(frame, 1);
-		this.zoomToBounds({ x: frame.x, y: t.y - t.size, width: frame.width, height: frame.height + (frame.y - t.y + t.size) }, {
-			animate: opts.animate,
-			padding: 40,
-			maxZoom: 1,
-		});
-		if (opts.select) this.selection = new Set([frame.id]);
-		this.requestRender();
-		return true;
+		return navigateToFrame(this, frameId, opts);
 	}
 
 	/** Finds a frame by id or (case-insensitive) title. */
 	findFrame(ref: string): FrameElement | null {
-		const direct = this.byId.get(ref);
-		if (isFrame(direct)) return direct;
-		const needle = ref.trim().toLowerCase();
-		return this.frames().find((f) => f.title.trim().toLowerCase() === needle) ?? null;
+		return findFrame(this, ref);
 	}
 
 	navigateBack(): void {
-		const vp = this.navStack.pop();
-		if (vp) this.view.animateTo(vp);
-		this.requestRender();
+		navigateBack(this);
 	}
 
 	/** Steps to the next/previous frame in frame order. */
 	stepFrame(delta: 1 | -1): void {
-		const frames = this.frames();
-		if (!frames.length) return;
-		const size = this.viewSize();
-		const centerWorld = this.screenToWorld({ x: size.width / 2, y: size.height / 2 });
-		let idx = frames.findIndex((f) => this.selection.has(f.id));
-		if (idx < 0) {
-			idx = frames.findIndex((f) => centerWorld.x >= f.x && centerWorld.x <= f.x + f.width && centerWorld.y >= f.y && centerWorld.y <= f.y + f.height);
-		}
-		const next = idx < 0 ? (delta > 0 ? 0 : frames.length - 1) : (idx + delta + frames.length) % frames.length;
-		this.navigateToFrame(frames[next].id, { remember: false, select: true });
+		stepFrame(this, delta);
 	}
 
 	/** Follows a block's link: frames are navigated in place, other links go to the host. */
 	followLink(blockId: string, newLeaf = false): void {
-		const block = this.byId.get(blockId);
-		if (!isBlock(block) || !block.link) return;
-		const parsed = parseLink(block.link);
-		if (!parsed) return;
-		if (parsed.kind === "frame") this.navigateToFrame(parsed.frameId);
-		else this.host.openLink(block.link, newLeaf);
+		followLink(this, blockId, newLeaf);
 	}
 
 	/** Shows or hides a block's description on the canvas; the text itself is kept. */
@@ -678,33 +641,16 @@ export class Editor {
 	}
 
 	/** Opens the link picker for a block. */
-	async editLink(blockId: string): Promise<void> {
-		const block = this.byId.get(blockId);
-		if (!isBlock(block)) return;
-		const result = await this.host.pickLink({
-			current: block.link,
-			frames: this.frames(),
-			ownFrameId: block.frameId,
-		});
-		if (result === undefined || this.destroyed) return;
-		const fresh = this.byId.get(blockId);
-		if (!isBlock(fresh)) return;
-		this.updateElement(blockId, { link: result });
+	editLink(blockId: string): Promise<void> {
+		return editLink(this, blockId);
 	}
 
 	linkToFrame(blockId: string, frameId: string | null): void {
-		this.updateElement(blockId, { link: frameId ? frameLink(frameId) : null });
+		linkToFrame(this, blockId, frameId);
 	}
 
 	describeLink(link: string | null): string {
-		const parsed = parseLink(link);
-		if (!parsed) return "";
-		if (parsed.kind === "frame") {
-			const f = this.byId.get(parsed.frameId);
-			return isFrame(f) ? `Frame: ${f.title}` : "Frame: (missing)";
-		}
-		if (parsed.kind === "url") return parsed.url;
-		return this.host.describeLink?.(link as string) ?? parsed.display;
+		return describeLink(this, link);
 	}
 
 	/** Aligns selected boxes (blocks and frames). */
