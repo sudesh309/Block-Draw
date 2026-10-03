@@ -7,9 +7,10 @@
 // squashfs-root/obsidian). Needs xvfb-run on Linux without a display. Set SHOTS=<dir> to keep
 // screenshots and PLUGIN_DIR=<dir> to install main.js/manifest.json/styles.css from somewhere
 // other than the repository root (e.g. files downloaded from a release). A fresh temporary vault
-// and Obsidian profile are used; nothing else is touched.
+// and Obsidian profile are used; nothing else is touched. The mock Apps Script bridge serves https
+// with a throwaway certificate made by openssl, which must be on the PATH.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -41,9 +42,12 @@ await esbuild.build({
 });
 const { startMockBridge } = await import("./dist/mockBridge.mjs");
 const SECRET = "e2e-secret";
-const bridge = await startMockBridge(root, SECRET);
-
 const work = mkdtempSync(join(tmpdir(), "bd-e2e-"));
+// The plugin only sends requests over https, so the bridge needs a certificate. Obsidian is
+// started with --ignore-certificate-errors to accept this self-signed one.
+execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1", "-keyout", join(work, "key.pem"), "-out", join(work, "cert.pem")], { stdio: "ignore" });
+const bridge = await startMockBridge(root, SECRET, { key: readFileSync(join(work, "key.pem"), "utf8"), cert: readFileSync(join(work, "cert.pem"), "utf8") });
+
 const home = join(work, "home");
 const vault = join(work, "vault");
 const pluginDir = join(vault, ".obsidian", "plugins", "block-draw");
@@ -58,7 +62,7 @@ writeFileSync(
 	JSON.stringify({ vaults: { e2evault0000000: { path: vault, ts: Date.now(), open: true } }, updateDisabled: true }),
 );
 
-const args = [BIN, "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${PORT}`];
+const args = [BIN, "--no-sandbox", "--disable-gpu", "--ignore-certificate-errors", `--remote-debugging-port=${PORT}`];
 const proc = spawn(process.platform === "linux" && !process.env.DISPLAY ? "xvfb-run" : args.shift(), process.platform === "linux" && !process.env.DISPLAY ? ["-a", "-s", "-screen 0 1440x900x24", ...args] : args, {
 	env: { ...process.env, HOME: home, XDG_CONFIG_HOME: join(home, ".config") },
 	detached: true,
@@ -441,12 +445,30 @@ test("Google Sheets export goes through the Apps Script bridge and updates in pl
 		},
 		[bridge.url, SECRET],
 	);
+	// The secret is kept on this device, not in the vault's data.json, and comes back on load.
+	const saved = readFileSync(join(pluginDir, "data.json"), "utf8");
+	assert.ok(!saved.includes(SECRET), "the Apps Script secret is not written to data.json");
+	assert.match(saved, /"appsScriptUrl"/);
+	const reloaded = await page.evaluate(async () => {
+		const p = window.app.plugins.plugins["block-draw"];
+		await p.loadSettings();
+		return p.settings.sheets.appsScriptSecret;
+	});
+	assert.equal(reloaded, SECRET, "the secret is read back from this device's secret storage");
+
+	// 127.0.0.1 is not a Google Apps Script host: the first export asks before sending anything.
 	await command("block-draw:export-google-sheets");
+	const ask = page.locator(".modal", { hasText: "Send drawings to this address?" });
+	await ask.waitFor({ timeout: 10000 });
+	assert.match(await ask.textContent(), /127\.0\.0\.1 is not a Google Apps Script address/);
+	assert.equal(bridge.log.length, 0, "nothing is sent before the address is confirmed");
+	await ask.getByRole("button", { name: "Send" }).click();
 	const first = await waitFor(async () => JSON.parse(await readFile(state.path)).exports?.googleSheet, "export info saved in the drawing", 20000);
 	assert.equal(bridge.svc.spreadsheets.size, 1);
 	const titles = [...bridge.svc.spreadsheets.get(first.spreadsheetId).sheets].sort((a, b) => a.index - b.index).map((s) => s.title);
 	assert.deepEqual(titles, ["Index", "Overview", "Frame 2", "Blocks", "Connections"]);
 	assert.ok(bridge.log.includes("GET echo ok"), "followed the Apps Script redirect");
+	// Confirmed once per session: the second export does not ask again.
 	await command("block-draw:export-google-sheets");
 	await waitFor(
 		async () => JSON.parse(await readFile(state.path)).exports?.googleSheet?.exportedAt !== first.exportedAt,
@@ -454,6 +476,7 @@ test("Google Sheets export goes through the Apps Script bridge and updates in pl
 		20000,
 	);
 	assert.equal(bridge.svc.spreadsheets.size, 1, "re-export updated the same spreadsheet");
+	assert.equal(await page.locator(".modal", { hasText: "Send drawings to this address?" }).count(), 0, "the address is not asked for twice");
 	await shot("e2e-05-after-gsheet");
 });
 
@@ -462,34 +485,45 @@ test("settings tab renders and tests the bridge connection", async () => {
 		window.app.setting.open();
 		window.app.setting.openTabById("block-draw");
 	});
-	// Obsidian 1.13 shows settings in a popout window; older versions use a modal.
-	const headingsOf = (p) =>
-		p.evaluate(() => [...document.querySelectorAll(".setting-item-heading .setting-item-name")].map((e) => e.textContent)).catch(() => []);
-	const settingsPage = await waitFor(async () => {
-		for (const p of page.context().pages()) if ((await headingsOf(p)).length) return p;
-		return null;
-	}, "settings window");
-	assert.deepEqual(await headingsOf(settingsPage), ["Drawings", "Export", "Google Sheets"]);
-	const fontsRow = await settingsPage.evaluate(() => {
-		const row = [...document.querySelectorAll(".setting-item")].find((r) => r.querySelector(".setting-item-name")?.textContent === "Load web fonts from Google Fonts");
-		return row ? { on: row.querySelector(".checkbox-container")?.classList.contains("is-enabled") ?? null, desc: row.querySelector(".setting-item-description")?.textContent ?? "" } : null;
-	});
-	assert.ok(fontsRow, "the web fonts setting is listed");
-	assert.equal(fontsRow.on, false, "web fonts are off by default");
-	assert.match(fontsRow.desc, /never contacts Google for fonts/);
-	await settingsPage.getByRole("button", { name: "Test" }).click();
-	const noticeShown = async () => {
-		for (const p of page.context().pages()) {
-			const found = await p
-				.evaluate(() => [...document.querySelectorAll(".notice")].some((n) => /Connected to the Block Draw bridge as e2e@example\.com/.test(n.textContent)))
-				.catch(() => false);
-			if (found) return true;
-		}
-		return false;
-	};
-	await waitFor(noticeShown, "connection notice");
-	if (SHOTS) await settingsPage.screenshot({ path: join(SHOTS, "e2e-06-settings.png") });
-	await page.evaluate(() => window.app.setting.close());
+	try {
+		// Obsidian 1.13 shows settings in a popout window; older versions use a modal.
+		const headingsOf = (p) =>
+			p.evaluate(() => [...document.querySelectorAll(".setting-item-heading .setting-item-name")].map((e) => e.textContent)).catch(() => []);
+		const settingsPage = await waitFor(async () => {
+			for (const p of page.context().pages()) if ((await headingsOf(p)).length) return p;
+			return null;
+		}, "settings window");
+		assert.deepEqual(await headingsOf(settingsPage), ["Drawings", "Export", "Google Sheets"]);
+		const fontsRow = await settingsPage.evaluate(() => {
+			const row = [...document.querySelectorAll(".setting-item")].find((r) => r.querySelector(".setting-item-name")?.textContent === "Load web fonts from Google Fonts");
+			return row ? { on: row.querySelector(".checkbox-container")?.classList.contains("is-enabled") ?? null, desc: row.querySelector(".setting-item-description")?.textContent ?? "" } : null;
+		});
+		assert.ok(fontsRow, "the web fonts setting is listed");
+		assert.equal(fontsRow.on, false, "web fonts are off by default");
+		assert.match(fontsRow.desc, /never contacts Google for fonts/);
+		// every setting shows its control; only the two rows that explain a step have none
+		const withoutControl = await settingsPage.evaluate(() =>
+			[...document.querySelectorAll(".setting-item:not(.setting-item-heading)")]
+				.filter((r) => r.offsetParent !== null && !r.querySelector(".setting-item-control")?.children.length)
+				.map((r) => r.querySelector(".setting-item-name")?.textContent),
+		);
+		assert.deepEqual(withoutControl, ["How it works", "Apps Script setup"]);
+		await settingsPage.getByRole("button", { name: "Test" }).click();
+		const noticeShown = async () => {
+			for (const p of page.context().pages()) {
+				const found = await p
+					.evaluate(() => [...document.querySelectorAll(".notice")].some((n) => /Connected to the Block Draw bridge as e2e@example\.com/.test(n.textContent)))
+					.catch(() => false);
+				if (found) return true;
+			}
+			return false;
+		};
+		await waitFor(noticeShown, "connection notice");
+		if (SHOTS) await settingsPage.screenshot({ path: join(SHOTS, "e2e-06-settings.png") });
+	} finally {
+		// close it even after a failure, or the settings modal (Obsidian 1.5) covers the next test
+		await page.evaluate(() => window.app.setting.close());
+	}
 });
 
 test("nested blocks, text alignment and opt-in web fonts work in Obsidian", async () => {
