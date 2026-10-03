@@ -1323,3 +1323,9 @@
 	text-align: right;
 }
 
+
+/* confirm dialog */
+
+.bd-confirm-detail {
+	word-break: break-all;
+}

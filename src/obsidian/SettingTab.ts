@@ -12,7 +12,8 @@ import APPS_SCRIPT_CODE from "../../apps-script/Code.gs";
 import { AppsScriptTransport } from "../export/gsheets/transport";
 import { getPath, setPath, type SettingDef } from "../kernel/settings";
 import { GOOGLE_SCOPE } from "./googleAuth";
-import { obsidianHttp } from "./exports";
+import { confirmAppsScriptUrl } from "./exports";
+import { obsidianHttp } from "./net";
 import type { BlockDrawHost } from "./plugin";
 import { settingDef, type BlockDrawSettings, type SettingKey } from "./settings";
 
@@ -284,6 +285,7 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 								return;
 							}
 							try {
+								await confirmAppsScriptUrl(this.app, s.sheets.appsScriptUrl);
 								const res = await new AppsScriptTransport(s.sheets.appsScriptUrl, s.sheets.appsScriptSecret, obsidianHttp).ping();
 								new Notice(`Connected to the Block Draw bridge${res.user ? ` as ${res.user}` : ""}.`);
 							} catch (e) {

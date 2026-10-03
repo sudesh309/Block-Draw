@@ -10,7 +10,8 @@ import type { ExportContext } from "./obsidian/exports";
 import { GoogleAuth } from "./obsidian/googleAuth";
 import type { BlockDrawHost } from "./obsidian/plugin";
 import { BlockDrawSettingTab } from "./obsidian/SettingTab";
-import { loadSettings, settingsToSave, type SecretStore, type StoredSettings } from "./kernel/settings";
+import { getPath, loadSettings, settingsToSave, type Capability, type SecretStore, type StoredSettings } from "./kernel/settings";
+import { setAllowedHosts } from "./obsidian/net";
 import { deviceSecrets, vaultTag } from "./obsidian/secrets";
 import { SETTINGS, type BlockDrawSettings } from "./obsidian/settings";
 import { WebFontLoader } from "./obsidian/webFonts";
@@ -59,6 +60,7 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 		const loaded = loadSettings<BlockDrawSettings>(SETTINGS, await this.loadData(), this.secrets);
 		this.settings = loaded.values;
 		this.stored = loaded;
+		this.syncAllowedHosts();
 		if (loaded.migrated.length) {
 			// Secrets written by 0.4.x were in data.json, which syncs with the vault: take them out now.
 			await this.saveData(settingsToSave(SETTINGS, this.settings, this.stored, this.secrets));
@@ -68,10 +70,21 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(settingsToSave(SETTINGS, this.settings, this.stored, this.secrets));
+		this.syncAllowedHosts();
 		if (this.settings.webFonts !== this.webFontsOn) void this.syncWebFonts(true);
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
 			if (leaf.view instanceof BlockDrawView) leaf.view.applySettings();
 		}
+	}
+
+	/**
+	 * The network allow-list is what the tables declare: the hosts of every export (they only run
+	 * when someone exports), and the hosts of a setting only while that setting is on.
+	 */
+	private syncAllowedHosts(): void {
+		const needs: Capability[] = exporterRows().flatMap(([, ex]) => ex.needs ?? []);
+		for (const def of SETTINGS) if (def.needs && getPath(this.settings, def.key) === true) needs.push(...def.needs);
+		setAllowedHosts(needs);
 	}
 
 	isSecretInVault(key: string): boolean {

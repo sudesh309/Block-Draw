@@ -100,7 +100,11 @@ export function toSpreadsheetInfo(raw: RawSpreadsheet): SpreadsheetInfo {
 	if (!raw || typeof raw.spreadsheetId !== "string") throw new SheetsError("Unexpected response from Google Sheets.");
 	return {
 		spreadsheetId: raw.spreadsheetId,
-		spreadsheetUrl: raw.spreadsheetUrl ?? `https://docs.google.com/spreadsheets/d/${raw.spreadsheetId}/edit`,
+		// The address is opened in the browser after the export, so only a Google Sheets address is taken as is.
+		spreadsheetUrl:
+			typeof raw.spreadsheetUrl === "string" && raw.spreadsheetUrl.startsWith("https://docs.google.com/")
+				? raw.spreadsheetUrl
+				: `https://docs.google.com/spreadsheets/d/${encodeURIComponent(raw.spreadsheetId)}/edit`,
 		sheets: (raw.sheets ?? []).map((s) => ({ sheetId: s.properties?.sheetId ?? 0, title: s.properties?.title ?? "" })),
 	};
 }

@@ -1,6 +1,7 @@
-import { requestUrl, type App } from "obsidian";
+import type { App } from "obsidian";
 import { WEB_FONTS_URL } from "../render/fonts";
 import { parseWebFontFaces, type WebFontFace } from "../render/webFontFaces";
+import { request } from "./net";
 
 /** Documents of the main window and of every pop-out window. */
 export function openDocuments(app: App): Document[] {
@@ -11,7 +12,7 @@ export function openDocuments(app: App): Document[] {
 
 /** Google's stylesheet for the web fonts. Overridable so tests need no network. */
 async function fetchStylesheet(): Promise<string> {
-	const res = await requestUrl({ url: WEB_FONTS_URL, throw: false });
+	const res = await request({ url: WEB_FONTS_URL, throw: false });
 	if (res.status !== 200) throw new Error(`Google Fonts answered HTTP ${res.status}`);
 	return res.text;
 }

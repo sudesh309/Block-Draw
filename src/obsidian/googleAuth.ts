@@ -1,5 +1,6 @@
-import { Platform, requestUrl, type App } from "obsidian";
+import { Platform, type App } from "obsidian";
 import type { SecretStore } from "../kernel/settings";
+import { request } from "./net";
 import { deviceSecrets } from "./secrets";
 
 /** The parts of Node's `http` module used for the sign-in redirect (desktop only). */
@@ -112,7 +113,7 @@ export class GoogleAuth {
 		const state = randomString(16);
 		const { code, redirectUri } = await this.waitForCode(clientId, challenge, state);
 
-		const res = await requestUrl({
+		const res = await request({
 			url: TOKEN_URL,
 			method: "POST",
 			contentType: "application/x-www-form-urlencoded",
@@ -200,7 +201,7 @@ export class GoogleAuth {
 		const tokens = this.read();
 		this.write(null);
 		if (tokens?.refreshToken) {
-			await requestUrl({
+			await request({
 				url: `${REVOKE_URL}?token=${encodeURIComponent(tokens.refreshToken)}`,
 				method: "POST",
 				contentType: "application/x-www-form-urlencoded",
@@ -215,7 +216,7 @@ export class GoogleAuth {
 		const { clientId, clientSecret } = this.getClient();
 		if (!tokens || tokens.clientId !== clientId) throw new Error("Sign in to Google in the Block Draw settings first.");
 		if (tokens.accessToken && tokens.expiresAt && tokens.expiresAt - 60_000 > Date.now()) return tokens.accessToken;
-		const res = await requestUrl({
+		const res = await request({
 			url: TOKEN_URL,
 			method: "POST",
 			contentType: "application/x-www-form-urlencoded",

@@ -1,11 +1,6 @@
-import { Notice, normalizePath, requestUrl, TFile, type App } from "obsidian";
+import { Notice, normalizePath, TFile, type App } from "obsidian";
 import { exportWorkbookToGoogleSheets } from "../export/gsheets/exporter";
-import {
-	AppsScriptTransport,
-	RestSheetsTransport,
-	type HttpClient,
-	type SheetsTransport,
-} from "../export/gsheets/transport";
+import { AppsScriptTransport, RestSheetsTransport, type SheetsTransport } from "../export/gsheets/transport";
 import { exportJsonText } from "../export/json";
 import { buildWorkbook } from "../export/workbook/layout";
 import { writeXlsx } from "../export/workbook/xlsx";
@@ -13,27 +8,10 @@ import { parseLink } from "../model/links";
 import { isFrame, type DrawingFile } from "../model/types";
 import { LIGHT_THEME } from "../render/colors";
 import { sceneToSvg } from "../render/scene";
+import { confirmAction } from "./confirm";
 import type { GoogleAuth } from "./googleAuth";
+import { allowConfirmedHost, isAllowedHost, obsidianHttp } from "./net";
 import type { BlockDrawSettings } from "./settings";
-
-/** Obsidian's requestUrl as a plain HTTP client (no CORS, works on mobile). */
-export const obsidianHttp: HttpClient = async (req) => {
-	const res = await requestUrl({
-		url: req.url,
-		method: req.method,
-		headers: req.headers,
-		contentType: req.contentType,
-		body: req.body,
-		throw: false,
-	});
-	let text = "";
-	try {
-		text = res.text;
-	} catch {
-		text = "";
-	}
-	return { status: res.status, text };
-};
 
 export interface ExportContext {
 	app: App;
@@ -117,6 +95,29 @@ export async function exportXlsxFile(ctx: ExportContext, source: TFile, drawing:
 	return file;
 }
 
+/**
+ * Checks the Apps Script web app address before anything is sent to it: it must be https, and an
+ * address outside script.google.com is only used after the person confirms it (once per session).
+ */
+export async function confirmAppsScriptUrl(app: App, url: string): Promise<void> {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error("The Apps Script web app address is not a valid URL.");
+	}
+	if (parsed.protocol !== "https:") throw new Error("The Apps Script web app address must start with https://.");
+	if (isAllowedHost(parsed.hostname)) return;
+	const yes = await confirmAction(app, {
+		title: "Send drawings to this address?",
+		message: `${parsed.hostname} is not a Google Apps Script address. Exporting sends your drawing and your Apps Script secret there.`,
+		detail: url,
+		confirm: "Send",
+	});
+	if (!yes) throw new Error("Cancelled: the web app address was not confirmed.");
+	allowConfirmedHost(parsed.hostname);
+}
+
 export function sheetsTransport(ctx: ExportContext): SheetsTransport {
 	const s = ctx.settings.sheets;
 	if (s.method === "oauth") {
@@ -139,6 +140,7 @@ export async function exportGoogleSheets(
 	opts: { forceNew?: boolean } = {},
 ): Promise<{ spreadsheetId: string; url: string; exportedAt: string; sheetIds: number[] }> {
 	const transport = sheetsTransport(ctx);
+	if (ctx.settings.sheets.method !== "oauth") await confirmAppsScriptUrl(ctx.app, ctx.settings.sheets.appsScriptUrl.trim());
 	const previous = drawing.exports?.googleSheet;
 	const target =
 		!opts.forceNew && ctx.settings.sheets.updateExisting && previous?.spreadsheetId

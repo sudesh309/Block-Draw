@@ -2,8 +2,8 @@
 //
 // Each folder in src/ has a rank. A file may import from its own folder or from a folder with a
 // lower rank: never upward, and never sideways (editor/ and export/ share a rank and stay apart).
-// Only obsidian/ and main.ts may import the "obsidian" package. Prints every violation and exits 1
-// when there is one. No dependencies.
+// Only obsidian/ and main.ts may import the "obsidian" package, and only obsidian/net.ts may call
+// requestUrl. Prints every violation and exits 1 when there is one. No dependencies.
 
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -15,6 +15,7 @@ const SRC = join(ROOT, "src");
 /** Lower is more basic. "(root)" is main.ts, the composition root. */
 const RANKS = { model: 0, geometry: 1, render: 2, kernel: 3, editor: 4, export: 4, obsidian: 5, "(root)": 6 };
 const MAY_IMPORT_OBSIDIAN = new Set(["obsidian", "(root)"]);
+const NETWORK_GATEWAY = "src/obsidian/net.ts";
 
 function* sourceFiles(dir) {
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -72,6 +73,9 @@ for (const file of sourceFiles(SRC)) {
 			const why = RANKS[to] === RANKS[from] ? "a sibling" : "a higher layer";
 			problems.push(`${rel(file)}: imports ${spec}; ${from}/ (rank ${RANKS[from]}) may not import ${to}/ (rank ${RANKS[to]}), ${why}`);
 		}
+	}
+	if (rel(file) !== NETWORK_GATEWAY && /\brequestUrl\b/.test(code)) {
+		problems.push(`${rel(file)}: uses requestUrl; every request goes through ${NETWORK_GATEWAY}`);
 	}
 }
 
