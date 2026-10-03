@@ -12,7 +12,7 @@ import APPS_SCRIPT_CODE from "../../apps-script/Code.gs";
 import { AppsScriptTransport } from "../export/gsheets/transport";
 import { GOOGLE_SCOPE } from "./googleAuth";
 import { obsidianHttp } from "./exports";
-import type BlockDrawPlugin from "../main";
+import type { BlockDrawHost } from "./plugin";
 import type { BlockDrawSettings, SheetsMethod } from "./settings";
 
 const DECLARATIVE_SETTINGS = "1.13.0";
@@ -59,7 +59,7 @@ function showSliderValue(slider: SliderComponent): void {
 export class BlockDrawSettingTab extends PluginSettingTab {
 	constructor(
 		app: App,
-		private readonly plugin: BlockDrawPlugin,
+		private readonly plugin: BlockDrawHost,
 	) {
 		super(app, plugin);
 	}

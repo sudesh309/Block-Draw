@@ -6,7 +6,7 @@ import { createEmptyDrawing, DrawingParseError, parseDrawing, serializeDrawing }
 import { parseLink } from "../model/links";
 import { isFrame, type DrawingFile, type DrawingMeta } from "../model/types";
 import { LinkPickerModal } from "./LinkPickerModal";
-import type BlockDrawPlugin from "../main";
+import type { BlockDrawHost } from "./plugin";
 
 export const VIEW_TYPE = "block-draw-view";
 export const VIEW_ICON = "workflow";
@@ -50,7 +50,7 @@ export class BlockDrawView extends TextFileView {
 
 	constructor(
 		leaf: WorkspaceLeaf,
-		readonly plugin: BlockDrawPlugin,
+		readonly plugin: BlockDrawHost,
 	) {
 		super(leaf);
 	}

@@ -1,0 +1,17 @@
+import type { Plugin } from "obsidian";
+import type { BlockDrawView } from "./BlockDrawView";
+import type { GoogleAuth } from "./googleAuth";
+import type { BlockDrawSettings } from "./settings";
+
+export type ExportKind = "json" | "copy-json" | "xlsx" | "gsheet" | "gsheet-new" | "svg" | "png";
+
+/**
+ * What the drawing views, the note embeds and the settings tab need from the plugin. main.ts
+ * implements it, so nothing in obsidian/ has to import main.ts (which imports all of obsidian/).
+ */
+export interface BlockDrawHost extends Plugin {
+	settings: BlockDrawSettings;
+	readonly auth: GoogleAuth;
+	saveSettings(): Promise<void>;
+	runExport(view: BlockDrawView, kind: ExportKind, frameId?: string | null): Promise<void>;
+}

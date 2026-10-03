@@ -15,13 +15,12 @@ import {
 	type ExportContext,
 } from "./obsidian/exports";
 import { GoogleAuth } from "./obsidian/googleAuth";
+import type { BlockDrawHost, ExportKind } from "./obsidian/plugin";
 import { BlockDrawSettingTab } from "./obsidian/SettingTab";
 import { mergeSettings, type BlockDrawSettings } from "./obsidian/settings";
 import { WebFontLoader } from "./obsidian/webFonts";
 
-export type ExportKind = "json" | "copy-json" | "xlsx" | "gsheet" | "gsheet-new" | "svg" | "png";
-
-export default class BlockDrawPlugin extends Plugin {
+export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 	settings!: BlockDrawSettings;
 	auth!: GoogleAuth;
 	webFonts!: WebFontLoader;

@@ -5,7 +5,7 @@ import { isFrame } from "../model/types";
 import { SCREEN_THEME } from "../render/colors";
 import { sceneToSvg } from "../render/scene";
 import { toDom } from "../render/vnode";
-import type BlockDrawPlugin from "../main";
+import type { BlockDrawHost } from "./plugin";
 
 /**
  * ```blockdraw
@@ -38,7 +38,7 @@ class DrawingEmbed extends MarkdownRenderChild {
 	private file: TFile | null = null;
 
 	constructor(
-		private readonly plugin: BlockDrawPlugin,
+		private readonly plugin: BlockDrawHost,
 		containerEl: HTMLElement,
 		private readonly source: string,
 		private readonly sourcePath: string,
@@ -103,7 +103,7 @@ class DrawingEmbed extends MarkdownRenderChild {
 	}
 }
 
-export function registerEmbeds(plugin: BlockDrawPlugin): void {
+export function registerEmbeds(plugin: BlockDrawHost): void {
 	plugin.registerMarkdownCodeBlockProcessor("blockdraw", (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
 		ctx.addChild(new DrawingEmbed(plugin, el, source, ctx.sourcePath));
 	});
