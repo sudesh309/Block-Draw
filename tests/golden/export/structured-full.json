@@ -1,0 +1,312 @@
+{
+  "format": "block-draw/export",
+  "version": 2,
+  "frames": [
+    {
+      "id": "f1",
+      "order": 1,
+      "title": "Request path",
+      "description": "From the browser to the database",
+      "blocks": [
+        {
+          "id": "web",
+          "title": "Web app",
+          "tag": "React",
+          "description": "Single page app",
+          "comment": "",
+          "shape": "rounded",
+          "link": {
+            "type": "note",
+            "target": "Notes/Web app",
+            "display": "Web"
+          },
+          "outgoing": [
+            "c-elbow",
+            "c-cross"
+          ],
+          "incoming": []
+        },
+        {
+          "id": "api",
+          "title": "API",
+          "tag": "Service · Go",
+          "description": "Kept for the export, not drawn",
+          "comment": "Rate limited per user",
+          "shape": "rounded",
+          "link": {
+            "type": "frame",
+            "frameId": "f2",
+            "frameTitle": "Shapes"
+          },
+          "outgoing": [
+            "c-straight",
+            "c-curved"
+          ],
+          "incoming": [
+            "c-elbow"
+          ]
+        },
+        {
+          "id": "db",
+          "title": "Orders",
+          "tag": "",
+          "description": "",
+          "comment": "Closed comment",
+          "shape": "cylinder",
+          "link": {
+            "type": "url",
+            "url": "https://example.com/orders"
+          },
+          "outgoing": [],
+          "incoming": [
+            "c-straight"
+          ]
+        },
+        {
+          "id": "mail",
+          "title": "Support",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "text",
+          "link": {
+            "type": "url",
+            "url": "mailto:support@example.com"
+          },
+          "outgoing": [],
+          "incoming": [
+            "c-curved"
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "id": "c-elbow",
+          "from": {
+            "blockId": "web",
+            "blockTitle": "Web app",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "to": {
+            "blockId": "api",
+            "blockTitle": "API",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "label": "calls",
+          "comment": ""
+        },
+        {
+          "id": "c-straight",
+          "from": {
+            "blockId": "api",
+            "blockTitle": "API",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "to": {
+            "blockId": "db",
+            "blockTitle": "Orders",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "label": "",
+          "comment": ""
+        },
+        {
+          "id": "c-curved",
+          "from": {
+            "blockId": "api",
+            "blockTitle": "API",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "to": {
+            "blockId": "mail",
+            "blockTitle": "Support",
+            "frameId": "f1",
+            "frameTitle": "Request path"
+          },
+          "label": "escalate",
+          "comment": "Only during office hours"
+        }
+      ],
+      "linksTo": [
+        {
+          "frameId": "f2",
+          "title": "Shapes"
+        }
+      ],
+      "linkedFrom": []
+    },
+    {
+      "id": "f2",
+      "order": 2,
+      "title": "Shapes",
+      "description": "",
+      "blocks": [
+        {
+          "id": "s-rounded",
+          "title": "rounded",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "rounded",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        },
+        {
+          "id": "s-rectangle",
+          "title": "rectangle",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "rectangle",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        },
+        {
+          "id": "s-ellipse",
+          "title": "ellipse",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "ellipse",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        },
+        {
+          "id": "s-diamond",
+          "title": "diamond",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "diamond",
+          "link": null,
+          "outgoing": [
+            "c-dotted"
+          ],
+          "incoming": []
+        },
+        {
+          "id": "s-parallelogram",
+          "title": "parallelogram",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "parallelogram",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        },
+        {
+          "id": "s-hexagon",
+          "title": "hexagon",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "hexagon",
+          "link": null,
+          "outgoing": [],
+          "incoming": [
+            "c-dotted"
+          ]
+        },
+        {
+          "id": "s-cylinder",
+          "title": "cylinder",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "cylinder",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        },
+        {
+          "id": "s-text",
+          "title": "text",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "text",
+          "link": null,
+          "outgoing": [],
+          "incoming": []
+        }
+      ],
+      "connections": [
+        {
+          "id": "c-dotted",
+          "from": {
+            "blockId": "s-diamond",
+            "blockTitle": "diamond",
+            "frameId": "f2",
+            "frameTitle": "Shapes"
+          },
+          "to": {
+            "blockId": "s-hexagon",
+            "blockTitle": "hexagon",
+            "frameId": "f2",
+            "frameTitle": "Shapes"
+          },
+          "label": "",
+          "comment": ""
+        }
+      ],
+      "linksTo": [],
+      "linkedFrom": [
+        {
+          "frameId": "f1",
+          "title": "Request path"
+        }
+      ]
+    }
+  ],
+  "unframed": {
+    "blocks": [
+      {
+        "id": "loose",
+        "title": "Unframed",
+        "tag": "",
+        "description": "Not in any frame",
+        "comment": "",
+        "shape": "rounded",
+        "link": null,
+        "outgoing": [],
+        "incoming": [
+          "c-cross"
+        ]
+      }
+    ],
+    "connections": []
+  },
+  "crossFrameConnections": [
+    {
+      "id": "c-cross",
+      "from": {
+        "blockId": "web",
+        "blockTitle": "Web app",
+        "frameId": "f1",
+        "frameTitle": "Request path"
+      },
+      "to": {
+        "blockId": "loose",
+        "blockTitle": "Unframed",
+        "frameId": null,
+        "frameTitle": null
+      },
+      "label": "",
+      "comment": "Hidden note"
+    }
+  ],
+  "stats": {
+    "frames": 2,
+    "blocks": 13,
+    "connections": 5
+  }
+}

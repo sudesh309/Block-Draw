@@ -1,0 +1,305 @@
+workbook "Checkout"
+sheet {"key":"index","title":"Index","rowCount":20,"colCount":6,"frozenRows":1,"hideGridlines":false,"defaultColWidth":100,"defaultRowHeight":21,"merges":[],"outlines":[],"print":{"landscape":true,"fitHeight":false}}
+  colWidths [[0,40],[1,230],[2,70],[3,100],[4,260],[5,320]]
+  rowHeights [[0,26]]
+  0:0 {"value":"#","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:1 {"value":"Frame","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:2 {"value":"Blocks","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:3 {"value":"Connections","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:4 {"value":"Links to","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:5 {"value":"Description","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:0 {"value":1,"style":{"hAlign":"center","color":"#868e96"}}
+  1:1 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"bold":true}}
+  1:2 {"value":4,"style":{"hAlign":"center"}}
+  1:3 {"value":4,"style":{"hAlign":"center"}}
+  1:4 {"value":"Payment details","style":{"wrap":true}}
+  1:5 {"value":"Happy path and sign-in branch","style":{"wrap":true,"color":"#495057"}}
+  2:0 {"value":2,"style":{"hAlign":"center","color":"#868e96"}}
+  2:1 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"bold":true}}
+  2:2 {"value":3,"style":{"hAlign":"center"}}
+  2:3 {"value":2,"style":{"hAlign":"center"}}
+  2:4 {"value":"Checkout flow","style":{"wrap":true}}
+  2:5 {"value":"","style":{"wrap":true,"color":"#495057"}}
+  3:0 {"value":"–","style":{"hAlign":"center","color":"#868e96"}}
+  3:1 {"value":"Unframed","link":{"type":"sheet","sheetKey":"unframed"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"bold":true}}
+  3:2 {"value":1,"style":{"hAlign":"center"}}
+  3:3 {"value":0,"style":{"hAlign":"center"}}
+  3:4 {"value":"","style":{"wrap":true}}
+  3:5 {"value":"Blocks that are not inside a frame","style":{"wrap":true,"color":"#495057"}}
+  5:1 {"value":"Blocks","link":{"type":"sheet","sheetKey":"blocks"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}]}
+  5:2 {"value":"All blocks as a table","style":{"color":"#868e96","italic":true}}
+  6:1 {"value":"Connections","link":{"type":"sheet","sheetKey":"connections"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}]}
+  6:2 {"value":"All connections as a table","style":{"color":"#868e96","italic":true}}
+sheet {"key":"frame:f1","title":"Checkout flow","rowCount":28,"colCount":47,"frozenRows":0,"hideGridlines":true,"defaultColWidth":20,"defaultRowHeight":20,"merges":[{"row":0,"col":1,"rows":1,"cols":38},{"row":1,"col":1,"rows":1,"cols":5},{"row":1,"col":7,"rows":1,"cols":32},{"row":6,"col":29,"rows":3,"cols":8},{"row":9,"col":29,"rows":1,"cols":8},{"row":16,"col":16,"rows":4,"cols":8},{"row":6,"col":16,"rows":4,"cols":8},{"row":6,"col":3,"rows":4,"cols":8},{"row":7,"col":15,"rows":2,"cols":1},{"row":7,"col":28,"rows":2,"cols":1},{"row":7,"col":26,"rows":2,"cols":2},{"row":15,"col":19,"rows":1,"cols":2},{"row":13,"col":19,"rows":1,"cols":2},{"row":10,"col":32,"rows":1,"cols":2}],"outlines":[{"range":{"row":3,"col":1,"rows":22,"cols":38},"line":{"style":"thin","color":"#adb5bd"}},{"range":{"row":6,"col":29,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}},{"range":{"row":16,"col":16,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}},{"range":{"row":6,"col":16,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}},{"range":{"row":6,"col":3,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}}],"print":{"landscape":true,"fitHeight":true},"filter":{"row":0,"col":41,"rows":5,"cols":6}}
+  colWidths [[41,180],[42,130],[43,220],[44,220],[45,240],[46,240]]
+  rowHeights [[0,34],[1,22]]
+  0:1 {"value":"Checkout flow","style":{"bold":true,"fontSize":14,"vAlign":"middle"}}
+  0:41 {"value":"Block Title","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:42 {"value":"Tag","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:43 {"value":"LinkTo","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:44 {"value":"LinkFrom","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:45 {"value":"Block Description","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:46 {"value":"Notes","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:1 {"value":"← Index","link":{"type":"sheet","sheetKey":"index"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"fontSize":9,"vAlign":"middle"}}
+  1:7 {"value":"Happy path and sign-in branch","style":{"italic":true,"fontSize":9,"color":"#868e96","vAlign":"middle"}}
+  1:41 {"value":"Cart","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:42 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:43 {"value":"→ Logged in?","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:44 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:45 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:46 {"value":"Confirm totals before moving on","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:41 {"value":"Logged in?","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:42 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:43 {"value":"→ Payment (yes)\n→ Sign in (no)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:44 {"value":"← Cart","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:45 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:46 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:41 {"value":"Payment","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:42 {"value":"Service · Java","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:43 {"value":"→ Card form [Payment details] (submit)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:44 {"value":"← Logged in? (yes)\n← Sign in","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:45 {"value":"Card, wallet or invoice","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:46 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:41 {"value":"Sign in","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:42 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:43 {"value":"→ Payment","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:44 {"value":"← Logged in? (no)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:45 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:46 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:3 {"value":"Cart","note":"Cart\n\nComment: Confirm totals before moving on\n\nOutgoing:\n→ Logged in?","style":{"bg":"#a5d8ff","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  6:16 {"value":"Logged in?","note":"Logged in?\n\nOutgoing:\n→ Payment (yes)\n→ Sign in (no)\n\nIncoming:\n← Cart","style":{"bg":"#ffec99","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  6:29 {"value":"Service · Java\nPayment\nCard, wallet or invoice","runs":[{"start":0,"italic":true,"fontSize":10,"color":"#1e1e1e"},{"start":15,"bold":true,"underline":false,"fontSize":12,"color":"#1e1e1e"},{"start":23,"fontSize":10,"color":"#1e1e1e"}],"note":"Payment\n\nLink: Payment details\n\nOutgoing:\n→ Card form [Payment details] (submit)\n\nIncoming:\n← Logged in? (yes)\n← Sign in","style":{"bg":"#a5d8ff","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  7:15 {"value":"►","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"right","vAlign":"middle","wrap":false}}
+  7:26 {"value":"yes","note":"Comment: Requires 3-D Secure","style":{"color":"#1e1e1e","fontSize":9,"hAlign":"center","vAlign":"middle","wrap":false,"bg":"#ffffff"}}
+  7:28 {"value":"►","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"right","vAlign":"middle","wrap":false}}
+  8:11 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  8:12 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  8:13 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  8:14 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  8:24 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  8:25 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  9:29 {"value":"→ Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"italic":true,"underline":true,"color":"#1971c2","fontSize":10}],"style":{"bg":"#a5d8ff","color":"#1971c2","fontSize":10,"hAlign":"center","vAlign":"top","wrap":false}}
+  10:20 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  10:32 {"value":"▲","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"center","vAlign":"top","wrap":false}}
+  11:20 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  11:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  12:20 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  12:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  13:19 {"value":"no","style":{"color":"#1e1e1e","fontSize":9,"hAlign":"center","vAlign":"middle","wrap":false,"bg":"#ffffff"}}
+  13:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  14:20 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  14:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  15:19 {"value":"▼","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"center","vAlign":"bottom","wrap":false}}
+  15:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  16:16 {"value":"Sign in","note":"Sign in\n\nOutgoing:\n→ Payment\n\nIncoming:\n← Logged in? (no)","style":{"bg":"#ffc9c9","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  16:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  17:33 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  18:24 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:25 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:26 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:27 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:28 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:29 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:30 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:31 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+  18:32 {"style":{"borders":{"top":{"style":"medium","color":"#1e1e1e"}}}}
+sheet {"key":"frame:f2","title":"Payment details","rowCount":28,"colCount":37,"frozenRows":0,"hideGridlines":true,"defaultColWidth":20,"defaultRowHeight":20,"merges":[{"row":0,"col":1,"rows":1,"cols":28},{"row":1,"col":1,"rows":1,"cols":5},{"row":16,"col":17,"rows":4,"cols":8},{"row":16,"col":3,"rows":3,"cols":8},{"row":19,"col":3,"rows":1,"cols":8},{"row":6,"col":3,"rows":4,"cols":8},{"row":15,"col":6,"rows":1,"cols":2},{"row":17,"col":16,"rows":2,"cols":1}],"outlines":[{"range":{"row":3,"col":1,"rows":22,"cols":28},"line":{"style":"thin","color":"#1971c2"}},{"range":{"row":16,"col":17,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}},{"range":{"row":16,"col":3,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}},{"range":{"row":6,"col":3,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}}],"print":{"landscape":true,"fitHeight":true},"tabColor":"#1971c2","filter":{"row":0,"col":31,"rows":4,"cols":6}}
+  colWidths [[31,180],[32,130],[33,220],[34,220],[35,240],[36,240]]
+  rowHeights [[0,34],[1,22]]
+  0:1 {"value":"Payment details","style":{"bold":true,"fontSize":14,"vAlign":"middle"}}
+  0:31 {"value":"Block Title","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:32 {"value":"Tag","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:33 {"value":"LinkTo","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:34 {"value":"LinkFrom","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:35 {"value":"Block Description","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:36 {"value":"Notes","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:1 {"value":"← Index","link":{"type":"sheet","sheetKey":"index"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"fontSize":9,"vAlign":"middle"}}
+  1:31 {"value":"Card form","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:32 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:33 {"value":"→ Confirmation","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:34 {"value":"← Payment [Checkout flow] (submit)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:35 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:36 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:31 {"value":"Confirmation","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:32 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:33 {"value":"→ Orders DB","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:34 {"value":"← Card form","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:35 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:36 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:31 {"value":"Orders DB","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:32 {"value":"PostgreSQL","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:33 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:34 {"value":"← Confirmation","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:35 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:36 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:3 {"value":"Card form","note":"Card form\n\nOutgoing:\n→ Confirmation\n\nIncoming:\n← Payment [Checkout flow] (submit)","style":{"bg":"#b2f2bb","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  10:7 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  11:7 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  12:7 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  13:7 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  14:7 {"style":{"borders":{"left":{"style":"medium","color":"#1e1e1e"}}}}
+  15:6 {"value":"▼","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"center","vAlign":"bottom","wrap":false}}
+  16:3 {"value":"Confirmation","runs":[{"start":0,"bold":true,"underline":false,"fontSize":12,"color":"#1e1e1e"}],"note":"Confirmation\n\nLink: Checkout flow\n\nOutgoing:\n→ Orders DB\n\nIncoming:\n← Card form","style":{"bg":"#a5d8ff","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  16:17 {"value":"PostgreSQL\nOrders DB","runs":[{"start":0,"italic":true,"fontSize":10,"color":"#1e1e1e"},{"start":11,"bold":false,"underline":false,"fontSize":12,"color":"#1e1e1e"}],"note":"Orders DB\n\nIncoming:\n← Confirmation","style":{"bg":"#d0bfff","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  17:16 {"value":"►","style":{"color":"#1e1e1e","fontSize":10,"hAlign":"right","vAlign":"middle","wrap":false}}
+  18:11 {"style":{"borders":{"top":{"style":"dashed","color":"#1e1e1e"}}}}
+  18:12 {"style":{"borders":{"top":{"style":"dashed","color":"#1e1e1e"}}}}
+  18:13 {"style":{"borders":{"top":{"style":"dashed","color":"#1e1e1e"}}}}
+  18:14 {"style":{"borders":{"top":{"style":"dashed","color":"#1e1e1e"}}}}
+  18:15 {"style":{"borders":{"top":{"style":"dashed","color":"#1e1e1e"}}}}
+  19:3 {"value":"→ Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"italic":true,"underline":true,"color":"#1971c2","fontSize":10}],"style":{"bg":"#a5d8ff","color":"#1971c2","fontSize":10,"hAlign":"center","vAlign":"top","wrap":false}}
+sheet {"key":"unframed","title":"Unframed","rowCount":14,"colCount":25,"frozenRows":0,"hideGridlines":true,"defaultColWidth":20,"defaultRowHeight":20,"merges":[{"row":0,"col":1,"rows":1,"cols":16},{"row":1,"col":1,"rows":1,"cols":5},{"row":1,"col":7,"rows":1,"cols":10},{"row":5,"col":3,"rows":3,"cols":8},{"row":8,"col":3,"rows":1,"cols":8}],"outlines":[{"range":{"row":3,"col":1,"rows":8,"cols":12},"line":{"style":"thin","color":"#adb5bd"}},{"range":{"row":5,"col":3,"rows":4,"cols":8},"line":{"style":"medium","color":"#1e1e1e"}}],"print":{"landscape":true,"fitHeight":true},"filter":{"row":0,"col":19,"rows":2,"cols":6}}
+  colWidths [[19,180],[20,130],[21,220],[22,220],[23,240],[24,240]]
+  rowHeights [[0,34],[1,22]]
+  0:1 {"value":"Unframed","style":{"bold":true,"fontSize":14,"vAlign":"middle"}}
+  0:19 {"value":"Block Title","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:20 {"value":"Tag","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:21 {"value":"LinkTo","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:22 {"value":"LinkFrom","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:23 {"value":"Block Description","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:24 {"value":"Notes","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:1 {"value":"← Index","link":{"type":"sheet","sheetKey":"index"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"fontSize":9,"vAlign":"middle"}}
+  1:7 {"value":"Blocks that are not inside a frame","style":{"italic":true,"fontSize":9,"color":"#868e96","vAlign":"middle"}}
+  1:19 {"value":"Spec","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:20 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:21 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:22 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:23 {"value":"Requirements note","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:24 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:3 {"value":"Spec\nRequirements note","runs":[{"start":0,"bold":true,"underline":false,"fontSize":12,"color":"#1e1e1e"},{"start":5,"fontSize":10,"color":"#1e1e1e"}],"note":"Spec\n\nLink: Checkout","style":{"bg":"#a5d8ff","color":"#1e1e1e","fontSize":12,"hAlign":"center","vAlign":"middle","wrap":true}}
+  8:3 {"value":"→ Checkout","link":{"type":"url","url":"obsidian://open?vault=Vault&file=Specs%2FCheckout"},"runs":[{"start":0,"italic":true,"underline":true,"color":"#1971c2","fontSize":10}],"style":{"bg":"#a5d8ff","color":"#1971c2","fontSize":10,"hAlign":"center","vAlign":"top","wrap":false}}
+sheet {"key":"blocks","title":"Blocks","rowCount":14,"colCount":9,"frozenRows":1,"hideGridlines":false,"defaultColWidth":100,"defaultRowHeight":21,"merges":[],"outlines":[],"print":{"landscape":true,"fitHeight":false},"filter":{"row":0,"col":0,"rows":9,"cols":9}}
+  colWidths [[0,160],[1,200],[2,140],[3,260],[4,90],[5,180],[6,220],[7,220],[8,240]]
+  rowHeights [[0,26]]
+  0:0 {"value":"Frame","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:1 {"value":"Block","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:2 {"value":"Tag","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:3 {"value":"Description","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:4 {"value":"Shape","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:5 {"value":"Links to","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:6 {"value":"Outgoing","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:7 {"value":"Incoming","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:8 {"value":"Comment","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:1 {"value":"Cart","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:4 {"value":"rounded","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:5 {"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:6 {"value":"→ Logged in?","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:7 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:8 {"value":"Confirm totals before moving on","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:1 {"value":"Logged in?","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:4 {"value":"diamond","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:5 {"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:6 {"value":"→ Payment (yes)\n→ Sign in (no)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:7 {"value":"← Cart","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:1 {"value":"Payment","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:2 {"value":"Service · Java","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:3 {"value":"Card, wallet or invoice","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:4 {"value":"rounded","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:5 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:6 {"value":"→ Card form [Payment details] (submit)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:7 {"value":"← Logged in? (yes)\n← Sign in","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:1 {"value":"Sign in","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:4 {"value":"rounded","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:5 {"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:6 {"value":"→ Payment","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:7 {"value":"← Logged in? (no)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:0 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:1 {"value":"Card form","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:4 {"value":"rounded","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:5 {"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:6 {"value":"→ Confirmation","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:7 {"value":"← Payment [Checkout flow] (submit)","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:0 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:1 {"value":"Confirmation","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:4 {"value":"ellipse","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:5 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:6 {"value":"→ Orders DB","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:7 {"value":"← Card form","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:0 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:1 {"value":"Orders DB","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:2 {"value":"PostgreSQL","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:3 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:4 {"value":"cylinder","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:5 {"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:6 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:7 {"value":"← Confirmation","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:0 {"value":"Unframed","link":{"type":"sheet","sheetKey":"unframed"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:1 {"value":"Spec","style":{"bold":true,"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:2 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:3 {"value":"Requirements note","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:4 {"value":"rounded","style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:5 {"value":"Checkout","link":{"type":"url","url":"obsidian://open?vault=Vault&file=Specs%2FCheckout"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:6 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:7 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  8:8 {"value":"","style":{"wrap":true,"vAlign":"top","borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+sheet {"key":"connections","title":"Connections","rowCount":13,"colCount":6,"frozenRows":1,"hideGridlines":false,"defaultColWidth":100,"defaultRowHeight":21,"merges":[],"outlines":[],"print":{"landscape":true,"fitHeight":false},"filter":{"row":0,"col":0,"rows":8,"cols":6}}
+  colWidths [[0,160],[1,200],[2,140],[3,200],[4,160],[5,240]]
+  rowHeights [[0,26]]
+  0:0 {"value":"From frame","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:1 {"value":"From","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:2 {"value":"Label","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:3 {"value":"To","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:4 {"value":"To frame","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  0:5 {"value":"Comment","style":{"bold":true,"bg":"#f1f3f5","borders":{"bottom":{"style":"thin","color":"#ced4da"}},"vAlign":"middle"}}
+  1:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:1 {"value":"Cart","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:2 {"value":"","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:3 {"value":"Logged in?","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:4 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  1:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:1 {"value":"Logged in?","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:2 {"value":"yes","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:3 {"value":"Payment","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:4 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  2:5 {"value":"Requires 3-D Secure","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:1 {"value":"Logged in?","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:2 {"value":"no","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:3 {"value":"Sign in","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:4 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  3:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:1 {"value":"Sign in","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:2 {"value":"","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:3 {"value":"Payment","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:4 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  4:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:0 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:1 {"value":"Card form","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:2 {"value":"","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:3 {"value":"Confirmation","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:4 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  5:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:0 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:1 {"value":"Confirmation","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:2 {"value":"","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:3 {"value":"Orders DB","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:4 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  6:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:0 {"value":"Checkout flow","link":{"type":"sheet","sheetKey":"frame:f1"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:1 {"value":"Payment","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:2 {"value":"submit","style":{"italic":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:3 {"value":"Card form","style":{"bold":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:4 {"value":"Payment details","link":{"type":"sheet","sheetKey":"frame:f2"},"runs":[{"start":0,"underline":true,"color":"#1971c2"}],"style":{"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}
+  7:5 {"value":"","style":{"wrap":true,"borders":{"bottom":{"style":"thin","color":"#e9ecef"}}}}

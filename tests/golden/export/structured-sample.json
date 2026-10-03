@@ -1,0 +1,307 @@
+{
+  "format": "block-draw/export",
+  "version": 2,
+  "frames": [
+    {
+      "id": "f1",
+      "order": 1,
+      "title": "Checkout flow",
+      "description": "Happy path and sign-in branch",
+      "blocks": [
+        {
+          "id": "cart",
+          "title": "Cart",
+          "tag": "",
+          "description": "",
+          "comment": "Confirm totals before moving on",
+          "shape": "rounded",
+          "link": null,
+          "outgoing": [
+            "c1"
+          ],
+          "incoming": []
+        },
+        {
+          "id": "check",
+          "title": "Logged in?",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "diamond",
+          "link": null,
+          "outgoing": [
+            "c2",
+            "c3"
+          ],
+          "incoming": [
+            "c1"
+          ]
+        },
+        {
+          "id": "pay",
+          "title": "Payment",
+          "tag": "Service · Java",
+          "description": "Card, wallet or invoice",
+          "comment": "",
+          "shape": "rounded",
+          "link": {
+            "type": "frame",
+            "frameId": "f2",
+            "frameTitle": "Payment details"
+          },
+          "outgoing": [
+            "c7"
+          ],
+          "incoming": [
+            "c2",
+            "c4"
+          ]
+        },
+        {
+          "id": "login",
+          "title": "Sign in",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "rounded",
+          "link": null,
+          "outgoing": [
+            "c4"
+          ],
+          "incoming": [
+            "c3"
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "id": "c1",
+          "from": {
+            "blockId": "cart",
+            "blockTitle": "Cart",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "to": {
+            "blockId": "check",
+            "blockTitle": "Logged in?",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "label": "",
+          "comment": ""
+        },
+        {
+          "id": "c2",
+          "from": {
+            "blockId": "check",
+            "blockTitle": "Logged in?",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "to": {
+            "blockId": "pay",
+            "blockTitle": "Payment",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "label": "yes",
+          "comment": "Requires 3-D Secure"
+        },
+        {
+          "id": "c3",
+          "from": {
+            "blockId": "check",
+            "blockTitle": "Logged in?",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "to": {
+            "blockId": "login",
+            "blockTitle": "Sign in",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "label": "no",
+          "comment": ""
+        },
+        {
+          "id": "c4",
+          "from": {
+            "blockId": "login",
+            "blockTitle": "Sign in",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "to": {
+            "blockId": "pay",
+            "blockTitle": "Payment",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "label": "",
+          "comment": ""
+        }
+      ],
+      "linksTo": [
+        {
+          "frameId": "f2",
+          "title": "Payment details"
+        }
+      ],
+      "linkedFrom": [
+        {
+          "frameId": "f2",
+          "title": "Payment details"
+        }
+      ]
+    },
+    {
+      "id": "f2",
+      "order": 2,
+      "title": "Payment details",
+      "description": "",
+      "blocks": [
+        {
+          "id": "card",
+          "title": "Card form",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "rounded",
+          "link": null,
+          "outgoing": [
+            "c5"
+          ],
+          "incoming": [
+            "c7"
+          ]
+        },
+        {
+          "id": "done",
+          "title": "Confirmation",
+          "tag": "",
+          "description": "",
+          "comment": "",
+          "shape": "ellipse",
+          "link": {
+            "type": "frame",
+            "frameId": "f1",
+            "frameTitle": "Checkout flow"
+          },
+          "outgoing": [
+            "c6"
+          ],
+          "incoming": [
+            "c5"
+          ]
+        },
+        {
+          "id": "db",
+          "title": "Orders DB",
+          "tag": "PostgreSQL",
+          "description": "",
+          "comment": "",
+          "shape": "cylinder",
+          "link": null,
+          "outgoing": [],
+          "incoming": [
+            "c6"
+          ]
+        }
+      ],
+      "connections": [
+        {
+          "id": "c5",
+          "from": {
+            "blockId": "card",
+            "blockTitle": "Card form",
+            "frameId": "f2",
+            "frameTitle": "Payment details"
+          },
+          "to": {
+            "blockId": "done",
+            "blockTitle": "Confirmation",
+            "frameId": "f2",
+            "frameTitle": "Payment details"
+          },
+          "label": "",
+          "comment": ""
+        },
+        {
+          "id": "c6",
+          "from": {
+            "blockId": "done",
+            "blockTitle": "Confirmation",
+            "frameId": "f2",
+            "frameTitle": "Payment details"
+          },
+          "to": {
+            "blockId": "db",
+            "blockTitle": "Orders DB",
+            "frameId": "f2",
+            "frameTitle": "Payment details"
+          },
+          "label": "",
+          "comment": ""
+        }
+      ],
+      "linksTo": [
+        {
+          "frameId": "f1",
+          "title": "Checkout flow"
+        }
+      ],
+      "linkedFrom": [
+        {
+          "frameId": "f1",
+          "title": "Checkout flow"
+        }
+      ]
+    }
+  ],
+  "unframed": {
+    "blocks": [
+      {
+        "id": "spec",
+        "title": "Spec",
+        "tag": "",
+        "description": "Requirements note",
+        "comment": "",
+        "shape": "rounded",
+        "link": {
+          "type": "note",
+          "target": "Specs/Checkout",
+          "display": "Checkout"
+        },
+        "outgoing": [],
+        "incoming": []
+      }
+    ],
+    "connections": []
+  },
+  "crossFrameConnections": [
+    {
+      "id": "c7",
+      "from": {
+        "blockId": "pay",
+        "blockTitle": "Payment",
+        "frameId": "f1",
+        "frameTitle": "Checkout flow"
+      },
+      "to": {
+        "blockId": "card",
+        "blockTitle": "Card form",
+        "frameId": "f2",
+        "frameTitle": "Payment details"
+      },
+      "label": "submit",
+      "comment": ""
+    }
+  ],
+  "stats": {
+    "frames": 2,
+    "blocks": 8,
+    "connections": 7
+  }
+}

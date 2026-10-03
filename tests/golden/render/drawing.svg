@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1208" height="870" viewBox="-24 -46 1208 870">
+<rect x="-24" y="-46" width="1208" height="870" style="fill:#ffffff"/>
+<g>
+<g class="bd-frame">
+<rect class="bd-frame-rect" x="0" y="0" width="900" height="400" rx="8" style="fill:none;stroke:#adb5bd;stroke-width:1.5" vector-effect="non-scaling-stroke"/>
+<text class="bd-frame-title" x="0" y="-8" style="fill:#495057;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:14px;font-weight:600">Request path</text>
+</g>
+<g class="bd-frame">
+<rect class="bd-frame-rect" x="0" y="440" width="900" height="360" rx="8" style="fill:#f8f9fa;stroke:#1971c2;stroke-width:1.5" vector-effect="non-scaling-stroke"/>
+<text class="bd-frame-title" x="0" y="432" style="fill:#495057;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:14px;font-weight:600">Shapes</text>
+</g>
+</g>
+<g>
+<g class="bd-block bd-has-link" transform="translate(40,60)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#ffec99;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="start" style="fill:#1e1e1e;font-family:Georgia, &quot;Times New Roman&quot;, Times, serif">
+<tspan x="8" y="17.75" class="bd-text-tag" style="font-size:10px;font-weight:600;opacity:0.7">REACT</tspan>
+<tspan x="8" y="39.3" style="font-size:16px;font-weight:600">Web app</tspan>
+<tspan x="8" y="61.98" style="font-size:13px;font-weight:400;opacity:0.78">Single page app</tspan>
+</text>
+<g class="bd-link-badge" transform="translate(140,4)">
+<title>Open Web</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M5 3.5 H9 L11.5 6 V12.5 H5 Z M9 3.5 V6 H11.5" style="fill:none;stroke:#1e1e1e;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g class="bd-block bd-has-link bd-3d" transform="translate(340,60)">
+<defs>
+<linearGradient id="bd-face-a5d8ff" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#b9e1ff"/>
+<stop offset="1" stop-color="#a5d8ff"/>
+</linearGradient>
+</defs>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(2.92,7.68)" style="fill:#000000;fill-opacity:0.06" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(2.63,6.91)" style="fill:#000000;fill-opacity:0.08" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(2.43,6.4)" style="fill:#7497b3;stroke:#1e1e1e;stroke-opacity:0.35;stroke-width:4" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(2.08,5.49)" style="fill:#7497b3" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(1.74,4.57)" style="fill:#7497b3" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(1.39,3.66)" style="fill:#7497b3" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(1.04,2.74)" style="fill:#7497b3" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(0.69,1.83)" style="fill:#7497b3" pointer-events="none"/>
+<path d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" transform="translate(0.35,0.91)" style="fill:#7497b3" pointer-events="none"/>
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:url(#bd-face-a5d8ff);stroke:#1e1e1e;stroke-width:4;stroke-dasharray:18 14;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1f3a5f;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="29.7" class="bd-text-tag" style="font-size:12px;font-weight:600;opacity:0.7">SERVICE · GO</tspan>
+<tspan x="80" y="56.5" style="font-size:20px;font-weight:500">API</tspan>
+</text>
+<g class="bd-link-badge" transform="translate(140,4)">
+<title>Go to frame: Shapes</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M5 11 L11 5 M6.5 5 H11 V9.5" style="fill:none;stroke:#1e1e1e;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-comment-badge is-open" transform="translate(140,60)">
+<title>Hide comment: Rate limited per user</title>
+<rect width="16" height="16" rx="4" style="fill:#1e1e1e;stroke:#1e1e1e;stroke-width:1;opacity:0.85"/>
+<path d="M3.5 4 H12.5 V10 H7.5 L4.5 13 V10 H3.5 Z" style="fill:none;stroke:#ffffff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g class="bd-block bd-has-link" transform="translate(640,60)">
+<path class="bd-shape" d="M0,12 A80,12 0 0 1 160,12 V68 A80,12 0 0 1 0,68 Z" style="fill:none;stroke:#e03131;stroke-width:2;stroke-dasharray:0.21 7;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M0,12 A80,12 0 0 0 160,12" style="fill:none;stroke:#e03131;stroke-width:2;stroke-dasharray:0.21 7"/>
+<text class="bd-text" text-anchor="end" style="fill:#1e1e1e;font-family:Montserrat, &quot;Segoe UI&quot;, Arial, sans-serif">
+<tspan x="152" y="61.6" style="font-size:16px;font-weight:500">Orders</tspan>
+</text>
+<g class="bd-link-badge" transform="translate(140,4)">
+<title>Open https://example.com/orders</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M7 9 L11.5 4.5 M8.5 4.5 H11.5 V7.5 M10 9.5 V12 H4.5 V6.5 H7" style="fill:none;stroke:#1e1e1e;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-comment-badge" transform="translate(140,60)">
+<title>Show comment: Closed comment</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M3.5 4 H12.5 V10 H7.5 L4.5 13 V10 H3.5 Z" style="fill:none;stroke:#1e1e1e;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g class="bd-block bd-has-link" transform="translate(340,260)">
+<path class="bd-shape" d="M0,0 H160 V80 H0 Z" style="fill:#a5d8ff;stroke:none;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="44.2" style="font-size:12px;font-weight:500">Support</tspan>
+</text>
+<g class="bd-link-badge" transform="translate(140,4)">
+<title>Open mailto:support@example.com</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M7 9 L11.5 4.5 M8.5 4.5 H11.5 V7.5 M10 9.5 V12 H4.5 V6.5 H7" style="fill:none;stroke:#1e1e1e;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g class="bd-block" transform="translate(40,480)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">rounded</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(260,480)">
+<path class="bd-shape" d="M0,0 H160 V80 H0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">rectangle</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(480,480)">
+<path class="bd-shape" d="M0,40 A80,40 0 1 1 160,40 A80,40 0 1 1 0,40 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">ellipse</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(700,480)">
+<path class="bd-shape" d="M80,0 L160,40 L80,80 L0,40 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">diamond</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(40,640)">
+<path class="bd-shape" d="M32,0 L160,0 L128,80 L0,80 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="35.6" style="font-size:16px;font-weight:500">parallelogra</tspan>
+<tspan x="80" y="55.6" style="font-size:16px;font-weight:500">m</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(260,640)">
+<path class="bd-shape" d="M40,0 L120,0 L160,40 L120,80 L40,80 L0,40 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">hexagon</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(480,640)">
+<path class="bd-shape" d="M0,12 A80,12 0 0 1 160,12 V68 A80,12 0 0 1 0,68 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<path d="M0,12 A80,12 0 0 0 160,12" style="fill:none;stroke:#1e1e1e;stroke-width:2"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="51.6" style="font-size:16px;font-weight:500">cylinder</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(700,640)">
+<path class="bd-shape" d="M0,0 H160 V80 H0 Z" style="fill:#a5d8ff;stroke:none;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">text</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(1000,60)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="34.67" style="font-size:16px;font-weight:600">Unframed</tspan>
+<tspan x="80" y="57.35" style="font-size:13px;font-weight:400;opacity:0.78">Not in any frame</tspan>
+</text>
+</g>
+</g>
+<g>
+<g class="bd-connector bd-flow">
+<path class="bd-connector-line" d="M200,100 L338.8,100" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M326,107 L340,100 L326,93" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-connector bd-3d">
+<g class="bd-connector-shadow" transform="translate(2.5,5)" pointer-events="none">
+<path d="M506,100 L625.98,100" style="fill:none;stroke:rgba(0,0,0,0.22);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M640,100 L623.5,106.93 L623.5,93.07 Z" style="fill:rgba(0,0,0,0.22);stroke:rgba(0,0,0,0.22);stroke-width:1;stroke-linejoin:round"/>
+<circle cx="506" cy="100" r="6" style="fill:rgba(0,0,0,0.22);stroke:none"/>
+</g>
+<path class="bd-connector-line" d="M506,100 L625.98,100" style="fill:none;stroke:#1e1e1e;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"/>
+<path class="bd-connector-sheen" d="M506,100 L625.98,100" pointer-events="none" style="fill:none;stroke:#ffffff;stroke-opacity:0.45;stroke-width:1.05;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M640,100 L623.5,106.93 L623.5,93.07 Z" style="fill:#1e1e1e;stroke:#1e1e1e;stroke-width:1;stroke-linejoin:round"/>
+<circle cx="506" cy="100" r="6" style="fill:#1e1e1e;stroke:none"/>
+</g>
+<g class="bd-connector bd-flow">
+<path class="bd-connector-line bd-flow-lane" d="M418.05,141.2 L418.05,145.52 L418.05,149.72 L418.05,153.8 L418.05,157.77 L418.05,161.64 L418.05,165.42 L418.05,169.12 L418.05,172.74 L418.05,176.29 L418.05,179.79 L418.05,183.23 L418.05,186.64 L418.05,190.01 L418.05,193.35 L418.05,196.68 L418.05,200 L418.05,203.32 L418.05,206.65 L418.05,209.99 L418.05,213.36 L418.05,216.77 L418.05,220.21 L418.05,223.71 L418.05,227.26 L418.05,230.88 L418.05,234.58 L418.05,238.36 L418.05,242.23 L418.05,246.2 L418.05,250.28 L418.05,254.48 L418.05,258.8" style="fill:none;stroke:#2f9e44;stroke-width:1.4;stroke-dasharray:7.6 6.2;stroke-linecap:round;stroke-linejoin:round"/>
+<path class="bd-connector-line bd-flow-lane" d="M421.95,258.8 L421.95,254.48 L421.95,250.28 L421.95,246.2 L421.95,242.23 L421.95,238.36 L421.95,234.58 L421.95,230.88 L421.95,227.26 L421.95,223.71 L421.95,220.21 L421.95,216.77 L421.95,213.36 L421.95,209.99 L421.95,206.65 L421.95,203.32 L421.95,200 L421.95,196.68 L421.95,193.35 L421.95,190.01 L421.95,186.64 L421.95,183.23 L421.95,179.79 L421.95,176.29 L421.95,172.74 L421.95,169.12 L421.95,165.42 L421.95,161.64 L421.95,157.77 L421.95,153.8 L421.95,149.72 L421.95,145.52 L421.95,141.2" style="fill:none;stroke:#2f9e44;stroke-width:1.4;stroke-dasharray:7.6 6.2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M413,246 L420,260 L427,246" style="fill:none;stroke:#2f9e44;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M427,154 L420,140 L413,154" style="fill:none;stroke:#2f9e44;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-connector">
+<path class="bd-connector-line" d="M700,520 L680,520 L680,680 L420,680" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-dasharray:0.21 7;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-connector">
+<path class="bd-connector-line" d="M200,100 L998.8,100" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M986,107 L1000,100 L986,93" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g>
+<g class="bd-connector-label">
+<rect x="249.88" y="88.25" width="40.24" height="23.5" rx="4" style="fill:#ffffff;opacity:0.92"/>
+<text text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:14px">
+<tspan x="270" y="104.9">calls</tspan>
+</text>
+</g>
+<g class="bd-connector-label">
+<rect x="387.42" y="188.25" width="65.16" height="23.5" rx="4" style="fill:#ffffff;opacity:0.92"/>
+<text text-anchor="middle" style="fill:#2f9e44;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:14px">
+<tspan x="420" y="204.9">escalate</tspan>
+</text>
+</g>
+<g class="bd-comment-badge is-open" transform="translate(412,166.25)">
+<title>Hide comment: Only during office hours</title>
+<rect width="16" height="16" rx="4" style="fill:#1e1e1e;stroke:#1e1e1e;stroke-width:1;opacity:0.85"/>
+<path d="M3.5 4 H12.5 V10 H7.5 L4.5 13 V10 H3.5 Z" style="fill:none;stroke:#ffffff;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-comment-badge" transform="translate(592,92)">
+<title>Show comment: Hidden note</title>
+<rect width="16" height="16" rx="4" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1;opacity:0.9"/>
+<path d="M3.5 4 H12.5 V10 H7.5 L4.5 13 V10 H3.5 Z" style="fill:none;stroke:#1e1e1e;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g>
+<g class="bd-comment-callout">
+<rect x="350.06" y="148" width="139.88" height="31" rx="6" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1"/>
+<path d="M414,148 L420,142 L426,148 Z" style="fill:#ffffff"/>
+<text style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:12px">
+<tspan x="358.06" y="168">Rate limited per user</tspan>
+</text>
+</g>
+<g class="bd-comment-callout">
+<rect x="342.68" y="129.25" width="154.64" height="31" rx="6" style="fill:#ffffff;stroke:#1e1e1e;stroke-width:1"/>
+<path d="M414,160.25 L420,166.25 L426,160.25 Z" style="fill:#ffffff"/>
+<text style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;font-size:12px">
+<tspan x="350.68" y="149.25">Only during office hours</tspan>
+</text>
+</g>
+</g>
+</svg>

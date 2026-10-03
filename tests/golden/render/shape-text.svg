@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="808" height="548" viewBox="-24 -24 808 548">
+<rect x="-24" y="-24" width="808" height="548" style="fill:#ffffff"/>
+<g/>
+<g>
+<g class="bd-block" transform="translate(300,200)">
+<path class="bd-shape" d="M0,0 H160 V80 H0 Z" style="fill:#a5d8ff;stroke:none;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="13.75" class="bd-text-tag" style="font-size:10px;font-weight:600;opacity:0.7">TAG</tspan>
+<tspan x="80" y="35.3" style="font-size:16px;font-weight:600">A text</tspan>
+<tspan x="80" y="57.98" style="font-size:13px;font-weight:400;opacity:0.78">Two lines of description</tspan>
+<tspan x="80" y="74.23" style="font-size:13px;font-weight:400;opacity:0.78">text</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(0,200)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">Left</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(0,0)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">Above left</tspan>
+</text>
+</g>
+<g class="bd-block" transform="translate(600,420)">
+<path class="bd-shape" d="M16,0 H144 A16,16 0 0 1 160,16 V64 A16,16 0 0 1 144,80 H16 A16,16 0 0 1 0,64 V16 A16,16 0 0 1 16,0 Z" style="fill:#a5d8ff;stroke:#1e1e1e;stroke-width:2;stroke-linejoin:round"/>
+<text class="bd-text" text-anchor="middle" style="fill:#1e1e1e;font-family:Inter, &quot;Segoe UI&quot;, -apple-system, BlinkMacSystemFont, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif">
+<tspan x="80" y="45.6" style="font-size:16px;font-weight:500">Below right</tspan>
+</text>
+</g>
+</g>
+<g>
+<g class="bd-connector">
+<path class="bd-connector-line" d="M160,240 L298.8,240" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M286,247 L300,240 L286,233" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-connector">
+<path class="bd-connector-line" d="M140,80 L319,199.33" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M304.47,198.06 L320,200 L312.23,186.41" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+<g class="bd-connector">
+<path class="bd-connector-line" d="M600,460 C495.69,460 564.31,240 461.2,240" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+<path d="M474,233 L460,240 L474,247" style="fill:none;stroke:#1e1e1e;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/>
+</g>
+</g>
+<g/>
+<g/>
+</svg>

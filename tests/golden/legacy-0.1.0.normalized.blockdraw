@@ -1,0 +1,14 @@
+{
+	"type": "block-draw",
+	"version": 1,
+	"exports": {"googleSheet":{"spreadsheetId":"1Old","url":"https://docs.google.com/spreadsheets/d/1Old/edit","exportedAt":"2025-01-10T09:00:00.000Z"}},
+	"futureKey": "kept as is",
+	"elements": [
+		{"id":"f1","type":"frame","x":0,"y":0,"width":600,"height":400,"title":"Old frame","description":"Written by 0.1.0","style":{"fill":"transparent","stroke":"default"}},
+		{"id":"a","type":"block","x":40,"y":60,"width":160,"height":80,"title":"Old block","description":"No tag, comment, 3D or font yet","descriptionOpen":true,"shape":"rounded","frameId":"f1","link":null,"tag":"","comment":"","commentOpen":false,"style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center","textVAlign":"middle","threeD":false,"fontFamily":"inter"}},
+		{"id":"b","type":"block","x":320,"y":60,"width":160,"height":80,"title":"Decision","description":"","descriptionOpen":true,"shape":"diamond","frameId":"f1","link":"frame:f1","tag":"","comment":"","commentOpen":false,"style":{"fill":"#ffec99","stroke":"#e03131","strokeWidth":3,"strokeStyle":"dashed","textColor":"#000000","fontSize":14,"textAlign":"left","textVAlign":"middle","threeD":false,"fontFamily":"inter"}},
+		{"id":"c","type":"block","x":40,"y":240,"width":1,"height":80,"title":"Bad values","description":"","descriptionOpen":true,"shape":"rounded","frameId":null,"link":null,"tag":"","comment":"","commentOpen":false,"style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":0,"strokeStyle":"solid","textColor":"auto","fontSize":4,"textAlign":"center","textVAlign":"middle","threeD":false,"fontFamily":"inter"}},
+		{"id":"c1","type":"connector","from":{"id":"a","side":"auto"},"to":{"id":"b","side":"left"},"label":"next","routing":"elbow","comment":"","commentOpen":false,"style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow","threeD":false,"flow":false}},
+		{"id":"c2","type":"connector","from":{"id":"a","side":"auto"},"to":{"id":"c","side":"auto"},"label":"","routing":"elbow","comment":"","commentOpen":false,"style":{"stroke":"default","strokeWidth":0.5,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow","threeD":false,"flow":false}}
+	]
+}

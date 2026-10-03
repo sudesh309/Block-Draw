@@ -1,0 +1,17 @@
+{
+	"type": "block-draw",
+	"version": 1,
+	"exports": {"googleSheet":{"spreadsheetId":"1Old","url":"https://docs.google.com/spreadsheets/d/1Old/edit","exportedAt":"2025-01-10T09:00:00.000Z"}},
+	"futureKey": "kept as is",
+	"elements": [
+		{"id":"f1","type":"frame","x":0,"y":0,"width":600,"height":400,"title":"Old frame","description":"Written by 0.1.0","style":{"fill":"transparent","stroke":"default"}},
+		{"id":"a","type":"block","x":40,"y":60,"width":160,"height":80,"title":"Old block","description":"No tag, comment, 3D or font yet","shape":"rounded","frameId":"f1","link":null,"style":{"fill":"#a5d8ff","stroke":"default","strokeWidth":2,"strokeStyle":"solid","textColor":"auto","fontSize":16,"textAlign":"center"}},
+		{"id":"b","type":"block","x":320,"y":60,"width":160,"height":80,"title":"Decision","description":"","shape":"diamond","frameId":"f1","link":"frame:f1","style":{"fill":"#ffec99","stroke":"#e03131","strokeWidth":3,"strokeStyle":"dashed","textColor":"#000000","fontSize":14,"textAlign":"left"}},
+		{"id":"c","type":"block","x":40,"y":240,"width":-20,"height":80,"title":"Bad values","shape":"star","frameId":"nowhere","link":"  ","style":{"strokeWidth":-3,"fontSize":1,"strokeStyle":"wavy","textAlign":"justify"}},
+		{"id":"sticker","type":"sticker","x":0,"y":0},
+		{"id":"c1","type":"connector","from":{"id":"a","side":"auto"},"to":{"id":"b","side":"left"},"label":"next","routing":"elbow","style":{"stroke":"default","strokeWidth":2,"strokeStyle":"solid","startArrow":"none","endArrow":"arrow"}},
+		{"id":"c2","type":"connector","from":{"id":"a","side":"sideways"},"to":{"id":"c"},"routing":"zigzag","style":{"strokeWidth":0,"endArrow":"diamond"}},
+		{"id":"c3","type":"connector","from":{"id":"a"},"to":{"id":"missing"}},
+		{"id":"c4","type":"connector","from":{"id":"b"},"to":{"id":"b"}}
+	]
+}
