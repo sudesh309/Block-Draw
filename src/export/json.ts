@@ -145,11 +145,41 @@ export function exportStructuredJson(file: DrawingFile): StructuredExport {
 		comment: c.comment,
 	});
 
-	const frameOf = (blockId: string) => (byId.get(blockId) as BlockElement).frameId;
+	const frameOf = (blockId: string) => (byId.get(blockId) as BlockElement).frameId || null;
 	const valid = connectors.filter((c) => isBlock(byId.get(c.from.id)) && isBlock(byId.get(c.to.id)));
 
+	// Group everything once (blocks by frame, connections by where their ends are, frame-to-frame
+	// links by target) so the export stays linear in the size of the drawing.
+	const blocksIn = new Map<string | null, BlockElement[]>();
+	const linkedFrom = new Map<string, Map<string, string>>();
+	for (const b of blocks) {
+		const key = b.frameId || null;
+		const list = blocksIn.get(key);
+		if (list) list.push(b);
+		else blocksIn.set(key, [b]);
+		const target = parseLink(b.link);
+		if (target?.kind === "frame" && b.frameId && b.frameId !== target.frameId) {
+			let from = linkedFrom.get(target.frameId);
+			if (!from) linkedFrom.set(target.frameId, (from = new Map<string, string>()));
+			from.set(b.frameId, frameTitle(b.frameId) ?? "");
+		}
+	}
+	const connectionsIn = new Map<string, ConnectorElement[]>();
+	const unframedConnections: ConnectorElement[] = [];
+	const crossFrame: ConnectorElement[] = [];
+	for (const c of valid) {
+		const a = frameOf(c.from.id);
+		if (a !== frameOf(c.to.id)) crossFrame.push(c);
+		else if (!a) unframedConnections.push(c);
+		else {
+			const list = connectionsIn.get(a);
+			if (list) list.push(c);
+			else connectionsIn.set(a, [c]);
+		}
+	}
+
 	const exportFrames: ExportFrame[] = frames.map((f: FrameElement, i) => {
-		const own = readingOrder(blocks.filter((b) => b.frameId === f.id));
+		const own = readingOrder(blocksIn.get(f.id) ?? []);
 		const linksTo = new Map<string, string>();
 		for (const b of own) {
 			const target = parseLink(b.link);
@@ -158,35 +188,27 @@ export function exportStructuredJson(file: DrawingFile): StructuredExport {
 				if (title !== null) linksTo.set(target.frameId, title);
 			}
 		}
-		const linkedFrom = new Map<string, string>();
-		for (const b of blocks) {
-			const target = parseLink(b.link);
-			if (target?.kind === "frame" && target.frameId === f.id && b.frameId && b.frameId !== f.id) {
-				linkedFrom.set(b.frameId, frameTitle(b.frameId) ?? "");
-			}
-		}
 		return {
 			id: f.id,
 			order: i + 1,
 			title: f.title,
 			description: f.description,
 			blocks: own.map(exportBlock),
-			connections: valid.filter((c) => frameOf(c.from.id) === f.id && frameOf(c.to.id) === f.id).map(exportConnection),
+			connections: (connectionsIn.get(f.id) ?? []).map(exportConnection),
 			linksTo: [...linksTo].map(([frameId, title]) => ({ frameId, title })),
-			linkedFrom: [...linkedFrom].map(([frameId, title]) => ({ frameId, title })),
+			linkedFrom: [...(linkedFrom.get(f.id) ?? [])].map(([frameId, title]) => ({ frameId, title })),
 		};
 	});
 
-	const loose = readingOrder(blocks.filter((b) => !b.frameId));
 	return {
 		format: "block-draw/export",
 		version: 2,
 		frames: exportFrames,
 		unframed: {
-			blocks: loose.map(exportBlock),
-			connections: valid.filter((c) => !frameOf(c.from.id) && !frameOf(c.to.id)).map(exportConnection),
+			blocks: readingOrder(blocksIn.get(null) ?? []).map(exportBlock),
+			connections: unframedConnections.map(exportConnection),
 		},
-		crossFrameConnections: valid.filter((c) => frameOf(c.from.id) !== frameOf(c.to.id)).map(exportConnection),
+		crossFrameConnections: crossFrame.map(exportConnection),
 		stats: { frames: frames.length, blocks: blocks.length, connections: valid.length },
 	};
 }
