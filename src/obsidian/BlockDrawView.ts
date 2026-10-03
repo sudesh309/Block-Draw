@@ -7,6 +7,7 @@ import { parseLink } from "../model/links";
 import { isFrame, type DrawingFile, type DrawingMeta } from "../model/types";
 import { LinkPickerModal } from "./LinkPickerModal";
 import { exporterRows } from "./exporters";
+import { openExternal } from "./links";
 import type { BlockDrawHost } from "./plugin";
 
 export const VIEW_TYPE = "block-draw-view";
@@ -226,7 +227,7 @@ export class BlockDrawView extends TextFileView {
 		}
 		const info = this.meta.exports?.googleSheet;
 		if (info?.url) {
-			items.splice(1, 0, { title: "Open the exported Google Sheet", icon: "follow-link", onClick: () => window.open(info.url) });
+			items.splice(1, 0, { title: "Open the exported Google Sheet", icon: "follow-link", onClick: () => void openExternal(this.app, info.url) });
 		}
 		return items;
 	}
@@ -254,7 +255,7 @@ export class BlockDrawView extends TextFileView {
 			openLink: (link, newLeaf) => {
 				const parsed = parseLink(link);
 				if (!parsed) return;
-				if (parsed.kind === "url") window.open(parsed.url);
+				if (parsed.kind === "url") void openExternal(this.app, parsed.url);
 				else if (parsed.kind === "note") void this.app.workspace.openLinkText(parsed.linktext, this.file?.path ?? "", newLeaf);
 			},
 			pickLink: (options: LinkPickOptions) =>

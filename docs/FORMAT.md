@@ -131,6 +131,8 @@ A block's `link` is one of:
 - `[[path#subpath|alias]]`: a note or file in the vault, written as Obsidian link text. `[[Checkout.blockdraw#Payment]]` opens another drawing at a frame.
 - A URL with a scheme, such as `https://…` or `mailto:…`.
 
+Any link is kept in the file as written. Since 0.5.0 Block Draw opens `http`, `https` and `mailto` links directly, asks before opening `obsidian://` links, and does not open other schemes (such as `file://`), because a drawing can come from someone else.
+
 ## Repairs on load
 
 - An element without an id gets a new one, and so does an element whose id is already taken.

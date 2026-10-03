@@ -10,6 +10,7 @@ import { LIGHT_THEME } from "../render/colors";
 import { sceneToSvg } from "../render/scene";
 import { confirmAction } from "./confirm";
 import type { GoogleAuth } from "./googleAuth";
+import { openExternal } from "./links";
 import { allowConfirmedHost, isAllowedHost, obsidianHttp } from "./net";
 import type { BlockDrawSettings } from "./settings";
 
@@ -157,7 +158,7 @@ export async function exportGoogleSheets(
 		new Notice(
 			`${result.created ? "Created" : "Updated"} the Google Sheet for “${source.basename}” (${frames} frame${frames === 1 ? "" : "s"}).`,
 		);
-		if (ctx.settings.sheets.openAfterExport) window.open(result.url);
+		if (ctx.settings.sheets.openAfterExport) void openExternal(ctx.app, result.url);
 		return { spreadsheetId: result.spreadsheetId, url: result.url, exportedAt: new Date().toISOString(), sheetIds: result.sheetIds };
 	} catch (e) {
 		notice.hide();
