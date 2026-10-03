@@ -590,14 +590,147 @@ test("a block can be brought in front of a link, and a link sent behind a block"
 	await panel("Send to back");
 	await frame();
 	assert.equal(await page.locator(`.bd-layer-connectors-behind > [data-id="${id.link}"]`).count(), 1, "the link moved below the blocks");
+	// (a selected link shows a grip in its middle, drawn above everything: look at it unselected)
+	await page.evaluate(() => window.bd.editor.clearSelection());
+	await frame();
 	assert.deepEqual([(await hit()).kind, await drawnTop()], ["block", id.onLink], "a link sent behind is covered by the block");
 	// where nothing covers it, the link can still be clicked
 	const free = await page.evaluate((p) => window.bd.editor.hitTest(p), { x: 300, y: 140 });
 	assert.deepEqual([free.kind, free.id], ["connector", id.link]);
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
 	await panel("Bring to front");
 	await frame();
 	assert.equal(await page.locator(`.bd-layer-connectors > [data-id="${id.link}"]`).count(), 1, "bring to front puts the link back above the blocks");
 	await shot("z-order-link-and-block");
+});
+
+test("a link can be bent by dragging it, and its bends move, copy, reset and undo with it", async () => {
+	const id = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const a = ed.makeBlock({ x: 100, y: 200, width: 160, height: 80 }, { title: "A" });
+		const c = ed.makeBlock({ x: 600, y: 200, width: 160, height: 80 }, { title: "C" });
+		ed.insertBlocks([a, c]);
+		const link = ed.connect(a.id, c.id);
+		ed.zoomToFit({ animate: false });
+		ed.setSelection([link.id]);
+		return { a: a.id, c: c.id, link: link.id };
+	});
+	await frame();
+	const bends = async (linkId = id.link) => (await els()).find((e) => e.id === linkId).waypoints ?? null;
+	const drag = async (from, to) => {
+		const [a, b] = [await toScreen(from), await toScreen(to)];
+		await page.mouse.move(a.x, a.y);
+		await page.mouse.down();
+		await page.mouse.move(b.x, b.y, { steps: 6 });
+		await page.mouse.up();
+		await frame();
+	};
+	/** Whether the drawn route has a corner or end at the point. */
+	const routePasses = (p, linkId = id.link) =>
+		page.evaluate(
+			({ p, linkId }) => {
+				const ed = window.bd.editor;
+				return ed.renderer.route(ed.byId.get(linkId)).route.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < 1e-6);
+			},
+			{ p, linkId },
+		);
+
+	assert.equal(await bends(), null, "a new link has no bends of its own");
+	// the grip in the middle of the straight link (430, 240) pulled up makes a first bend
+	await drag({ x: 430, y: 240 }, { x: 440, y: 120 });
+	assert.deepEqual(await bends(), [{ x: 440, y: 120 }], "the bend is where it was dropped (on the grid)");
+	assert.equal(await routePasses({ x: 440, y: 120 }), true, "the link goes through the bend");
+	assert.deepEqual(await sel(), [id.link], "the link stays selected");
+	await shot("link-bent");
+
+	// the handle moves it; grabbing a handle never adds a second bend
+	await drag({ x: 440, y: 120 }, { x: 440, y: 60 });
+	assert.deepEqual(await bends(), [{ x: 440, y: 60 }]);
+	await page.keyboard.press("Control+z");
+	await frame();
+	assert.deepEqual(await bends(), [{ x: 440, y: 120 }], "moving a bend is one undo step");
+	await page.keyboard.press("Control+z");
+	await frame();
+	assert.equal(await bends(), null, "and adding it was another");
+	await page.keyboard.press("Control+Shift+z");
+	await frame();
+	assert.deepEqual(await bends(), [{ x: 440, y: 120 }]);
+
+	// a second bend goes between the first and the end, in route order
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
+	await drag({ x: 600, y: 120 }, { x: 600, y: 120 }); // a click on empty space deselects ...
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
+	const second = await page.evaluate((id) => {
+		const ed = window.bd.editor;
+		const pts = ed.renderer.route(ed.byId.get(id)).route.points;
+		// the middle of the last long stretch, which comes after the first bend
+		let best = null;
+		for (let i = 1; i < pts.length; i++) {
+			const len = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+			if (len > 60 && (!best || i > best.i)) best = { i, p: { x: (pts[i].x + pts[i - 1].x) / 2, y: (pts[i].y + pts[i - 1].y) / 2 } };
+		}
+		return best.p;
+	}, id.link);
+	await drag(second, { x: 540, y: 340 });
+	const two = await bends();
+	assert.equal(two.length, 2);
+	assert.deepEqual(two[0], { x: 440, y: 120 }, "the first bend is still first");
+	assert.deepEqual(two[1], { x: 540, y: 340 });
+
+	// double-click removes a bend
+	const at = await toScreen({ x: 440, y: 120 });
+	await page.mouse.dblclick(at.x, at.y);
+	await frame();
+	assert.deepEqual(await bends(), [{ x: 540, y: 340 }], "double-clicking a bend removes it");
+	assert.equal(await page.locator(".bd-textedit, textarea.bd-inline-edit").count(), 0, "and does not start editing the label");
+
+	// bends travel with the blocks, whether they are moved or copied
+	await page.keyboard.press("Control+a");
+	await page.keyboard.press("ArrowRight");
+	await frame();
+	assert.deepEqual(await bends(), [{ x: 560, y: 340 }], "nudging the blocks moves the bends with them");
+	await page.keyboard.press("Control+d");
+	await frame();
+	const links = (await els()).filter((e) => e.type === "connector");
+	assert.equal(links.length, 2);
+	const copy = links.find((l) => l.id !== id.link);
+	const [orig, dup] = [await page.evaluate((i) => window.bd.editor.byId.get(i), id.a), null];
+	const copyFrom = await page.evaluate((i) => window.bd.editor.byId.get(i), copy.from.id);
+	assert.deepEqual(
+		[copy.waypoints[0].x - copyFrom.x, copy.waypoints[0].y - copyFrom.y],
+		[560 - orig.x, 340 - orig.y],
+		"a copy keeps its bends in the same place relative to its blocks",
+	);
+	assert.equal(dup, null);
+
+	// reset: from the panel, and from the context menu
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
+	await page.click(".bd-panel .bd-reset-route");
+	await frame();
+	assert.equal(await bends(), null, "reset route takes the bends out");
+	await page.keyboard.press("Control+z");
+	await frame();
+	assert.equal((await bends()).length, 1, "and is one undo step");
+	const where = await toScreen({ x: 560, y: 340 });
+	await page.mouse.click(where.x + 40, where.y - 40, { button: "right" }).catch(() => undefined);
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
+	const mid = await page.evaluate((id) => {
+		const ed = window.bd.editor;
+		const r = ed.renderer.route(ed.byId.get(id)).route;
+		return r.points[Math.floor(r.points.length / 2)];
+	}, id.link);
+	const ms = await toScreen(mid);
+	await page.mouse.click(ms.x, ms.y, { button: "right" });
+	await frame();
+	await page.locator(".harness-menu-item", { hasText: "Reset route" }).click();
+	await frame();
+	assert.equal(await bends(), null, "the context menu resets the route too");
+	assert.deepEqual(errors, []);
 });
 
 test("arrow keys nudge, Escape clears the selection", async () => {

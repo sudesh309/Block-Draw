@@ -22,6 +22,7 @@ import { PALETTES, paletteById, type PaletteId } from "../../render/colors";
 import { fontDefinitionById, PRESENTATION_FONTS, type FontFamilyId } from "../../render/fonts";
 import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
+import { resetRoutes } from "../routeEdit";
 import { iconButton, section, sectionWithVisibility, segmented, swatches, textField } from "./controls";
 
 const FONT_SIZES: { value: number; label: string; text: string }[] = [
@@ -346,6 +347,16 @@ export class PropsPanel {
 					(routing: Routing) => ed.applyRouting(routing),
 				),
 			);
+			if (connectors.length) {
+				const reset = el("button", "bd-seg-btn bd-reset-route", routeSec, "Reset route");
+				reset.type = "button";
+				reset.title = "Remove the bends you added: the line finds its own way again. Drag a selected line to bend it.";
+				reset.addEventListener("pointerdown", (e) => e.preventDefault());
+				reset.addEventListener("click", () => resetRoutes(ed, connectors.map((c) => c.id)));
+				this.syncers.push(() => {
+					reset.disabled = !ed.selectedConnectors().some((c) => c.waypoints?.length);
+				});
+			}
 			const arrows: ArrowHead[] = ["none", "arrow", "triangle", "dot"];
 			const arrowSec = section(this.body, "Arrowheads");
 			this.syncers.push(

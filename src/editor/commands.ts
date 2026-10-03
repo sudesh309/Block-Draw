@@ -149,6 +149,8 @@ export const GESTURES: readonly { group: (typeof HELP_GROUPS)[number]; keys: str
 	{ group: "Draw", keys: "Drag an edge dot", label: "Connect blocks; drop on empty space to create a connected block" },
 	{ group: "Draw", keys: "Click an edge dot", label: "Add a connected block in that direction" },
 	{ group: "Edit", keys: "Ctrl/Cmd+C, X, V", label: "Copy, cut and paste" },
+	{ group: "Edit", keys: "Drag a selected line", label: "Bend it: grab a dot on the line and drop it where the line should pass" },
+	{ group: "Edit", keys: "Double-click a bend", label: "Remove that bend" },
 	{ group: "Edit", keys: "Shift+Enter", label: "New line while editing text" },
 	{ group: "Links and frames", keys: "Ctrl/Cmd+click", label: "Follow a block's link" },
 	{ group: "Present", keys: "In a presentation", label: "← → slides · click a block to spotlight it · ? legend · S stage · L laser · Esc ends" },

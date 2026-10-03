@@ -641,6 +641,53 @@ test("nested blocks, text alignment and opt-in web fonts work in Obsidian", asyn
 	await shot("e2e-11-web-fonts-off");
 });
 
+test("a link can be bent by dragging it, and a block can be brought in front of a link", async () => {
+	// in the drawing the previous test left open, away from what it drew
+	const id = await editorEval((ed) => {
+		const a = ed.makeBlock({ x: 700, y: 400, width: 140, height: 70 }, { title: "Left" });
+		const c = ed.makeBlock({ x: 1100, y: 400, width: 140, height: 70 }, { title: "Right" });
+		const onLink = ed.makeBlock({ x: 900, y: 405, width: 100, height: 60 }, { title: "On the link" });
+		ed.insertBlocks([a, c, onLink]);
+		const link = ed.connect(a.id, c.id);
+		ed.updateElement(link.id, { routing: "straight" });
+		ed.setSelection([link.id]);
+		ed.zoomToFit({ animate: false });
+		return { link: link.id, onLink: onLink.id };
+	});
+	await frame();
+	const linkOf = async () => (await elements()).find((e) => e.id === id.link);
+
+	// pull the grip in the middle of the link up: it becomes a bend where it is dropped
+	await drag(await toPage({ x: 970, y: 435 }), await toPage({ x: 980, y: 340 }));
+	await frame();
+	assert.deepEqual((await linkOf()).waypoints, [{ x: 980, y: 340 }], "the bend is where it was dropped");
+	const passes = await editorEval((ed, id) => ed.renderer.route(ed.byId.get(id)).route.points.some((p) => p.x === 980 && p.y === 340), id.link);
+	assert.equal(passes, true, "the drawn link goes through the bend");
+	await shot("e2e-12-bent-link");
+
+	// it is saved in the file, and the bends come back when the file is read again
+	const file = state.fontsPath;
+	await waitFor(async () => (await readFile(file).catch(() => "")).includes('"waypoints":[{"x":980,"y":340}]'), "the bend in the saved file", 20000);
+
+	// a block brought in front of the links leaves the layer of the others
+	await editorEval((ed, id) => ed.setSelection([id]), id.onLink);
+	await frame();
+	await page.click('.bd-panel .bd-btn[aria-label="Bring to front"]:visible');
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-blocks-front > [data-id="${id.onLink}"]`).count(), 1, "the block is drawn above the links");
+	await waitFor(async () => (await readFile(file).catch(() => "")).includes('"inFront":true'), "inFront in the saved file", 20000);
+	await page.click('.bd-panel .bd-btn[aria-label="Send to back"]:visible');
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-blocks-front > [data-id="${id.onLink}"]`).count(), 0);
+
+	// reset takes the bend out again
+	await editorEval((ed, id) => ed.setSelection([id]), id.link);
+	await frame();
+	await page.click(".bd-panel .bd-reset-route:visible");
+	await frame();
+	assert.equal((await linkOf()).waypoints, undefined, "reset route takes the bends out");
+});
+
 test("code block embeds render a live preview", async () => {
 	const linktext = state.path.replace(/\.blockdraw$/, ".blockdraw");
 	await page.evaluate(async (lt) => {

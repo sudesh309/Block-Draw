@@ -4,6 +4,7 @@ import { shapeContains, sideAnchor } from "../geometry/shapes";
 import { isBlock, isBox, isConnector, isFrame, type AnchorSide, type BlockElement } from "../model/types";
 import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
 import type { Editor } from "./Editor";
+import { bendHit } from "./routeEdit";
 import { CONNECT_HANDLE_OFFSET, CONNECT_HANDLE_RADIUS, handlePosition, RESIZE_HANDLE_SIZE } from "./renderer";
 import { HANDLES, type Hit } from "./types";
 
@@ -27,6 +28,8 @@ export function hitTest(ed: Editor, p: Point): Hit | null {
 				if (r) {
 					if (dist(p, r.route.start) <= 9 / z) return { kind: "conn-end", id: only.id, end: "from" };
 					if (dist(p, r.route.end) <= 9 / z) return { kind: "conn-end", id: only.id, end: "to" };
+					const bend = bendHit(ed, only, p);
+					if (bend) return bend;
 				}
 			}
 		}

@@ -46,15 +46,17 @@ export function fullDrawing(): DrawingFile {
 			shape: "text",
 			frameId: "f1",
 			link: "mailto:support@example.com",
+			inFront: true,
 			style: { ...DEFAULT_BLOCK_STYLE, textColor: "default", fontSize: 12, strokeWidth: 1 },
 		}),
 		...shapes,
 		block("loose", 1000, 60, { title: "Unframed", description: "Not in any frame" }),
-		connector("c-elbow", "web", "api", { label: "calls", style: { ...DEFAULT_CONNECTOR_STYLE, flow: true } }),
+		connector("c-elbow", "web", "api", { label: "calls", waypoints: [{ x: 250, y: 20 }], style: { ...DEFAULT_CONNECTOR_STYLE, flow: true } }),
 		connector("c-straight", "api", "db", {
 			routing: "straight",
 			from: { id: "api", side: "right" },
 			to: { id: "db", side: "left" },
+			waypoints: [{ x: 570, y: 20 }],
 			style: { ...DEFAULT_CONNECTOR_STYLE, startArrow: "dot", endArrow: "triangle", strokeWidth: 3, threeD: true },
 		}),
 		connector("c-curved", "api", "mail", {
@@ -62,11 +64,12 @@ export function fullDrawing(): DrawingFile {
 			label: "escalate",
 			from: { id: "api", side: "bottom" },
 			to: { id: "mail", side: "top" },
+			waypoints: [{ x: 540, y: 200 }, { x: 300, y: 220.5 }],
 			comment: "Only during office hours",
 			commentOpen: true,
 			style: { ...DEFAULT_CONNECTOR_STYLE, strokeStyle: "dashed", stroke: "#2f9e44", startArrow: "arrow", endArrow: "arrow", flow: true },
 		}),
-		connector("c-dotted", "s-diamond", "s-hexagon", { style: { ...DEFAULT_CONNECTOR_STYLE, strokeStyle: "dotted", endArrow: "none" } }),
+		connector("c-dotted", "s-diamond", "s-hexagon", { behind: true, style: { ...DEFAULT_CONNECTOR_STYLE, strokeStyle: "dotted", endArrow: "none" } }),
 		connector("c-cross", "web", "loose", { comment: "Hidden note" }),
 	];
 	return {

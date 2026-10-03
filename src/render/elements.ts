@@ -1,5 +1,6 @@
 import { add, normalize, offsetPolyline, scale, type Point } from "../geometry/geom";
 import { routeConnector, routePathData, sampleCubic, trimRoute, type Route } from "../geometry/routing";
+import { routeThrough } from "../geometry/viaRoutes";
 import { shapeDecorationPath, shapePath } from "../geometry/shapes";
 import { parseLink } from "../model/links";
 import type {
@@ -458,11 +459,9 @@ export function renderFrame(frame: FrameElement, o: RenderOptions): VNode {
 /* -------------------------------------------------------------- connectors */
 
 export function routeFor(conn: ConnectorElement, from: BlockElement, to: BlockElement): Route {
-	return routeConnector(
-		conn.routing,
-		{ bounds: from, shape: from.shape, side: conn.from.side },
-		{ bounds: to, shape: to.shape, side: conn.to.side },
-	);
+	const a = { bounds: from, shape: from.shape, side: conn.from.side };
+	const b = { bounds: to, shape: to.shape, side: conn.to.side };
+	return conn.waypoints?.length ? routeThrough(conn.routing, a, b, conn.waypoints) : routeConnector(conn.routing, a, b);
 }
 
 function arrowSize(strokeWidth: number): number {

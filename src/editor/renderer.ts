@@ -19,6 +19,7 @@ import {
 } from "../render/elements";
 import { h, toDom, type VNode } from "../render/vnode";
 import { svgEl } from "./dom";
+import { bendHandles } from "./routeEdit";
 import type { Editor } from "./Editor";
 import { HANDLES, type Handle } from "./types";
 
@@ -319,6 +320,7 @@ export class SceneRenderer {
 					for (const p of [entry.route.start, entry.route.end]) {
 						nodes.push(h("circle", { class: "bd-handle bd-handle-end", cx: p.x, cy: p.y, r: 6 / z }));
 					}
+					nodes.push(...bendHandles(ed, el, z));
 				}
 			}
 		}

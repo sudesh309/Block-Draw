@@ -62,7 +62,6 @@ function normalizeBlock(raw: Raw): BlockElement {
 		tag: str(raw.tag),
 		comment: str(raw.comment),
 		commentOpen: bool(raw.commentOpen, false),
-		...(raw.inFront === true ? { inFront: true } : {}),
 		style: {
 			fill: str(s.fill, DEFAULT_BLOCK_STYLE.fill),
 			stroke: str(s.stroke, DEFAULT_BLOCK_STYLE.stroke),
@@ -75,6 +74,9 @@ function normalizeBlock(raw: Raw): BlockElement {
 			threeD: bool(s.threeD, DEFAULT_BLOCK_STYLE.threeD),
 			fontFamily: oneOf(s.fontFamily, FONT_IDS, DEFAULT_BLOCK_STYLE.fontFamily),
 		},
+		// Optional fields come last, in the order the edit operations write them, so a file does not
+		// change its line order when it is saved again.
+		...(raw.inFront === true ? { inFront: true } : {}),
 	};
 }
 
@@ -123,8 +125,6 @@ function normalizeConnector(raw: Raw): ConnectorElement | null {
 		routing: oneOf(raw.routing, ROUTINGS, "elbow"),
 		comment: str(raw.comment),
 		commentOpen: bool(raw.commentOpen, false),
-		...(waypoints.length ? { waypoints } : {}),
-		...(raw.behind === true ? { behind: true } : {}),
 		style: {
 			stroke: str(s.stroke, DEFAULT_CONNECTOR_STYLE.stroke),
 			strokeWidth: Math.max(0.5, num(s.strokeWidth, DEFAULT_CONNECTOR_STYLE.strokeWidth)),
@@ -134,6 +134,9 @@ function normalizeConnector(raw: Raw): ConnectorElement | null {
 			threeD: bool(s.threeD, DEFAULT_CONNECTOR_STYLE.threeD),
 			flow: bool(s.flow, DEFAULT_CONNECTOR_STYLE.flow),
 		},
+		// Optional fields come last: waypoints, then behind (see withWaypoints and placed in ops.ts).
+		...(waypoints.length ? { waypoints } : {}),
+		...(raw.behind === true ? { behind: true } : {}),
 	};
 }
 

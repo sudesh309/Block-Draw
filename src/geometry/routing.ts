@@ -25,7 +25,7 @@ export interface RouteEndpoint {
 }
 
 export interface Route {
-	/** Polyline for straight/elbow routes; [start, control1, control2, end] for curved ones. */
+	/** Polyline for straight/elbow routes; for curved ones [start, control1, control2, end], continued by further control1, control2, end triples when the route has waypoints. */
 	points: Point[];
 	curved: boolean;
 	start: Point;
@@ -72,7 +72,7 @@ export function routeConnector(
 	}
 }
 
-function finishPolyline(points: Point[], fromSide: Side | null, toSide: Side | null): Route {
+export function finishPolyline(points: Point[], fromSide: Side | null, toSide: Side | null): Route {
 	const pts = points.length >= 2 ? points : [points[0], points[0]];
 	const n = pts.length;
 	const endDir = normalize(sub(pts[n - 1], pts[n - 2]));
@@ -113,7 +113,7 @@ function straightRoute(from: RouteEndpoint, to: RouteEndpoint): Route {
 }
 
 /** Picks facing sides from the dominant axis between the two centers. */
-function naturalSides(a: Bounds, b: Bounds): [Side, Side] {
+export function naturalSides(a: Bounds, b: Bounds): [Side, Side] {
 	const ca = center(a);
 	const cb = center(b);
 	const dx = cb.x - ca.x;
@@ -242,7 +242,11 @@ export function routePathData(route: Route): string {
 	const r = (n: number) => Math.round(n * 100) / 100;
 	const p = route.points;
 	if (route.curved) {
-		return `M${r(p[0].x)},${r(p[0].y)} C${r(p[1].x)},${r(p[1].y)} ${r(p[2].x)},${r(p[2].y)} ${r(p[3].x)},${r(p[3].y)}`;
+		let d = `M${r(p[0].x)},${r(p[0].y)}`;
+		for (let i = 1; i + 2 < p.length; i += 3) {
+			d += ` C${r(p[i].x)},${r(p[i].y)} ${r(p[i + 1].x)},${r(p[i + 1].y)} ${r(p[i + 2].x)},${r(p[i + 2].y)}`;
+		}
+		return d;
 	}
 	return p.map((pt, i) => `${i === 0 ? "M" : "L"}${r(pt.x)},${r(pt.y)}`).join(" ");
 }
@@ -266,9 +270,12 @@ function distToSeg(p: Point, a: Point, b: Point): number {
 	return dist(p, { x: a.x + t * dx, y: a.y + t * dy });
 }
 
+/** Samples a curve made of cubic pieces ([start, c1, c2, end, c1, c2, end, ...]), `steps` points per piece. */
 export function sampleCubic(points: Point[], steps: number): Point[] {
 	const out: Point[] = [];
-	for (let i = 0; i <= steps; i++) out.push(cubicPoint(points[0], points[1], points[2], points[3], i / steps));
+	for (let i = 0; i + 3 < points.length; i += 3) {
+		for (let k = i === 0 ? 0 : 1; k <= steps; k++) out.push(cubicPoint(points[i], points[i + 1], points[i + 2], points[i + 3], k / steps));
+	}
 	return out;
 }
 
@@ -277,7 +284,7 @@ export function trimRoute(route: Route, atStart: number, atEnd: number): Point[]
 	const pts = route.points.map((p) => ({ ...p }));
 	const n = pts.length;
 	if (atEnd > 0) {
-		const prev = route.curved ? pts[2] : pts[n - 2];
+		const prev = pts[n - 2];
 		const seg = dist(prev, pts[n - 1]);
 		const k = seg > 0 ? Math.min(atEnd, seg * 0.9) / seg : 0;
 		pts[n - 1] = { x: pts[n - 1].x + (prev.x - pts[n - 1].x) * k, y: pts[n - 1].y + (prev.y - pts[n - 1].y) * k };

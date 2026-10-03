@@ -1,4 +1,4 @@
-import type { Side } from "../model/types";
+import type { Point, Side } from "../model/types";
 
 export type Tool = "select" | "pan" | "block" | "connector" | "frame";
 
@@ -35,6 +35,8 @@ export type Hit =
 	| { kind: "resize"; id: string; handle: Handle }
 	| { kind: "conn-handle"; id: string; side: Side }
 	| { kind: "conn-end"; id: string; end: "from" | "to" }
+	| { kind: "bend"; id: string; index: number }
+	| { kind: "bend-add"; id: string; at: Point; index: number }
 	| { kind: "link-badge"; id: string }
 	| { kind: "comment-badge"; id: string }
 	| { kind: "block"; id: string }

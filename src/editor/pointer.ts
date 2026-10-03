@@ -8,6 +8,7 @@ import {
 	expandMoveSet,
 	frameAt,
 	insertClones,
+	movingLinks,
 	refreshFrameMembership,
 	translateElements,
 	updateElements,
@@ -27,6 +28,7 @@ import {
 import { h, type VNode } from "../render/vnode";
 import type { Editor } from "./Editor";
 import { CONNECT_HANDLE_OFFSET } from "./renderer";
+import { bendHandles, dragBend, removeBend, type BendDrag } from "./routeEdit";
 import type { Handle, Viewport } from "./types";
 
 type Interaction =
@@ -44,6 +46,8 @@ type Interaction =
 			alt: boolean;
 			moveSet: Set<string>;
 			origin: Map<string, { x: number; y: number }>;
+			/** Waypoints, as they were, of the links that move along with their blocks. */
+			links: Map<string, Point[]>;
 			anchorId: string | null;
 			dropFrameId: string | null;
 	  }
@@ -51,6 +55,7 @@ type Interaction =
 	| { kind: "create"; type: "block" | "frame"; start: Point; current: Point; startScreen: Point; moved: boolean }
 	| { kind: "connect"; fromId: string; side: Side | null; startScreen: Point; current: Point; targetId: string | null; moved: boolean }
 	| { kind: "reconnect"; connId: string; end: "from" | "to"; startScreen: Point; current: Point; targetId: string | null; moved: boolean }
+	| ({ kind: "bend" } & BendDrag)
 	| { kind: "pinch"; startDist: number; startMid: Point; startVp: Viewport };
 
 const DRAG_THRESHOLD = 4;
@@ -107,7 +112,7 @@ export class PointerController {
 		const st = this.state;
 		if (!st) return false;
 		this.state = null;
-		if ((st.kind === "move" || st.kind === "resize") && st.moved) this.ed.setTransient(st.before.elements);
+		if ((st.kind === "move" || st.kind === "resize" || st.kind === "bend") && st.moved) this.ed.setTransient(st.before.elements);
 		this.release();
 		this.ed.requestRender();
 		return true;
@@ -234,6 +239,18 @@ export class PointerController {
 			case "conn-end":
 				this.state = { kind: "reconnect", connId: hit.id, end: hit.end, startScreen: screen, current: world, targetId: null, moved: false };
 				break;
+			case "bend":
+			case "bend-add":
+				this.state = {
+					kind: "bend",
+					connId: hit.id,
+					index: hit.index,
+					at: hit.kind === "bend-add" ? hit.at : null,
+					before: ed.snapshot(),
+					startScreen: screen,
+					moved: false,
+				};
+				break;
 			case "link-badge":
 				ed.followLink(hit.id, e.ctrlKey || e.metaKey);
 				return;
@@ -272,6 +289,7 @@ export class PointerController {
 					alt: e.altKey,
 					moveSet: new Set(),
 					origin: new Map(),
+					links: new Map(),
 					anchorId: null,
 					dropFrameId: null,
 				};
@@ -342,6 +360,9 @@ export class PointerController {
 				ed.requestRender();
 				return;
 			}
+			case "bend":
+				dragBend(ed, st, world, beyond(st.startScreen));
+				return;
 			case "reconnect": {
 				st.current = world;
 				if (!st.moved && beyond(st.startScreen)) st.moved = true;
@@ -368,6 +389,7 @@ export class PointerController {
 			ed.setTransient(next);
 		}
 		st.moveSet = expandMoveSet(ed.elements, ed.selection);
+		st.links = movingLinks(ed.elements, st.moveSet);
 		for (const id of st.moveSet) {
 			const el = ed.byId.get(id);
 			if (isBox(el)) st.origin.set(id, { x: el.x, y: el.y });
@@ -390,7 +412,7 @@ export class PointerController {
 			dx = ed.snapValue(anchor.x + dx) - anchor.x;
 			dy = ed.snapValue(anchor.y + dy) - anchor.y;
 		}
-		const next = translateElements(ed.elements, st.moveSet, dx, dy, st.origin);
+		const next = translateElements(ed.elements, st.moveSet, dx, dy, st.origin, st.links);
 		ed.setTransient(next);
 		// Highlight the frame that will adopt the dragged block.
 		const anchorEl = st.anchorId ? ed.byId.get(st.anchorId) : null;
@@ -451,7 +473,7 @@ export class PointerController {
 			if (hit?.kind === "resize") cursor = CURSORS[hit.handle];
 			else if (hit?.kind === "conn-handle" || hit?.kind === "conn-end") cursor = "crosshair";
 			else if (hit?.kind === "link-badge" || hit?.kind === "comment-badge" || hit?.kind === "connector") cursor = "pointer";
-			else if (hit?.kind === "block" || hit?.kind === "frame") cursor = "move";
+			else if (hit?.kind === "block" || hit?.kind === "frame" || hit?.kind === "bend" || hit?.kind === "bend-add") cursor = "move";
 		}
 		if (ed.presenter.laserVisible()) cursor = "none";
 		// CSS maps data-cursor to the real cursor, so the tool and panning rules can override it.
@@ -541,6 +563,9 @@ export class PointerController {
 				if (ed.tool === "connector") ed.setTool("select");
 				break;
 			}
+			case "bend":
+				if (st.moved) ed.commit(ed.elements, { before: st.before });
+				break;
 			case "reconnect": {
 				const conn = ed.byId.get(st.connId);
 				if (st.targetId && isConnector(conn)) {
@@ -640,7 +665,12 @@ export class PointerController {
 		if (ed.options.readOnly || ed.tool !== "select") return;
 		const world = ed.clientToWorld(clientX, clientY);
 		const hit = ed.hitTest(world);
-		if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "comment-badge" || hit.kind === "connector")) {
+		if (hit?.kind === "bend") {
+			removeBend(ed, hit.id, hit.index);
+		} else if (hit?.kind === "bend-add") {
+			// The grip sits on the middle of the line, where people double-click to label it.
+			ed.textEditor.start(hit.id);
+		} else if (hit && (hit.kind === "block" || hit.kind === "link-badge" || hit.kind === "comment-badge" || hit.kind === "connector")) {
 			ed.setSelection([hit.id]);
 			ed.textEditor.start(hit.id);
 		} else if (hit && hit.kind === "frame" && hit.title) {
@@ -740,6 +770,9 @@ export class PointerController {
 			if (fromPoint && (st.moved || st.kind === "reconnect")) {
 				nodes.push(h("line", { class: "bd-connect-preview", x1: fromPoint.x, y1: fromPoint.y, x2: st.current.x, y2: st.current.y }));
 			}
+		} else if (st.kind === "bend" && st.moved) {
+			const conn = ed.byId.get(st.connId);
+			if (isConnector(conn)) nodes.push(...bendHandles(ed, conn, z, false));
 		} else if (st.kind === "move" && st.dropFrameId) {
 			const f = ed.byId.get(st.dropFrameId);
 			if (isFrame(f)) {

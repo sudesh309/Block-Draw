@@ -122,16 +122,41 @@ export function expandMoveSet(els: readonly DrawElement[], ids: Iterable<string>
 	return set;
 }
 
-/** Moves blocks/frames by (dx, dy); `moveSet` should come from {@link expandMoveSet}. */
+/** The waypoints of the links that move rigidly with `moveSet`: those with both ends in it. */
+export function movingLinks(els: readonly DrawElement[], moveSet: Set<string>): Map<string, Point[]> {
+	const out = new Map<string, Point[]>();
+	for (const el of els) {
+		if (isConnector(el) && el.waypoints?.length && moveSet.has(el.from.id) && moveSet.has(el.to.id)) out.set(el.id, el.waypoints);
+	}
+	return out;
+}
+
+/** The link with its waypoints replaced; the field is left out when there are none. */
+export function withWaypoints(el: ConnectorElement, waypoints: Point[]): ConnectorElement {
+	const { waypoints: _old, behind, ...rest } = el;
+	return { ...rest, ...(waypoints.length ? { waypoints } : {}), ...(behind ? { behind } : {}) };
+}
+
+/**
+ * Moves blocks/frames by (dx, dy); `moveSet` should come from {@link expandMoveSet}. A link whose two
+ * blocks both move takes its waypoints along, from `links` (see {@link movingLinks}, taken when the
+ * move began) or else from where they are now.
+ */
 export function translateElements(
 	els: readonly DrawElement[],
 	moveSet: Set<string>,
 	dx: number,
 	dy: number,
 	origin?: Map<string, { x: number; y: number }>,
+	links?: Map<string, Point[]>,
 ): DrawElement[] {
 	return els.map((el) => {
-		if (!moveSet.has(el.id) || isConnector(el)) return el;
+		if (isConnector(el)) {
+			const base = links?.get(el.id) ?? el.waypoints;
+			if (!base?.length || !moveSet.has(el.from.id) || !moveSet.has(el.to.id)) return el;
+			return { ...el, waypoints: base.map((p) => ({ x: p.x + dx, y: p.y + dy })) };
+		}
+		if (!moveSet.has(el.id)) return el;
 		const base = origin?.get(el.id) ?? el;
 		const x = base.x + dx;
 		const y = base.y + dy;
@@ -182,9 +207,9 @@ function placed(el: DrawElement, mode: "front" | "back"): DrawElement {
 		return rest;
 	}
 	if (isConnector(el)) {
-		if (mode === "back") return { ...el, behind: true };
-		const { behind: _off, ...rest } = el;
-		return rest;
+		// Optional keys go last, waypoints before behind, like the file parser writes them.
+		const { behind: _off, waypoints, ...rest } = el;
+		return { ...rest, ...(waypoints ? { waypoints } : {}), ...(mode === "back" ? { behind: true } : {}) };
 	}
 	return el;
 }
@@ -278,7 +303,14 @@ export function cloneElements(
 			const from = idMap.get(el.from.id);
 			const to = idMap.get(el.to.id);
 			if (!from || !to) continue;
-			out.push({ ...el, id, from: { ...el.from, id: from }, to: { ...el.to, id: to }, style: { ...el.style } });
+			out.push({
+				...el,
+				id,
+				from: { ...el.from, id: from },
+				to: { ...el.to, id: to },
+				...(el.waypoints ? { waypoints: el.waypoints.map((p) => ({ x: p.x + dx, y: p.y + dy })) } : {}),
+				style: { ...el.style },
+			});
 		} else if (isFrame(el)) {
 			out.push({ ...el, id, x: el.x + dx, y: el.y + dy, style: { ...el.style } });
 		} else {

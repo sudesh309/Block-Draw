@@ -4,12 +4,12 @@
 	"slack": 50,
 	"fileLines": {
 		"src/editor/Editor.ts": 727,
-		"src/editor/pointer.ts": 768,
-		"src/editor/ui/PropsPanel.ts": 607,
+		"src/editor/pointer.ts": 801,
+		"src/editor/ui/PropsPanel.ts": 608,
 		"src/export/workbook/layout.ts": 783,
 		"src/export/workbook/xlsx.ts": 476,
 		"src/render/elements.ts": 670
 	},
 	"runtimeDependencies": 1,
-	"bundleBytes": 250000
+	"bundleBytes": 260000
 }

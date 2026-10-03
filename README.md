@@ -6,7 +6,7 @@ Draw block diagrams in Obsidian: titled blocks, links and frames. Then present t
 
 ## Features
 
-- **Draw fast**: infinite canvas, grid and snapping, undo/redo, single-key shortcuts. Eight shapes; elbow, straight or curved links; frames that group blocks; blocks that contain other blocks.
+- **Draw fast**: infinite canvas, grid and snapping, undo/redo, single-key shortcuts. Eight shapes; elbow, straight or curved links you can bend by dragging; bring to front and send to back across blocks and links; frames that group blocks; blocks that contain other blocks.
 - **Link everything**: link a block to a frame, a note, another drawing or a URL, and jump with Ctrl/Cmd+click. Show a drawing in a note with a `blockdraw` code block or a `[[Drawing.blockdraw#Frame]]` link.
 - **Look sharp**: one-click themes (3D, Minimal, Futuristic, Classic), palettes, a 3D effect, ten business fonts, and text aligned left, center or right, top, middle or bottom.
 - **Explain**: tags (“Service · Java”), plus comments and descriptions that you can show or hide, also while presenting.

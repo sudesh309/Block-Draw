@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { normalizeElements, parseDrawing, serializeDrawing } from "../src/model/file";
-import { reorderElements } from "../src/model/ops";
+import { reorderElements, withWaypoints } from "../src/model/ops";
 import { inStackOrder, stackLevel } from "../src/model/stack";
 import type { ConnectorElement, DrawElement } from "../src/model/types";
 import { LIGHT_THEME } from "../src/render/colors";
@@ -57,6 +57,23 @@ describe("stacking order", () => {
 		// a drawing that never used them is written exactly as before
 		expect(serializeDrawing({ type: "block-draw", version: 1, elements: scene() })).not.toMatch(/behind|inFront/);
 		expect(normalizeElements([{ type: "block", id: "x", inFront: "yes" }])[0]).not.toHaveProperty("inFront");
+	});
+});
+
+describe("the order of the optional keys", () => {
+	it("is the same whichever was set first, and survives reading the file and writing it again", () => {
+		const link = connector("l", "a", "c");
+		const via = [{ x: 1, y: 2 }];
+		const [behindFirst] = [withWaypoints(reorder([link], ["l"], "back")[0] as ConnectorElement, via)];
+		const [bendFirst] = reorder([withWaypoints(link, via)], ["l"], "back");
+		expect(Object.keys(behindFirst)).toEqual(Object.keys(bendFirst));
+		expect(Object.keys(behindFirst).slice(-2)).toEqual(["waypoints", "behind"]);
+		// sent back and forth again, and bent and reset: no key moves
+		const again = withWaypoints(withWaypoints(reorder([bendFirst], ["l"], "front")[0] as ConnectorElement, []), via);
+		expect(Object.keys(reorder([again], ["l"], "back")[0])).toEqual(Object.keys(bendFirst));
+		const file = { type: "block-draw" as const, version: 1, elements: [block("a", 0, 0), block("c", 400, 0), bendFirst] };
+		const text = serializeDrawing(file);
+		expect(serializeDrawing(parseDrawing(text))).toBe(text);
 	});
 });
 

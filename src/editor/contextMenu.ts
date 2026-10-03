@@ -3,6 +3,7 @@ import { DRAWING_THEMES } from "../model/themes";
 import { isBlock, isConnector, isFrame, type Routing } from "../model/types";
 import type { Editor } from "./Editor";
 import type { MenuItemSpec } from "./host";
+import { resetRoutes } from "./routeEdit";
 
 /** The right-click menu: what can be done with the selection, or with the canvas when nothing is selected. */
 export function showContextMenu(ed: Editor, screen: { x: number; y: number }, world: Point): void {
@@ -92,6 +93,7 @@ export function showContextMenu(ed: Editor, screen: { x: number; y: number }, wo
 			items.push({ title: "Remove comment", onClick: () => ed.updateElement(c.id, { comment: "", commentOpen: false }) });
 		}
 		items.push({ title: "Reverse direction", onClick: () => ed.reverseConnector(c.id) });
+		if (c.waypoints?.length) items.push({ title: "Reset route", onClick: () => resetRoutes(ed, [c.id]) });
 		for (const r of ["elbow", "straight", "curved"] as Routing[]) {
 			items.push({
 				title: `${r[0].toUpperCase()}${r.slice(1)} line`,
