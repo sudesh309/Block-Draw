@@ -6,10 +6,11 @@
   "private": true,
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "build": "tsc --noEmit && node esbuild.config.mjs production",
+    "build": "tsc --noEmit && node esbuild.config.mjs production && node scripts/check-budgets.mjs --bundle",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src && npm run lint:css",
+    "lint": "eslint src && npm run lint:css && npm run lint:arch",
     "lint:css": "stylelint --max-warnings 0 styles.css",
+    "lint:arch": "node scripts/check-layers.mjs && node scripts/check-budgets.mjs",
     "test": "vitest run",
     "test:ui": "node tests/harness/build-harness.mjs && node tests/harness/run-ui-tests.mjs",
     "test:e2e": "node tests/e2e/run-obsidian-e2e.mjs",

@@ -1,0 +1,16 @@
+{
+	"$comment": "Numbers that only move on purpose (CONTRIBUTING.md, Budgets). Lower a file's number when it shrinks; raising any number needs the reason in the commit message.",
+	"maxNewFileLines": 400,
+	"slack": 50,
+	"fileLines": {
+		"src/editor/Editor.ts": 1400,
+		"src/editor/pointer.ts": 768,
+		"src/editor/ui/PropsPanel.ts": 607,
+		"src/export/workbook/layout.ts": 783,
+		"src/export/workbook/xlsx.ts": 476,
+		"src/obsidian/SettingTab.ts": 491,
+		"src/render/elements.ts": 670
+	},
+	"runtimeDependencies": 1,
+	"bundleBytes": 250000
+}
