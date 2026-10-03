@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.0
+
+What you may notice:
+
+- **Secrets stay on your device.** The Apps Script secret and the OAuth client secret are no longer saved in the plugin's settings file (`data.json`), which syncs with your vault. On the first start of 0.5.0 they move into Obsidian's secret storage on that device (this vault's local storage before Obsidian 1.11.4), where the Google sign-in already was. On your other devices, enter them once in **Settings → Block Draw → Google Sheets**; a device that still finds them in its copy of `data.json` moves them the same way.
+- **Links open safely.** A block's link to a web page or an email address opens as before. An `obsidian://` link now asks first and shows where it goes, and other kinds of links (such as `file://`) are no longer opened, because a drawing can come from someone else. Links are kept in the file as written.
+- **A checked Apps Script address.** The web app address must start with `https://`, and an address outside `script.google.com` is used only after you confirm it.
+- **The settings file keeps only what you changed**, so a default that improves in a later release reaches you even if you saved your settings before.
+- **Ctrl/Cmd+Enter follows the selected block's link.** It was meant to, but never worked.
+- The keyboard shortcuts list (press **?**) is grouped by task and lists every shortcut.
+- The structured JSON export is much faster on large drawings: it slowed down sharply beyond a few thousand blocks.
+- The description of **Blocks outside frames** says the tab is called Unframed.
+
+Inside (drawings and exports are unchanged):
+
+- The file format and every export are locked by golden files, and [docs/FORMAT.md](docs/FORMAT.md) lists every field with the release that added it.
+- Shapes, keyboard shortcuts, settings and exports are each one table with one row per item. Menus, the help panel, the settings tab, tooltips and the docs are built from the rows.
+- Every network request goes through one gateway that allows only https, and only to the hosts the features declare (a setting's hosts only while it is on).
+- The editor's largest file is split by concern, from 1401 to 727 lines.
+- `npm run lint` also checks which folders may import which, and size budgets. CI pins its actions to commits, limits its token and audits the runtime dependency, and Dependabot proposes updates. See [SECURITY.md](SECURITY.md) and the decision records in [docs/adr](docs/adr/README.md).
+
 ## 0.4.6
 
 - The JSON, Excel and Google Sheets exports leave out what is not about the diagram. JSON (format version 2): no colors or other styles, no positions or sizes, no line routing or anchor sides, no shown/hidden flags, and no drawing name or timestamp. Excel and Google Sheets: the Blocks table no longer has Fill and Size columns, the Connections table no longer has a Line column, and the Index sheet no longer starts with the drawing's name and an export-date line. The sheet for blocks that are not in a frame is now called **Unframed** instead of Canvas. The raw JSON format is unchanged: it is still the drawing file.
