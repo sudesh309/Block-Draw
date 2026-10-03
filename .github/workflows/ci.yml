@@ -4,16 +4,23 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Audit runtime dependencies
+        # Reports known vulnerabilities in what ships (fflate); it does not fail the build on its own.
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true
       - name: Lint
         run: npm run lint
       - name: Unit tests
