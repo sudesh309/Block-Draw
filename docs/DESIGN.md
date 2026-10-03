@@ -32,28 +32,73 @@ The [README](../README.md) is the short version. This document holds the detail:
 
 Press **?** in the editor for this list.
 
+<!-- shortcuts:start: generated from src/editor/commands.ts by tests/commands.test.ts (UPDATE_GOLDEN=1 npm test) -->
+**Draw**
+
 | Keys | Action |
 | --- | --- |
-| V / H (or hold Space) | Select / pan |
-| B, O, D, R | Block, ellipse block, decision block, rectangle block |
-| A or C | Connector tool |
-| F | Frame tool |
+| V or 1 | Select tool |
+| H | Pan tool (or hold Space and drag) |
+| B or 2 | Block tool |
+| R | Rectangle block tool |
+| O or 3 | Ellipse block tool |
+| D or 4 | Decision block tool |
+| A or C or 5 | Connector tool |
+| F or 6 | Frame tool |
 | Double-click | Add a block, or edit the text under the pointer |
-| Enter | Edit the selected element's text (Shift+Enter for a new line) |
-| Ctrl/Cmd+K | Link the selected block |
-| Ctrl/Cmd+click | Follow a block's link |
-| [ and ] (or Page Up/Down) | Previous / next frame |
+| Drag an edge dot | Connect blocks; drop on empty space to create a connected block |
+| Click an edge dot | Add a connected block in that direction |
+
+**Edit**
+
+| Keys | Action |
+| --- | --- |
+| Enter | Edit the selected element's text |
+| Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y | Redo |
+| Ctrl/Cmd+Z | Undo |
+| Ctrl/Cmd+A | Select everything |
+| Ctrl/Cmd+D | Duplicate (or Alt+drag) |
+| Delete or Backspace | Delete the selection (a frame takes its blocks with it) |
+| ← or → or ↑ or ↓ | Nudge the selection, or pan (Shift: 5 grid steps) |
+| Ctrl/Cmd+Shift+] or Ctrl/Cmd+} | Bring to front |
+| Ctrl/Cmd+] | Bring forward |
+| Ctrl/Cmd+Shift+[ or Ctrl/Cmd+{ | Send to back |
+| Ctrl/Cmd+[ | Send backward |
+| Ctrl/Cmd+C, X, V | Copy, cut and paste |
+| Shift+Enter | New line while editing text |
+
+**Links and frames**
+
+| Keys | Action |
+| --- | --- |
+| Ctrl/Cmd+K | Link the selected block to a frame or note |
+| Ctrl/Cmd+Enter | Follow the selected block's link (with Shift: in a new tab) |
 | Alt+← | Back to where you were before following a link |
-| P | [Present](#presenting) |
-| T | [Trace](#for-architects-and-engineers) the selected block's dependencies (Esc clears) |
-| Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z | Undo, redo |
-| Ctrl/Cmd+C / X / V / D | Copy, cut, paste, duplicate (or Alt+drag) |
-| G | Grid on / off |
-| Arrows (Shift = 5 steps) | Nudge |
-| Shift+1 / Shift+2 / Shift+0 | Zoom to fit / to selection / 100% |
-| Ctrl/Cmd+] / [ (with Shift: to front / back) | Bring forward / send backward |
-| Delete | Delete the selection (a frame takes its blocks with it) |
-| ? | Show all shortcuts |
+| ] or Page Down | Next frame |
+| [ or Page Up | Previous frame |
+| Ctrl/Cmd+click | Follow a block's link |
+
+**View**
+
+| Keys | Action |
+| --- | --- |
+| Shift+1 | Zoom to fit |
+| Shift+2 | Zoom to the selection |
+| Shift+0 | Zoom to 100% |
+| + or = | Zoom in |
+| − or _ | Zoom out |
+| G | Grid on or off |
+
+**Present**
+
+| Keys | Action |
+| --- | --- |
+| P | Present: an overview, then one slide per frame |
+| T | Trace the selected block's upstream and downstream dependencies |
+| ? | Show or hide these shortcuts |
+| Esc | Cancel what you are doing, close this list, clear a trace, or deselect |
+| In a presentation | ← → slides · click a block to spotlight it · ? legend · S stage · L laser · Esc ends |
+<!-- shortcuts:end -->
 
 ### Frames and links
 

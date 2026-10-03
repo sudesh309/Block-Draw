@@ -1,32 +1,7 @@
+import { helpRows } from "../commands";
 import { el } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton } from "./controls";
-
-const SHORTCUTS: [string, string][] = [
-	["V / H", "Select / pan tool (or hold Space and drag)"],
-	["B, O, D, R", "Block: rounded, ellipse, decision, rectangle"],
-	["A / C", "Connector tool"],
-	["F", "Frame tool"],
-	["Double-click", "Add a block, or edit the text under the pointer"],
-	["Drag an edge dot", "Connect blocks — drop on empty space to create a connected block"],
-	["Click an edge dot", "Add a connected block in that direction"],
-	["Ctrl/Cmd+K", "Link the selected block to a frame or note"],
-	["Ctrl/Cmd+click", "Follow a block's link"],
-	["[ / ]", "Previous / next frame"],
-	["P", "Present: overview, then one slide per frame (Esc to end)"],
-	["T", "Trace the selected block's upstream and downstream dependencies"],
-	["In a presentation", "← → slides · click a block to spotlight it · ? legend · S stage · L laser"],
-	["Alt+←", "Back to where you were before following a link"],
-	["Enter", "Edit the selected element's text"],
-	["Ctrl/Cmd+D", "Duplicate (or Alt+drag)"],
-	["Ctrl/Cmd+Z / Shift+Z", "Undo / redo"],
-	["G", "Toggle grid on / off"],
-	["Arrows", "Nudge (Shift = 5 grid steps)"],
-	["Shift+1 / Shift+2", "Zoom to fit / to selection"],
-	["+ / − / Shift+0", "Zoom in / out / 100%"],
-	["Ctrl/Cmd+] / [", "Bring forward / send backward"],
-	["Delete", "Delete selection"],
-];
 
 export class HelpPanel {
 	readonly el: HTMLDivElement;
@@ -37,9 +12,12 @@ export class HelpPanel {
 		el("div", "bd-panel-title", head, "Keyboard shortcuts");
 		iconButton(head, "close", "Close", () => this.toggle(false));
 		const table = el("div", "bd-help-grid", this.el);
-		for (const [keys, what] of SHORTCUTS) {
-			el("div", "bd-help-keys", table, keys);
-			el("div", "bd-help-what", table, what);
+		for (const { group, rows } of helpRows()) {
+			el("div", "bd-help-group", table, group);
+			for (const { keys, label } of rows) {
+				el("div", "bd-help-keys", table, keys);
+				el("div", "bd-help-what", table, label);
+			}
 		}
 	}
 

@@ -60,6 +60,7 @@ import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { blockCommentBadgeBox, connectorCommentBadgeRect, frameTitleMetrics, labelBox } from "../render/elements";
 import { clearTextMeasureCache, layoutBlockText } from "../render/text";
+import { shortcut } from "./commands";
 import { el, svgEl } from "./dom";
 import type { EditorHost, MenuItemSpec } from "./host";
 import { KeyboardController } from "./keyboard";
@@ -643,7 +644,7 @@ export class Editor {
 		this.current.frame = { fill: theme.frameFill, stroke: theme.frameStroke };
 		this.palette = id === "futuristic" ? "futuristic" : id === "classic" ? "classic" : id === "minimal" ? "minimal" : "3d";
 		this.props.refresh();
-		this.host.notice(`Applied the ${theme.name} theme to ${scope ? "the selection" : "the drawing"}. Undo with Ctrl/Cmd+Z.`);
+		this.host.notice(`Applied the ${theme.name} theme to ${scope ? "the selection" : "the drawing"}. Undo with ${shortcut("undo")}.`);
 	}
 
 	/** Turns the 3D effect on or off for the selected blocks and connectors (all when none). */
@@ -1365,7 +1366,7 @@ export class Editor {
 		if (trace && !this.presenter.isActive()) {
 			const root = this.byId.get(trace.rootId);
 			const name = isBlock(root) && root.title.trim() ? `“${root.title.trim().split("\n")[0]}”` : "this block";
-			text = `${name}: ${trace.upstream.size} upstream (amber) · ${trace.downstream.size} downstream (green) — Esc to clear`;
+			text = `${name}: ${trace.upstream.size} upstream (amber) · ${trace.downstream.size} downstream (green) — ${shortcut("cancel")} to clear`;
 		} else if (!this.options.readOnly) {
 			const busy = this.pointer.hint();
 			if (busy) text = busy;

@@ -1,6 +1,7 @@
 import { deleteElements, frameChildren, moveFrameOrder } from "../../model/ops";
 import { parseFrameLink } from "../../model/links";
 import { isBlock, type FrameElement } from "../../model/types";
+import { shortcut } from "../commands";
 import { clearEl, el } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton } from "./controls";
@@ -117,7 +118,7 @@ export class FramesPanel {
 			() => {
 				const children = frameChildren(ed.elements, frame.id).length;
 				ed.commit(deleteElements(ed.elements, [frame.id]), { selection: [] });
-				ed.host.notice(`Deleted “${frame.title}”${children ? ` and ${children} block${children === 1 ? "" : "s"}` : ""}. Undo with Ctrl/Cmd+Z.`);
+				ed.host.notice(`Deleted “${frame.title}”${children ? ` and ${children} block${children === 1 ? "" : "s"}` : ""}. Undo with ${shortcut("undo")}.`);
 			},
 			"bd-danger",
 		);

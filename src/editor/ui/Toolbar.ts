@@ -1,4 +1,5 @@
 import type { BlockShape } from "../../model/types";
+import { shortcut } from "../commands";
 import { el } from "../dom";
 import type { Editor } from "../Editor";
 import type { Tool } from "../types";
@@ -12,13 +13,13 @@ interface ToolSpec {
 }
 
 const TOOLS: ToolSpec[] = [
-	{ tool: "select", icon: "select", label: "Select — V" },
-	{ tool: "pan", icon: "pan", label: "Pan — H or hold Space" },
-	{ tool: "block", shape: "rounded", icon: "block", label: "Block — B" },
-	{ tool: "block", shape: "ellipse", icon: "ellipse", label: "Ellipse block — O" },
-	{ tool: "block", shape: "diamond", icon: "diamond", label: "Decision block — D" },
-	{ tool: "connector", icon: "connector", label: "Connector — A" },
-	{ tool: "frame", icon: "frame", label: "Frame — F" },
+	{ tool: "select", icon: "select", label: `Select — ${shortcut("tool-select")}` },
+	{ tool: "pan", icon: "pan", label: `Pan — ${shortcut("tool-pan")} or hold Space` },
+	{ tool: "block", shape: "rounded", icon: "block", label: `Block — ${shortcut("tool-block")}` },
+	{ tool: "block", shape: "ellipse", icon: "ellipse", label: `Ellipse block — ${shortcut("tool-ellipse")}` },
+	{ tool: "block", shape: "diamond", icon: "diamond", label: `Decision block — ${shortcut("tool-decision")}` },
+	{ tool: "connector", icon: "connector", label: `Connector — ${shortcut("tool-connector")}` },
+	{ tool: "frame", icon: "frame", label: `Frame — ${shortcut("tool-frame")}` },
 ];
 
 export class Toolbar {
@@ -39,19 +40,19 @@ export class Toolbar {
 		}
 		el("div", "bd-toolbar-sep", this.el);
 		const actions = el("div", "bd-toolbar-group", this.el);
-		this.undoBtn = iconButton(actions, "undo", "Undo — Ctrl/Cmd+Z", () => ed.undo());
-		this.redoBtn = iconButton(actions, "redo", "Redo — Ctrl/Cmd+Shift+Z", () => ed.redo());
+		this.undoBtn = iconButton(actions, "undo", `Undo — ${shortcut("undo")}`, () => ed.undo());
+		this.redoBtn = iconButton(actions, "redo", `Redo — ${shortcut("redo")}`, () => ed.redo());
 		el("div", "bd-toolbar-sep", this.el);
 		const view = el("div", "bd-toolbar-group", this.el);
 		this.framesBtn = iconButton(view, "frames", "Frames", () => ed.framesPanel.toggle());
-		iconButton(view, "present", "Present — P", () => ed.presenter.start(), "bd-present-btn");
+		iconButton(view, "present", `Present — ${shortcut("present")}`, () => ed.presenter.start(), "bd-present-btn");
 		if (ed.host.exportMenu) {
 			iconButton(view, "export", "Export", (e) => {
 				const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
 				ed.host.showMenu(ed.host.exportMenu?.() ?? [], { x: r.left, y: r.bottom + 4 });
 			}, "bd-export-btn");
 		}
-		iconButton(view, "help", "Keyboard shortcuts — ?", () => ed.help.toggle());
+		iconButton(view, "help", `Keyboard shortcuts — ${shortcut("help")}`, () => ed.help.toggle());
 		if (ed.options.readOnly) {
 			this.undoBtn.hidden = true;
 			this.redoBtn.hidden = true;

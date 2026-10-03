@@ -1,4 +1,5 @@
 import { shapeDef, shapePath } from "../../geometry/shapes";
+import { shortcut } from "../commands";
 import type { HistoryEntry } from "../../model/history";
 import { frameLink, parseFrameLink, parseLink } from "../../model/links";
 import { updateElements } from "../../model/ops";
@@ -450,11 +451,11 @@ export class PropsPanel {
 		if (sel.length) {
 			const act = section(this.body, "Actions");
 			const row = el("div", "bd-button-row", act);
-			iconButton(row, "duplicate", "Duplicate — Ctrl/Cmd+D", () => ed.duplicateSelection());
+			iconButton(row, "duplicate", `Duplicate — ${shortcut("duplicate")}`, () => ed.duplicateSelection());
 			iconButton(row, "front", "Bring to front", () => ed.reorderSelection("front"));
 			iconButton(row, "back_layer", "Send to back", () => ed.reorderSelection("back"));
 			if (isFrame(single)) iconButton(row, "fit", "Zoom to frame", () => ed.navigateToFrame(single.id));
-			iconButton(row, "trash", "Delete — Del", () => ed.deleteSelection(), "bd-danger");
+			iconButton(row, "trash", `Delete — ${shortcut("delete")}`, () => ed.deleteSelection(), "bd-danger");
 		}
 		if (prevScroll > 0) this.el.scrollTop = prevScroll;
 	}
