@@ -324,6 +324,8 @@ describe("flow direction on links", () => {
 		const nums = String(n.attrs.d).match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
 		return Array.from({ length: nums.length / 2 }, (_, i) => [nums[2 * i], nums[2 * i + 1]]);
 	};
+	/** Not `.at(-1)`: that is ES2022, newer than the lib in tsconfig.json. */
+	const lastPoint = (pts: [number, number][]): [number, number] => pts[pts.length - 1];
 
 	it("follows the arrowheads", () => {
 		const s = connector("x", "a", "b").style;
@@ -336,13 +338,13 @@ describe("flow direction on links", () => {
 	it("draws a one-way link start to end, and a start-only link end to start", () => {
 		const forward = find(draw(flowing({})), "bd-connector-line");
 		expect(forward).toHaveLength(1);
-		const [first, last] = [points(forward[0])[0], points(forward[0]).at(-1) as [number, number]];
+		const [first, last] = [points(forward[0])[0], lastPoint(points(forward[0]))];
 		expect(first[0]).toBeLessThan(last[0]);
 
 		const backward = find(draw(flowing({ startArrow: "arrow", endArrow: "none" })), "bd-connector-line");
 		expect(backward).toHaveLength(1);
 		const pts = points(backward[0]);
-		expect(pts[0][0]).toBeGreaterThan((pts.at(-1) as [number, number])[0]);
+		expect(pts[0][0]).toBeGreaterThan(lastPoint(pts)[0]);
 		// the arrowheads are drawn separately, so reversing the path moves nothing visible
 		expect(toSvgString(draw(flowing({ startArrow: "arrow", endArrow: "none" })))).toContain("bd-flow");
 	});
@@ -354,8 +356,8 @@ describe("flow direction on links", () => {
 		expect(find(node, "bd-connector-line")).toHaveLength(2);
 		const [there, back] = lanes.map(points);
 		// one lane runs left to right, the other right to left
-		expect(there[0][0]).toBeLessThan((there.at(-1) as [number, number])[0]);
-		expect(back[0][0]).toBeGreaterThan((back.at(-1) as [number, number])[0]);
+		expect(there[0][0]).toBeLessThan(lastPoint(there)[0]);
+		expect(back[0][0]).toBeGreaterThan(lastPoint(back)[0]);
 		// on either side of the centre line (y = 40), the same distance away
 		expect(there[0][1]).toBeGreaterThan(40);
 		expect(back[0][1]).toBeLessThan(40);
