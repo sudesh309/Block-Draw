@@ -1,109 +1,31 @@
-import type { BlockShape, Bounds, Side } from "../model/types";
-import { center, type Point } from "./geom";
+import type { BlockShape, Bounds, Point, Side } from "../model/types";
+import { center } from "./geom";
+import { SHAPES, type ShapeDef } from "./shapes/index";
 
-/** Corner radius used by the "rounded" shape. */
-export function roundedRadius(width: number, height: number): number {
-	return Math.max(0, Math.min(16, width / 4, height / 4));
-}
+export { SHAPES, type ShapeDef } from "./shapes/index";
 
-function parallelogramSkew(width: number, height: number): number {
-	return Math.min(width * 0.2, height * 0.6);
-}
+/*
+ * Shape geometry for the rest of the plugin. Each function works for every shape the same way;
+ * what differs between shapes is a row in the SHAPES table (one file per shape in shapes/).
+ */
 
-function hexagonInset(width: number, height: number): number {
-	return Math.min(width * 0.25, height * 0.5);
-}
-
-export function cylinderCap(width: number, height: number): number {
-	return Math.min(height * 0.15, width * 0.25, 14);
-}
-
-const f = (n: number) => (Math.round(n * 100) / 100).toString();
+/** The row for a shape; anything unknown is drawn as a rectangle. */
+export const shapeDef = (shape: BlockShape): ShapeDef => SHAPES[shape] ?? SHAPES.rectangle;
 
 /** SVG path data for a shape outline in local coordinates (0,0)-(w,h). */
 export function shapePath(shape: BlockShape, w: number, h: number): string {
-	switch (shape) {
-		case "rounded": {
-			const r = roundedRadius(w, h);
-			return (
-				`M${f(r)},0 H${f(w - r)} A${f(r)},${f(r)} 0 0 1 ${f(w)},${f(r)} ` +
-				`V${f(h - r)} A${f(r)},${f(r)} 0 0 1 ${f(w - r)},${f(h)} ` +
-				`H${f(r)} A${f(r)},${f(r)} 0 0 1 0,${f(h - r)} ` +
-				`V${f(r)} A${f(r)},${f(r)} 0 0 1 ${f(r)},0 Z`
-			);
-		}
-		case "ellipse":
-			return (
-				`M0,${f(h / 2)} A${f(w / 2)},${f(h / 2)} 0 1 1 ${f(w)},${f(h / 2)} ` +
-				`A${f(w / 2)},${f(h / 2)} 0 1 1 0,${f(h / 2)} Z`
-			);
-		case "diamond":
-			return `M${f(w / 2)},0 L${f(w)},${f(h / 2)} L${f(w / 2)},${f(h)} L0,${f(h / 2)} Z`;
-		case "parallelogram": {
-			const s = parallelogramSkew(w, h);
-			return `M${f(s)},0 L${f(w)},0 L${f(w - s)},${f(h)} L0,${f(h)} Z`;
-		}
-		case "hexagon": {
-			const s = hexagonInset(w, h);
-			return `M${f(s)},0 L${f(w - s)},0 L${f(w)},${f(h / 2)} L${f(w - s)},${f(h)} L${f(s)},${f(h)} L0,${f(h / 2)} Z`;
-		}
-		case "cylinder": {
-			const ry = cylinderCap(w, h);
-			return (
-				`M0,${f(ry)} A${f(w / 2)},${f(ry)} 0 0 1 ${f(w)},${f(ry)} ` +
-				`V${f(h - ry)} A${f(w / 2)},${f(ry)} 0 0 1 0,${f(h - ry)} Z`
-			);
-		}
-		case "rectangle":
-		case "text":
-		default:
-			return `M0,0 H${f(w)} V${f(h)} H0 Z`;
-	}
+	return shapeDef(shape).path(w, h);
 }
 
 /** Extra decoration strokes drawn on top of the fill (e.g. the cylinder's front lip). */
 export function shapeDecorationPath(shape: BlockShape, w: number, h: number): string | null {
-	if (shape === "cylinder") {
-		const ry = cylinderCap(w, h);
-		return `M0,${f(ry)} A${f(w / 2)},${f(ry)} 0 0 0 ${f(w)},${f(ry)}`;
-	}
-	return null;
+	return shapeDef(shape).decoration?.(w, h) ?? null;
 }
 
 /** Outline polygon (in absolute coordinates) for polygonal shapes, used for exact hit/clip maths. */
 function polygonFor(shape: BlockShape, b: Bounds): Point[] | null {
-	const { x, y, width: w, height: h } = b;
-	switch (shape) {
-		case "diamond":
-			return [
-				{ x: x + w / 2, y },
-				{ x: x + w, y: y + h / 2 },
-				{ x: x + w / 2, y: y + h },
-				{ x, y: y + h / 2 },
-			];
-		case "parallelogram": {
-			const s = parallelogramSkew(w, h);
-			return [
-				{ x: x + s, y },
-				{ x: x + w, y },
-				{ x: x + w - s, y: y + h },
-				{ x, y: y + h },
-			];
-		}
-		case "hexagon": {
-			const s = hexagonInset(w, h);
-			return [
-				{ x: x + s, y },
-				{ x: x + w - s, y },
-				{ x: x + w, y: y + h / 2 },
-				{ x: x + w - s, y: y + h },
-				{ x: x + s, y: y + h },
-				{ x, y: y + h / 2 },
-			];
-		}
-		default:
-			return null;
-	}
+	const outline = shapeDef(shape).outline;
+	return typeof outline === "function" ? outline(b) : null;
 }
 
 /** Intersection of the ray center→p with segment a-b; returns the ray parameter t (or null). */
@@ -127,7 +49,7 @@ export function boundaryPoint(shape: BlockShape, b: Bounds, toward: Point): Poin
 	let d = { x: toward.x - c.x, y: toward.y - c.y };
 	if (d.x === 0 && d.y === 0) d = { x: 1, y: 0 };
 
-	if (shape === "ellipse") {
+	if (shapeDef(shape).outline === "ellipse") {
 		const rx = b.width / 2;
 		const ry = b.height / 2;
 		if (rx === 0 || ry === 0) return c;
@@ -157,23 +79,16 @@ export function boundaryPoint(shape: BlockShape, b: Bounds, toward: Point): Poin
 /** Connection point in the middle of a side of the shape. */
 export function sideAnchor(shape: BlockShape, b: Bounds, side: Side): Point {
 	const c = center(b);
+	const inset = shapeDef(shape).sideInset?.(b.width, b.height) ?? 0;
 	switch (side) {
 		case "top":
 			return { x: c.x, y: b.y };
 		case "bottom":
 			return { x: c.x, y: b.y + b.height };
 		case "left":
-			if (shape === "parallelogram") {
-				const s = parallelogramSkew(b.width, b.height);
-				return { x: b.x + s / 2, y: c.y };
-			}
-			return { x: b.x, y: c.y };
+			return { x: b.x + inset, y: c.y };
 		case "right":
-			if (shape === "parallelogram") {
-				const s = parallelogramSkew(b.width, b.height);
-				return { x: b.x + b.width - s / 2, y: c.y };
-			}
-			return { x: b.x + b.width, y: c.y };
+			return { x: b.x + b.width - inset, y: c.y };
 	}
 }
 
@@ -182,35 +97,7 @@ export function sideAnchor(shape: BlockShape, b: Bounds, side: Side): Point {
  * Shapes with slanted or curved sides offer less room than their bounds.
  */
 export function textInsets(shape: BlockShape, w: number, h: number): Bounds {
-	const pad = 8;
-	switch (shape) {
-		case "ellipse": {
-			const iw = w * 0.72;
-			const ih = h * 0.72;
-			return { x: (w - iw) / 2 + 2, y: (h - ih) / 2, width: Math.max(0, iw - 4), height: ih };
-		}
-		case "diamond": {
-			const iw = w * 0.56;
-			const ih = h * 0.56;
-			return { x: (w - iw) / 2, y: (h - ih) / 2, width: iw, height: ih };
-		}
-		case "parallelogram": {
-			const s = parallelogramSkew(w, h);
-			return { x: s + 2, y: pad, width: Math.max(0, w - 2 * s - 4), height: Math.max(0, h - 2 * pad) };
-		}
-		case "hexagon": {
-			const s = hexagonInset(w, h) * 0.75;
-			return { x: s, y: pad, width: Math.max(0, w - 2 * s), height: Math.max(0, h - 2 * pad) };
-		}
-		case "cylinder": {
-			const ry = cylinderCap(w, h);
-			return { x: pad, y: ry * 2 + 2, width: Math.max(0, w - 2 * pad), height: Math.max(0, h - ry * 3 - 4) };
-		}
-		case "text":
-			return { x: 4, y: 4, width: Math.max(0, w - 8), height: Math.max(0, h - 8) };
-		default:
-			return { x: pad, y: pad, width: Math.max(0, w - 2 * pad), height: Math.max(0, h - 2 * pad) };
-	}
+	return shapeDef(shape).textBox(w, h);
 }
 
 /** Is `p` inside the visible shape (used for precise click selection)? */
@@ -224,7 +111,7 @@ export function shapeContains(shape: BlockShape, b: Bounds, p: Point, margin = 0
 		return false;
 	}
 	if (margin > 0) return true;
-	if (shape === "ellipse") {
+	if (shapeDef(shape).outline === "ellipse") {
 		const c = center(b);
 		const rx = b.width / 2;
 		const ry = b.height / 2;

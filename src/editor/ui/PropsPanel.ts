@@ -1,4 +1,4 @@
-import { shapePath } from "../../geometry/shapes";
+import { shapeDef, shapePath } from "../../geometry/shapes";
 import type { HistoryEntry } from "../../model/history";
 import { frameLink, parseFrameLink, parseLink } from "../../model/links";
 import { updateElements } from "../../model/ops";
@@ -23,17 +23,6 @@ import { activeElementOf, clearEl, el, svgEl } from "../dom";
 import type { Editor } from "../Editor";
 import { iconButton, section, sectionWithVisibility, segmented, swatches, textField } from "./controls";
 
-const SHAPE_LABELS: Record<BlockShape, string> = {
-	rounded: "Rounded",
-	rectangle: "Rectangle",
-	ellipse: "Ellipse",
-	diamond: "Decision",
-	parallelogram: "Input / output",
-	hexagon: "Preparation",
-	cylinder: "Database",
-	text: "Text only",
-};
-
 const FONT_SIZES: { value: number; label: string; text: string }[] = [
 	{ value: 12, label: "Small", text: "S" },
 	{ value: 16, label: "Medium", text: "M" },
@@ -54,7 +43,7 @@ function drawShape(shape: BlockShape) {
 				fill: "none",
 				stroke: "currentColor",
 				"stroke-width": 1.6,
-				"stroke-dasharray": shape === "text" ? "2 2" : "",
+				"stroke-dasharray": shapeDef(shape).dashedIcon ? "2 2" : "",
 			},
 			g,
 		);
@@ -251,7 +240,7 @@ export class PropsPanel {
 			this.syncers.push(
 				segmented(
 					shapeSec,
-					BLOCK_SHAPES.map((shape) => ({ value: shape, label: SHAPE_LABELS[shape], draw: drawShape(shape) })),
+					BLOCK_SHAPES.map((shape) => ({ value: shape, label: shapeDef(shape).label, draw: drawShape(shape) })),
 					() => ed.selectedBlocks()[0]?.shape ?? (ed.tool === "block" ? ed.toolShape : ed.current.shape),
 					(shape: BlockShape) => ed.applyShape(shape),
 				),

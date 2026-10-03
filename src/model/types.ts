@@ -13,26 +13,13 @@ export const FILE_VERSION = 1;
 export type Side = "top" | "right" | "bottom" | "left";
 export type AnchorSide = Side | "auto";
 
-export type BlockShape =
-	| "rectangle"
-	| "rounded"
-	| "ellipse"
-	| "diamond"
-	| "parallelogram"
-	| "hexagon"
-	| "cylinder"
-	| "text";
+/**
+ * Block shape ids, in the order the shape picker shows them. They are stored in files, so an id is
+ * never renamed or removed; each one has a row in the SHAPES table (geometry/shapes/).
+ */
+export const BLOCK_SHAPES = ["rounded", "rectangle", "ellipse", "diamond", "parallelogram", "hexagon", "cylinder", "text"] as const;
 
-export const BLOCK_SHAPES: BlockShape[] = [
-	"rounded",
-	"rectangle",
-	"ellipse",
-	"diamond",
-	"parallelogram",
-	"hexagon",
-	"cylinder",
-	"text",
-];
+export type BlockShape = (typeof BLOCK_SHAPES)[number];
 
 export type StrokeStyle = "solid" | "dashed" | "dotted";
 export type Routing = "elbow" | "straight" | "curved";

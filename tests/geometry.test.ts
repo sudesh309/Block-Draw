@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { offsetPolyline, segmentCrossesBox, simplifyPolyline } from "../src/geometry/geom";
 import { routeConnector, trimRoute, type RouteEndpoint } from "../src/geometry/routing";
-import { boundaryPoint, shapeContains, sideAnchor } from "../src/geometry/shapes";
+import { boundaryPoint, SHAPES, shapeContains, sideAnchor } from "../src/geometry/shapes";
+import { BLOCK_SHAPES } from "../src/model/types";
 import type { AnchorSide, BlockShape, Bounds } from "../src/model/types";
 
 const ep = (b: Bounds, side: AnchorSide = "auto", shape: BlockShape = "rectangle"): RouteEndpoint => ({
@@ -193,6 +194,26 @@ describe("offsetPolyline", () => {
 		for (const p of offsetPolyline([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 1, y: 1 }], 2)) {
 			expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
 			expect(Math.hypot(p.x, p.y)).toBeLessThan(40);
+		}
+	});
+});
+
+describe("the SHAPES table", () => {
+	it("has one row per shape id, each with its own picker label", () => {
+		expect(Object.keys(SHAPES).sort()).toEqual([...BLOCK_SHAPES].sort());
+		const labels = BLOCK_SHAPES.map((s) => SHAPES[s].label);
+		expect(new Set(labels).size).toBe(labels.length);
+	});
+
+	it("gives every shape a closed outline and a text box inside its bounds", () => {
+		for (const shape of BLOCK_SHAPES) {
+			const row = SHAPES[shape];
+			expect(row.path(160, 80), shape).toMatch(/^M.* Z$/);
+			const box = row.textBox(160, 80);
+			expect(box.x, shape).toBeGreaterThanOrEqual(0);
+			expect(box.y, shape).toBeGreaterThanOrEqual(0);
+			expect(box.x + box.width, shape).toBeLessThanOrEqual(160);
+			expect(box.y + box.height, shape).toBeLessThanOrEqual(80);
 		}
 	});
 });
