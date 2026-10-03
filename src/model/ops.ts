@@ -1,6 +1,7 @@
 import { newId } from "./ids";
 import { parseFrameLink, frameLink } from "./links";
 import { center, containsPoint } from "./space";
+import { stackLevel } from "./stack";
 import {
 	isBlock,
 	isConnector,
@@ -173,15 +174,32 @@ export function refreshFrameMembership(els: readonly DrawElement[], frameId: str
 
 export type ZOrderMode = "front" | "back" | "forward" | "backward";
 
-/** Changes stacking order. Frames, blocks and connectors render in separate layers, so only
- * the relative order within a layer is visible; frame order also drives export order. */
+/** The element as it is when brought to the front or sent to the back of its kind. */
+function placed(el: DrawElement, mode: "front" | "back"): DrawElement {
+	if (isBlock(el)) {
+		if (mode === "front") return { ...el, inFront: true };
+		const { inFront: _off, ...rest } = el;
+		return rest;
+	}
+	if (isConnector(el)) {
+		if (mode === "back") return { ...el, behind: true };
+		const { behind: _off, ...rest } = el;
+		return rest;
+	}
+	return el;
+}
+
+/**
+ * Changes stacking order (see model/stack.ts for the levels). Bring to front puts a block above the
+ * links and a link above the blocks; send to back puts a link below the blocks and a block below the
+ * links. Bring forward and send backward move one step among the elements of the same level.
+ */
 export function reorderElements(els: readonly DrawElement[], ids: Set<string>, mode: ZOrderMode): DrawElement[] {
 	const arr = els.slice();
-	if (mode === "front") {
-		return [...arr.filter((e) => !ids.has(e.id)), ...arr.filter((e) => ids.has(e.id))];
-	}
-	if (mode === "back") {
-		return [...arr.filter((e) => ids.has(e.id)), ...arr.filter((e) => !ids.has(e.id))];
+	if (mode === "front" || mode === "back") {
+		const picked = arr.filter((e) => ids.has(e.id)).map((e) => placed(e, mode));
+		const others = arr.filter((e) => !ids.has(e.id));
+		return mode === "front" ? [...others, ...picked] : [...picked, ...others];
 	}
 	if (mode === "forward") {
 		for (let i = arr.length - 2; i >= 0; i--) {
@@ -202,9 +220,9 @@ export function reorderElements(els: readonly DrawElement[], ids: Set<string>, m
 }
 
 function nextSameLayer(arr: DrawElement[], i: number, step: 1 | -1): number {
-	const type = arr[i].type;
+	const level = stackLevel(arr[i]);
 	for (let j = i + step; j >= 0 && j < arr.length; j += step) {
-		if (arr[j].type === type) return j;
+		if (stackLevel(arr[j]) === level) return j;
 	}
 	return -1;
 }

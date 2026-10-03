@@ -497,6 +497,109 @@ test("frames panel lists frames and navigates", async () => {
 	assert.deepEqual(order, [2000, 0]);
 });
 
+/** The ids of the drawn blocks in stacking order, bottom first, as the SVG has them. */
+const blockStack = () => page.evaluate(() => [...document.querySelectorAll(".bd-layer-blocks > .bd-block, .bd-layer-blocks-front > .bd-block")].map((n) => n.getAttribute("data-id")));
+
+test("bring to front and send to back work from the panel, the menu and the keyboard", async () => {
+	const a = await addBlock(300, 300, "A");
+	const b = await addBlock(400, 330, "B");
+	const c = await addBlock(500, 360, "C");
+	const ids = [a.id, b.id, c.id];
+	assert.deepEqual(await blockStack(), ids);
+	const select = async (id) => {
+		await page.evaluate((id) => window.bd.editor.setSelection([id]), id);
+		await frame();
+	};
+
+	await select(a.id);
+	await page.click('.bd-panel .bd-btn[aria-label="Bring to front"]');
+	await frame();
+	assert.deepEqual(await blockStack(), [b.id, c.id, a.id], "panel: bring to front");
+	await page.click('.bd-panel .bd-btn[aria-label="Send to back"]');
+	await frame();
+	assert.deepEqual(await blockStack(), ids, "panel: send to back");
+
+	await select(b.id);
+	await page.keyboard.press("Control+Shift+BracketRight");
+	await frame();
+	assert.deepEqual(await blockStack(), [a.id, c.id, b.id], "keyboard: bring to front");
+	await page.keyboard.press("Control+Shift+BracketLeft");
+	await frame();
+	assert.deepEqual(await blockStack(), [b.id, a.id, c.id], "keyboard: send to back");
+	await page.keyboard.press("Control+BracketRight");
+	await frame();
+	assert.deepEqual(await blockStack(), [a.id, b.id, c.id], "keyboard: bring forward");
+	await page.keyboard.press("Control+BracketLeft");
+	await frame();
+	assert.deepEqual(await blockStack(), [b.id, a.id, c.id], "keyboard: send backward");
+
+	// the right-click menu, on the block that is now on top of the others
+	await select(c.id);
+	const at = await centerOf(c.id);
+	await page.mouse.click(at.x, at.y, { button: "right" });
+	await frame();
+	await page.locator(".harness-menu-item", { hasText: "Send to back" }).click();
+	await frame();
+	assert.deepEqual(await blockStack(), [c.id, b.id, a.id], "menu: send to back");
+});
+
+test("a block can be brought in front of a link, and a link sent behind a block", async () => {
+	const id = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const a = ed.makeBlock({ x: 100, y: 100, width: 160, height: 80 }, { title: "A" });
+		const c = ed.makeBlock({ x: 600, y: 100, width: 160, height: 80 }, { title: "C" });
+		// a small block that sits on the straight link between the two
+		const onLink = ed.makeBlock({ x: 350, y: 110, width: 160, height: 60 }, { title: "On the link" });
+		ed.insertBlocks([a, c, onLink]);
+		const link = ed.connect(a.id, c.id);
+		ed.updateElement(link.id, { routing: "straight" });
+		ed.clearSelection();
+		ed.zoomToFit({ animate: false });
+		return { onLink: onLink.id, link: link.id };
+	});
+	await frame();
+	const onLinkPoint = { x: 430, y: 140 };
+	const hit = () => page.evaluate((p) => window.bd.editor.hitTest(p), onLinkPoint);
+	/** The element drawn on top at that point, as the browser sees it. */
+	const drawnTop = async () => {
+		const at = await toScreen(onLinkPoint);
+		return page.evaluate(({ x, y }) => {
+			const rect = document.querySelector(".bd-canvas, svg")?.getBoundingClientRect();
+			const el = document.elementsFromPoint(x + (rect?.left ?? 0), y + (rect?.top ?? 0)).find((e) => e.closest(".bd-block, .bd-connector"));
+			return el?.closest(".bd-block, .bd-connector")?.getAttribute("data-id") ?? null;
+		}, at);
+	};
+	const panel = (label) => page.click(`.bd-panel .bd-btn[aria-label="${label}"]`);
+
+	assert.deepEqual([(await hit()).kind, await drawnTop()], ["connector", id.link], "a link is above the blocks to begin with");
+
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.onLink);
+	await frame();
+	await panel("Bring to front");
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-blocks-front > [data-id="${id.onLink}"]`).count(), 1, "the block moved to the layer above the links");
+	assert.deepEqual([(await hit()).kind, (await hit()).id, await drawnTop()], ["block", id.onLink, id.onLink], "the block now covers the link and takes its clicks");
+
+	await panel("Send to back");
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-blocks-front > [data-id="${id.onLink}"]`).count(), 0);
+	assert.deepEqual([(await hit()).kind, await drawnTop()], ["connector", id.link], "sent back: the link is on top again");
+
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), id.link);
+	await frame();
+	await panel("Send to back");
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-connectors-behind > [data-id="${id.link}"]`).count(), 1, "the link moved below the blocks");
+	assert.deepEqual([(await hit()).kind, await drawnTop()], ["block", id.onLink], "a link sent behind is covered by the block");
+	// where nothing covers it, the link can still be clicked
+	const free = await page.evaluate((p) => window.bd.editor.hitTest(p), { x: 300, y: 140 });
+	assert.deepEqual([free.kind, free.id], ["connector", id.link]);
+	await panel("Bring to front");
+	await frame();
+	assert.equal(await page.locator(`.bd-layer-connectors > [data-id="${id.link}"]`).count(), 1, "bring to front puts the link back above the blocks");
+	await shot("z-order-link-and-block");
+});
+
 test("arrow keys nudge, Escape clears the selection", async () => {
 	const b = await addBlock(400, 300, "Nudge");
 	await page.keyboard.press("ArrowRight");

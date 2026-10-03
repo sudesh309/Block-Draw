@@ -111,10 +111,14 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 	const labels: VNode[] = [];
 	const blocks: VNode[] = [];
 	const comments: VNode[] = [];
+	// Only filled for links sent behind the blocks and blocks brought in front of the links.
+	const behind: VNode[] = [];
+	const behindLabels: VNode[] = [];
+	const inFront: VNode[] = [];
 	for (const el of visible) {
 		if (isFrame(el)) frames.push(renderFrame(el, ro));
 		else if (isBlock(el)) {
-			blocks.push(renderBlock(el, ro));
+			(el.inFront ? inFront : blocks).push(renderBlock(el, ro));
 			const callout = renderBlockCommentCallout(el, ro);
 			if (callout) comments.push(callout);
 		} else {
@@ -122,18 +126,29 @@ export function sceneToSvg(elements: readonly DrawElement[], opts: SceneSvgOptio
 			const to = byId.get(el.to.id);
 			if (isBlock(from) && isBlock(to)) {
 				const route = routeFor(el, from, to);
-				connectors.push(renderConnector(el, from, to, ro, route));
+				(el.behind ? behind : connectors).push(renderConnector(el, from, to, ro, route));
 				const label = renderConnectorLabel(el, route, ro);
-				if (label) labels.push(label);
+				if (label) (el.behind ? behindLabels : labels).push(label);
 				const badge = renderConnectorCommentBadge(el, route, ro);
-				if (badge) labels.push(badge);
+				if (badge) (el.behind ? behindLabels : labels).push(badge);
 				const callout = renderConnectorCommentCallout(el, route, ro);
 				if (callout) comments.push(callout);
 			}
 		}
 	}
-	// Same order as the editor: links and labels above blocks, so a container block cannot hide them.
-	layers.push(h("g", {}, frames), h("g", {}, blocks), h("g", {}, connectors), h("g", {}, labels), h("g", {}, comments));
+	// Same order as the editor (see model/stack.ts): links and labels above blocks, so a container block
+	// cannot hide them, unless a link was sent behind the blocks or a block brought in front of the links.
+	const extra = (nodes: VNode[]) => (nodes.length ? [h("g", {}, nodes)] : []);
+	layers.push(
+		h("g", {}, frames),
+		...extra(behind),
+		...extra(behindLabels),
+		h("g", {}, blocks),
+		h("g", {}, connectors),
+		h("g", {}, labels),
+		...extra(inFront),
+		h("g", {}, comments),
+	);
 
 	const k = opts.scale ?? 1;
 	const width = Math.max(1, Math.ceil(bounds.width * k));

@@ -88,6 +88,8 @@ export interface BlockElement extends Bounds {
 	comment: string;
 	/** Whether the comment callout is currently shown on the canvas (and in exports). */
 	commentOpen: boolean;
+	/** Drawn above the links instead of below them. Written only when true. */
+	inFront?: boolean;
 }
 
 export interface FrameStyle {
@@ -132,6 +134,10 @@ export interface ConnectorElement {
 	comment: string;
 	/** Whether the comment callout is currently shown on the canvas (and in exports). */
 	commentOpen: boolean;
+	/** Points the link passes through, in order, in canvas units. Written only when there are some. */
+	waypoints?: Point[];
+	/** Drawn below the blocks instead of above them. Written only when true. */
+	behind?: boolean;
 }
 
 export type BoxElement = BlockElement | FrameElement;

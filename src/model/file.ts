@@ -15,6 +15,7 @@ import {
 	type DrawElement,
 	type DrawingFile,
 	type FrameElement,
+	type Point,
 	type Routing,
 	type StrokeStyle,
 	type TextAlign,
@@ -61,6 +62,7 @@ function normalizeBlock(raw: Raw): BlockElement {
 		tag: str(raw.tag),
 		comment: str(raw.comment),
 		commentOpen: bool(raw.commentOpen, false),
+		...(raw.inFront === true ? { inFront: true } : {}),
 		style: {
 			fill: str(s.fill, DEFAULT_BLOCK_STYLE.fill),
 			stroke: str(s.stroke, DEFAULT_BLOCK_STYLE.stroke),
@@ -94,11 +96,24 @@ function normalizeFrame(raw: Raw): FrameElement {
 	};
 }
 
+/** The most waypoints a link keeps: more would be a drawing, not a route. */
+export const MAX_WAYPOINTS = 32;
+
+function readWaypoints(v: unknown): Point[] {
+	if (!Array.isArray(v)) return [];
+	const out: Point[] = [];
+	for (const p of v) {
+		if (isObj(p) && typeof p.x === "number" && typeof p.y === "number" && Number.isFinite(p.x) && Number.isFinite(p.y)) out.push({ x: p.x, y: p.y });
+	}
+	return out.slice(0, MAX_WAYPOINTS);
+}
+
 function normalizeConnector(raw: Raw): ConnectorElement | null {
 	const from = isObj(raw.from) ? raw.from : null;
 	const to = isObj(raw.to) ? raw.to : null;
 	if (!from || !to || typeof from.id !== "string" || typeof to.id !== "string") return null;
 	const s = isObj(raw.style) ? raw.style : {};
+	const waypoints = readWaypoints(raw.waypoints);
 	return {
 		id: str(raw.id) || newId(),
 		type: "connector",
@@ -108,6 +123,8 @@ function normalizeConnector(raw: Raw): ConnectorElement | null {
 		routing: oneOf(raw.routing, ROUTINGS, "elbow"),
 		comment: str(raw.comment),
 		commentOpen: bool(raw.commentOpen, false),
+		...(waypoints.length ? { waypoints } : {}),
+		...(raw.behind === true ? { behind: true } : {}),
 		style: {
 			stroke: str(s.stroke, DEFAULT_CONNECTOR_STYLE.stroke),
 			strokeWidth: Math.max(0.5, num(s.strokeWidth, DEFAULT_CONNECTOR_STYLE.strokeWidth)),

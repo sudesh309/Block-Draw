@@ -90,6 +90,10 @@ export class SceneRenderer {
 	private readonly connectors: Layer;
 	private readonly labels: Layer;
 	private readonly blocks: Layer;
+	/** Links sent behind the blocks (and their labels), and blocks brought in front of the links. */
+	private readonly connectorsBehind: Layer;
+	private readonly labelsBehind: Layer;
+	private readonly blocksFront: Layer;
 	/** Comment callouts: its own layer on top of everything else, so they are never obscured. */
 	private readonly comments: Layer;
 	readonly overlay: SVGGElement;
@@ -102,9 +106,12 @@ export class SceneRenderer {
 		// Links and their labels sit above the blocks, so a block drawn around other blocks (a container)
 		// never hides the links between the blocks inside it.
 		this.frames = new Layer(svgEl("g", { class: "bd-layer-frames" }, viewport));
+		this.connectorsBehind = new Layer(svgEl("g", { class: "bd-layer-connectors-behind" }, viewport));
+		this.labelsBehind = new Layer(svgEl("g", { class: "bd-layer-labels-behind" }, viewport));
 		this.blocks = new Layer(svgEl("g", { class: "bd-layer-blocks" }, viewport));
 		this.connectors = new Layer(svgEl("g", { class: "bd-layer-connectors" }, viewport));
 		this.labels = new Layer(svgEl("g", { class: "bd-layer-labels" }, viewport));
+		this.blocksFront = new Layer(svgEl("g", { class: "bd-layer-blocks-front" }, viewport));
 		this.comments = new Layer(svgEl("g", { class: "bd-layer-comments" }, viewport));
 		this.overlay = svgEl("g", { class: "bd-layer-overlay" }, viewport);
 	}
@@ -121,12 +128,21 @@ export class SceneRenderer {
 		return entry;
 	}
 
+	private layers(): Layer[] {
+		return [
+			this.frames,
+			this.connectorsBehind,
+			this.labelsBehind,
+			this.blocks,
+			this.connectors,
+			this.labels,
+			this.blocksFront,
+			this.comments,
+		];
+	}
+
 	reset(): void {
-		this.frames.clear();
-		this.connectors.clear();
-		this.labels.clear();
-		this.blocks.clear();
-		this.comments.clear();
+		for (const layer of this.layers()) layer.clear();
 		this.routes.clear();
 	}
 
@@ -150,6 +166,9 @@ export class SceneRenderer {
 		const labels: LayerItem[] = [];
 		const blocks: LayerItem[] = [];
 		const comments: LayerItem[] = [];
+		const connectorsBehind: LayerItem[] = [];
+		const labelsBehind: LayerItem[] = [];
+		const blocksFront: LayerItem[] = [];
 		const live = new Set<string>();
 		for (const el of ed.elements) {
 			const editing = ed.editingId === el.id;
@@ -160,7 +179,7 @@ export class SceneRenderer {
 				const linked = target ? ed.byId.get(target) : null;
 				const open = ed.presenter.commentOpen(el);
 				const shown = open === el.commentOpen ? el : { ...el, commentOpen: open };
-				blocks.push({ id: el.id, deps: [el, editing, linked, open], build: () => renderBlock(shown, opts) });
+				(el.inFront ? blocksFront : blocks).push({ id: el.id, deps: [el, editing, linked, open], build: () => renderBlock(shown, opts) });
 				if (el.comment.trim() && open) {
 					comments.push({ id: el.id, deps: [el, open], build: () => renderBlockCommentCallout(shown, opts) ?? h("g", {}) });
 				}
@@ -170,13 +189,15 @@ export class SceneRenderer {
 				live.add(el.id);
 				// Only links that flow both ways or backwards look different while a trace animates them.
 				const traced = !!trace?.connectors.has(el.id) && flowDirection(el.style) !== "forward";
-				connectors.push({
+				const linkLayer = el.behind ? connectorsBehind : connectors;
+				const labelLayer = el.behind ? labelsBehind : labels;
+				linkLayer.push({
 					id: el.id,
 					deps: [el, entry.from, entry.to, traced],
 					build: () => renderConnector(el, entry.from, entry.to, opts, entry.route),
 				});
 				if (el.label.trim()) {
-					labels.push({
+					labelLayer.push({
 						id: el.id,
 						deps: [el, entry.from, entry.to, editing],
 						build: () => renderConnectorLabel(el, entry.route, opts) ?? h("g", {}),
@@ -185,7 +206,7 @@ export class SceneRenderer {
 				if (el.comment.trim()) {
 					const open = ed.presenter.commentOpen(el);
 					const shown = open === el.commentOpen ? el : { ...el, commentOpen: open };
-					labels.push({
+					labelLayer.push({
 						id: `${el.id}:comment`,
 						deps: [el, entry.from, entry.to, open],
 						build: () => renderConnectorCommentBadge(shown, entry.route, opts) ?? h("g", {}),
@@ -202,9 +223,12 @@ export class SceneRenderer {
 		}
 		for (const id of this.routes.keys()) if (!live.has(id)) this.routes.delete(id);
 		this.frames.sync(frames);
+		this.connectorsBehind.sync(connectorsBehind);
+		this.labelsBehind.sync(labelsBehind);
 		this.connectors.sync(connectors);
 		this.labels.sync(labels);
 		this.blocks.sync(blocks);
+		this.blocksFront.sync(blocksFront);
 		this.comments.sync(comments);
 		this.applyTrace(trace);
 		this.renderOverlay();
@@ -223,7 +247,7 @@ export class SceneRenderer {
 			cl.toggle("bd-trace-down", !!trace?.downstream.has(id));
 			cl.toggle("bd-trace-path", !!trace?.connectors.has(id));
 		};
-		for (const layer of [this.connectors, this.labels, this.blocks, this.comments]) layer.forEach(mark);
+		for (const layer of this.layers()) if (layer !== this.frames) layer.forEach(mark);
 	}
 
 	private renderOverlay(): void {

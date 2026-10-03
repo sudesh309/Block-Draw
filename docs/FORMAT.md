@@ -20,7 +20,7 @@ This page lists every field, the value used when it is missing, and the release 
 The file format is Block Draw's public interface (see [ADR 0001](adr/0001-the-file-is-the-abi.md)):
 
 - A file written by any earlier release opens unchanged. New fields are optional and have defaults.
-- A field is never renamed, removed or given a new meaning.
+- A field is never renamed, removed or given a new meaning. A field marked "absent" below is written only when it is set; a file without it means the default behavior.
 - Unknown top-level keys are kept when the file is saved, so data written by a newer release survives a save by an older one. Unknown keys inside an element are not kept.
 - A missing value, a value of the wrong type or an out-of-range value falls back to the default below. An element that cannot be repaired is dropped (see [Repairs](#repairs-on-load)).
 
@@ -54,6 +54,7 @@ The file format is Block Draw's public interface (see [ADR 0001](adr/0001-the-fi
 | `tag` | string | `""` | 0.4.0 | Stereotype or technology shown above the title. |
 | `comment` | string | `""` | 0.2.0 | |
 | `commentOpen` | boolean | `false` | 0.2.0 | Whether the comment callout is shown. |
+| `inFront` | boolean | absent | 0.6.0 | `true` draws the block above the links instead of below them (see [stacking](#stacking)). Written only when true. |
 | `style.fill` | color | `"#a5d8ff"` | 0.1.0 | See [colors](#colors). |
 | `style.stroke` | color | `"default"` | 0.1.0 | |
 | `style.strokeWidth` | number | `2` | 0.1.0 | At least 0. |
@@ -94,6 +95,8 @@ The file format is Block Draw's public interface (see [ADR 0001](adr/0001-the-fi
 | `routing` | routing | `"elbow"` | 0.1.0 | |
 | `comment` | string | `""` | 0.2.0 | |
 | `commentOpen` | boolean | `false` | 0.2.0 | |
+| `waypoints` | array of points | absent | 0.6.0 | Points the link passes through, in order, as `{"x":…,"y":…}` in canvas units: the link's own route instead of the automatic one. At most 32; written only when there are some. |
+| `behind` | boolean | absent | 0.6.0 | `true` draws the link below the blocks instead of above them (see [stacking](#stacking)). Written only when true. |
 | `style.stroke` | color | `"default"` | 0.1.0 | |
 | `style.strokeWidth` | number | `2` | 0.1.0 | At least 0.5. |
 | `style.strokeStyle` | stroke style | `"solid"` | 0.1.0 | |
@@ -101,6 +104,10 @@ The file format is Block Draw's public interface (see [ADR 0001](adr/0001-the-fi
 | `style.endArrow` | arrowhead | `"arrow"` | 0.1.0 | |
 | `style.threeD` | boolean | `false` | 0.4.0 | Draws the line as a raised tube. |
 | `style.flow` | boolean | `false` | 0.4.0 | Animates the line in its direction; with arrowheads at both ends it runs both ways. |
+
+## Stacking
+
+Frames are drawn first, below everything. Above them, from back to front: links with `behind`, blocks, links, and blocks with `inFront`. Within one of these levels, the order of the elements in the file decides: later elements are drawn on top. A drawing that uses neither flag looks as it always did: links above blocks, so a block drawn around other blocks never hides the links between them. Bring to front and send to back in the editor set and clear the flags.
 
 ## Value sets
 

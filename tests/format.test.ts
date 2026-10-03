@@ -82,6 +82,13 @@ function normalizeOne(raw: Record<string, unknown>): DrawElement {
 	return el;
 }
 
+/** A value to set on each field that a file only contains when it is set (its default cell says "absent"). */
+const OPTIONAL_SAMPLES: Record<string, unknown> = {
+	"block.inFront": true,
+	"connector.behind": true,
+	"connector.waypoints": [{ x: 10, y: -20.5 }],
+};
+
 const SECTIONS = [
 	["Block", "block"],
 	["Frame", "frame"],
@@ -91,9 +98,16 @@ const SECTIONS = [
 describe("docs/FORMAT.md", () => {
 	for (const [heading, type] of SECTIONS) {
 		it(`documents every ${type} field, and its default matches the parser`, () => {
-			const rows = tableRows(heading);
+			const all = tableRows(heading);
+			const rows = all.filter((r) => r.defaultCell !== "absent");
 			const el = normalizeOne(RAW[type]);
 			expect(rows.map((r) => r.field).sort()).toEqual(leafPaths(el).sort());
+			for (const row of all.filter((r) => r.defaultCell === "absent")) {
+				const sample = OPTIONAL_SAMPLES[`${type}.${row.field}`];
+				expect(sample, `a sample value for optional ${type}.${row.field}`).toBeDefined();
+				expect(get(el, row.field), `${type}.${row.field} is not written by default`).toBeUndefined();
+				expect(get(normalizeOne(withValue(RAW[type], row.field, sample)), row.field)).toEqual(sample);
+			}
 			for (const row of rows) {
 				const literal = /^`(.*)`$/.exec(row.defaultCell);
 				if (!literal) continue; // "required", "a new random id"

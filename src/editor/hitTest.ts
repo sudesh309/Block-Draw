@@ -42,61 +42,32 @@ export function hitTest(ed: Editor, p: Point): Hit | null {
 		}
 	}
 
-	// Connector comment badges and labels sit above blocks.
-	for (let i = ed.elements.length - 1; i >= 0; i--) {
-		const e = ed.elements[i];
-		if (!isConnector(e)) continue;
-		const r = ed.renderer.route(e);
-		if (!r) continue;
-		if (e.comment.trim()) {
-			const badge = connectorCommentBadgeRect(e, r.route);
-			if (p.x >= badge.x && p.x <= badge.x + badge.width && p.y >= badge.y && p.y <= badge.y + badge.height) {
-				return { kind: "comment-badge", id: e.id };
-			}
-		}
-		if (!e.label.trim()) continue;
-		const box = labelBox(e, r.route);
-		if (p.x >= box.x && p.x <= box.x + box.width && p.y >= box.y && p.y <= box.y + box.height) {
-			return { kind: "connector", id: e.id, label: true };
-		}
-	}
+	// Top to bottom, as drawn (model/stack.ts): blocks in front of the links, the links' labels, the
+	// blocks, the links, and last the links that were sent behind the blocks.
+	const front = pickBlock(ed, p, true);
+	if (front) return "hit" in front ? front.hit : { kind: "block", id: front.blockId };
+	const label = pickLinkLabel(ed, p, false);
+	if (label) return label;
+	const normal = pickBlock(ed, p, false);
+	if (normal && "hit" in normal) return normal.hit;
+	const blockId = normal ? normal.blockId : null;
 
-	let blockId: string | null = null;
-	for (let i = ed.elements.length - 1; i >= 0; i--) {
-		const e = ed.elements[i];
-		if (!isBlock(e)) continue;
-		if (e.link && p.x >= e.x + e.width - 22 && p.x <= e.x + e.width && p.y >= e.y && p.y <= e.y + 22) {
-			if (shapeContains("rectangle", e, p)) return { kind: "link-badge", id: e.id };
-		}
-		if (e.comment.trim()) {
-			const b = blockCommentBadgeBox(e);
-			if (p.x >= e.x + b.x && p.x <= e.x + b.x + b.size && p.y >= e.y + b.y && p.y <= e.y + b.y + b.size) {
-				return { kind: "comment-badge", id: e.id };
-			}
-		}
-		if (shapeContains(e.shape, e, p)) {
-			blockId = e.id;
-			break;
-		}
-	}
-
-	let bestConn: { id: string; d: number } | null = null;
-	for (const e of ed.elements) {
-		if (!isConnector(e)) continue;
-		const r = ed.renderer.route(e);
-		if (!r) continue;
-		const d = distanceToRoute(r.route, p);
-		if (d <= Math.max(tolerance, e.style.strokeWidth) && (!bestConn || d < bestConn.d)) bestConn = { id: e.id, d };
-	}
-	if (bestConn) {
+	const lineId = pickLinkLine(ed, p, false, tolerance);
+	if (lineId) {
 		// Links are drawn above blocks, so one that runs across a block (such as the container around
 		// both of its ends) wins over it. Its own end blocks keep their clicks so they stay easy to grab.
-		const link = ed.byId.get(bestConn.id);
+		const link = ed.byId.get(lineId);
 		if (blockId === null || (isConnector(link) && link.from.id !== blockId && link.to.id !== blockId)) {
-			return { kind: "connector", id: bestConn.id, label: false };
+			return { kind: "connector", id: lineId, label: false };
 		}
 	}
 	if (blockId !== null) return { kind: "block", id: blockId };
+
+	// A link behind the blocks can only be reached where no block covers it.
+	const hiddenLabel = pickLinkLabel(ed, p, true);
+	if (hiddenLabel) return hiddenLabel;
+	const hiddenLine = pickLinkLine(ed, p, true, tolerance);
+	if (hiddenLine) return { kind: "connector", id: hiddenLine, label: false };
 
 	for (let i = ed.elements.length - 1; i >= 0; i--) {
 		const e = ed.elements[i];
@@ -120,11 +91,69 @@ export function hitTest(ed: Editor, p: Point): Hit | null {
 	return null;
 }
 
-/** Topmost block at a point (used as drop target while connecting). */
-export function blockAt(ed: Editor, p: Point, exclude?: string, margin = 0): BlockElement | null {
+type BlockPick = { hit: Hit } | { blockId: string };
+
+/** The topmost block among those in front of the links (or among the others) at a point: its badges, then its shape. */
+function pickBlock(ed: Editor, p: Point, inFront: boolean): BlockPick | null {
 	for (let i = ed.elements.length - 1; i >= 0; i--) {
 		const e = ed.elements[i];
-		if (isBlock(e) && e.id !== exclude && shapeContains(e.shape, e, p, margin)) return e;
+		if (!isBlock(e) || !!e.inFront !== inFront) continue;
+		if (e.link && p.x >= e.x + e.width - 22 && p.x <= e.x + e.width && p.y >= e.y && p.y <= e.y + 22) {
+			if (shapeContains("rectangle", e, p)) return { hit: { kind: "link-badge", id: e.id } };
+		}
+		if (e.comment.trim()) {
+			const b = blockCommentBadgeBox(e);
+			if (p.x >= e.x + b.x && p.x <= e.x + b.x + b.size && p.y >= e.y + b.y && p.y <= e.y + b.y + b.size) {
+				return { hit: { kind: "comment-badge", id: e.id } };
+			}
+		}
+		if (shapeContains(e.shape, e, p)) return { blockId: e.id };
+	}
+	return null;
+}
+
+/** A comment badge or label of a link under the point; `behind` picks the links sent behind the blocks. */
+function pickLinkLabel(ed: Editor, p: Point, behind: boolean): Hit | null {
+	for (let i = ed.elements.length - 1; i >= 0; i--) {
+		const e = ed.elements[i];
+		if (!isConnector(e) || !!e.behind !== behind) continue;
+		const r = ed.renderer.route(e);
+		if (!r) continue;
+		if (e.comment.trim()) {
+			const badge = connectorCommentBadgeRect(e, r.route);
+			if (p.x >= badge.x && p.x <= badge.x + badge.width && p.y >= badge.y && p.y <= badge.y + badge.height) {
+				return { kind: "comment-badge", id: e.id };
+			}
+		}
+		if (!e.label.trim()) continue;
+		const box = labelBox(e, r.route);
+		if (p.x >= box.x && p.x <= box.x + box.width && p.y >= box.y && p.y <= box.y + box.height) {
+			return { kind: "connector", id: e.id, label: true };
+		}
+	}
+	return null;
+}
+
+/** The link line closest to the point, if one is within reach. */
+function pickLinkLine(ed: Editor, p: Point, behind: boolean, tolerance: number): string | null {
+	let best: { id: string; d: number } | null = null;
+	for (const e of ed.elements) {
+		if (!isConnector(e) || !!e.behind !== behind) continue;
+		const r = ed.renderer.route(e);
+		if (!r) continue;
+		const d = distanceToRoute(r.route, p);
+		if (d <= Math.max(tolerance, e.style.strokeWidth) && (!best || d < best.d)) best = { id: e.id, d };
+	}
+	return best ? best.id : null;
+}
+
+/** Topmost block at a point (used as drop target while connecting). */
+export function blockAt(ed: Editor, p: Point, exclude?: string, margin = 0): BlockElement | null {
+	for (const inFront of [true, false]) {
+		for (let i = ed.elements.length - 1; i >= 0; i--) {
+			const e = ed.elements[i];
+			if (isBlock(e) && !!e.inFront === inFront && e.id !== exclude && shapeContains(e.shape, e, p, margin)) return e;
+		}
 	}
 	return null;
 }
