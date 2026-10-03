@@ -1,18 +1,9 @@
 import { snap, unionBounds, type Point } from "../geometry/geom";
 import { traceDependencies, type DependencyTrace } from "../model/graph";
 import { History, type HistoryEntry } from "../model/history";
-import { newId } from "../model/ids";
 import { frameLink, parseLink } from "../model/links";
+import { indexById, updateElements, type ElementPatch, type ZOrderMode } from "../model/ops";
 import {
-	assignFrames,
-	indexById,
-	refreshFrameMembership,
-	updateElements,
-	type ElementPatch,
-	type ZOrderMode,
-} from "../model/ops";
-import {
-	DEFAULT_BLOCK_SIZE,
 	DEFAULT_BLOCK_STYLE,
 	DEFAULT_CONNECTOR_STYLE,
 	DEFAULT_FRAME_STYLE,
@@ -33,14 +24,14 @@ import {
 	type Routing,
 	type Side,
 } from "../model/types";
-import { type DrawingThemeId } from "../model/themes";
+import type { DrawingThemeId } from "../model/themes";
 import type { PaletteId } from "../render/colors";
-import { contentBounds } from "../render/scene";
 import { frameTitleMetrics } from "../render/elements";
 import { clearTextMeasureCache } from "../render/text";
 import { ClipboardController } from "./clipboard";
 import { shortcut } from "./commands";
 import { showContextMenu } from "./contextMenu";
+import { addBlockAt, addFrame, addFrameAfterContent, connect, createConnectedBlock, insertBlocks, makeBlock } from "./create";
 import {
 	alignSelection,
 	applyBlockStyle,
@@ -606,91 +597,29 @@ export class Editor {
 	}
 
 	makeBlock(bounds: Bounds, patch: Partial<BlockElement> = {}): BlockElement {
-		return {
-			id: newId(),
-			type: "block",
-			x: bounds.x,
-			y: bounds.y,
-			width: Math.max(20, bounds.width),
-			height: Math.max(20, bounds.height),
-			title: "",
-			description: "",
-			descriptionOpen: true,
-			shape: this.toolShape,
-			frameId: null,
-			link: null,
-			tag: "",
-			comment: "",
-			commentOpen: false,
-			style: { ...this.current.block },
-			...patch,
-		};
+		return makeBlock(this, bounds, patch);
 	}
 
 	/** Adds a default-size block centered on `p` and starts editing its title. */
 	addBlockAt(p: Point, opts: { shape?: BlockShape; edit?: boolean } = {}): BlockElement {
-		const shape = opts.shape ?? (this.tool === "block" ? this.toolShape : this.current.shape);
-		const { width, height } = DEFAULT_BLOCK_SIZE;
-		const topLeft = this.snapPoint({ x: p.x - width / 2, y: p.y - height / 2 });
-		const block = this.makeBlock({ x: topLeft.x, y: topLeft.y, width, height }, { shape });
-		this.insertBlocks([block]);
-		if (opts.edit !== false) this.textEditor.start(block.id);
-		return this.byId.get(block.id) as BlockElement;
+		return addBlockAt(this, p, opts);
 	}
 
 	insertBlocks(blocks: BlockElement[], extra: DrawElement[] = []): void {
-		const next = assignFrames([...this.elements, ...blocks, ...extra], blocks.map((b) => b.id));
-		this.commit(next, { selection: blocks.map((b) => b.id) });
+		insertBlocks(this, blocks, extra);
 	}
 
 	addFrame(bounds: Bounds, opts: { edit?: boolean } = {}): FrameElement {
-		const n = this.frames().length + 1;
-		let title = `Frame ${n}`;
-		const titles = new Set(this.frames().map((f) => f.title.toLowerCase()));
-		for (let i = n; titles.has(title.toLowerCase()); i++) title = `Frame ${i + 1}`;
-		const frame: FrameElement = {
-			id: newId(),
-			type: "frame",
-			...bounds,
-			title,
-			description: "",
-			style: { ...this.current.frame },
-		};
-		// Frames go below existing frames' content in the array but after other frames.
-		const next = refreshFrameMembership([...this.elements, frame], frame.id);
-		this.commit(next, { selection: [frame.id] });
-		if (opts.edit) this.textEditor.start(frame.id);
-		return frame;
+		return addFrame(this, bounds, opts);
 	}
 
 	/** Adds a frame to the right of all existing content and navigates to it. */
 	addFrameAfterContent(): FrameElement {
-		const b = contentBounds(this.elements);
-		const size = this.viewSize();
-		const width = Math.max(480, Math.round((size.width * 0.6) / this.vp.zoom / 20) * 20);
-		const height = Math.max(320, Math.round((size.height * 0.6) / this.vp.zoom / 20) * 20);
-		const x = b ? this.snapValue(b.x + b.width + 80) : 0;
-		const y = b ? this.snapValue(b.y + 40) : 0;
-		const frame = this.addFrame({ x, y, width, height });
-		this.navigateToFrame(frame.id, { remember: false, select: true });
-		return frame;
+		return addFrameAfterContent(this);
 	}
 
 	connect(fromId: string, toId: string, opts: { fromSide?: AnchorSide; toSide?: AnchorSide; select?: boolean } = {}): ConnectorElement | null {
-		if (fromId === toId) return null;
-		const conn: ConnectorElement = {
-			id: newId(),
-			type: "connector",
-			from: { id: fromId, side: opts.fromSide ?? "auto" },
-			to: { id: toId, side: opts.toSide ?? "auto" },
-			label: "",
-			routing: this.current.routing,
-			comment: "",
-			commentOpen: false,
-			style: { ...this.current.connector },
-		};
-		this.commit([...this.elements, conn], { selection: opts.select ? [conn.id] : this.selection });
-		return conn;
+		return connect(this, fromId, toId, opts);
 	}
 
 	/**
@@ -698,39 +627,7 @@ export class Editor {
 	 * then starts editing its title. Mirrors draw.io's quick-connect.
 	 */
 	createConnectedBlock(fromId: string, side: Side | null, at?: Point): BlockElement | null {
-		const from = this.byId.get(fromId);
-		if (!isBlock(from)) return null;
-		const gap = 80;
-		let x: number;
-		let y: number;
-		if (at) {
-			x = at.x - from.width / 2;
-			y = at.y - from.height / 2;
-		} else {
-			const s = side ?? "right";
-			x = s === "right" ? from.x + from.width + gap : s === "left" ? from.x - from.width - gap : from.x;
-			y = s === "bottom" ? from.y + from.height + gap : s === "top" ? from.y - from.height - gap : from.y;
-		}
-		const pos = this.snapPoint({ x, y });
-		const block: BlockElement = {
-			...this.makeBlock({ x: pos.x, y: pos.y, width: from.width, height: from.height }),
-			shape: from.shape,
-			style: { ...from.style },
-		};
-		const conn: ConnectorElement = {
-			id: newId(),
-			type: "connector",
-			from: { id: from.id, side: "auto" },
-			to: { id: block.id, side: "auto" },
-			label: "",
-			routing: this.current.routing,
-			comment: "",
-			commentOpen: false,
-			style: { ...this.current.connector },
-		};
-		this.insertBlocks([block], [conn]);
-		this.textEditor.start(block.id);
-		return block;
+		return createConnectedBlock(this, fromId, side, at);
 	}
 
 	/* ============================================================ edits */
