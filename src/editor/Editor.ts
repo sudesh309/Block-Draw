@@ -1,23 +1,12 @@
-import {
-	snap,
-	unionBounds,
-	type Point,
-} from "../geometry/geom";
+import { snap, unionBounds, type Point } from "../geometry/geom";
 import { traceDependencies, type DependencyTrace } from "../model/graph";
 import { History, type HistoryEntry } from "../model/history";
 import { newId } from "../model/ids";
 import { frameLink, parseLink } from "../model/links";
 import {
 	assignFrames,
-	cloneElements,
-	collectForCopy,
-	deleteElements,
-	expandMoveSet,
 	indexById,
-	insertClones,
 	refreshFrameMembership,
-	reorderElements,
-	translateElements,
 	updateElements,
 	type ElementPatch,
 	type ZOrderMode,
@@ -44,7 +33,7 @@ import {
 	type Routing,
 	type Side,
 } from "../model/types";
-import { applyDrawingTheme, drawingThemeById, type DrawingThemeId } from "../model/themes";
+import { type DrawingThemeId } from "../model/themes";
 import type { PaletteId } from "../render/colors";
 import { contentBounds } from "../render/scene";
 import { frameTitleMetrics } from "../render/elements";
@@ -52,6 +41,22 @@ import { clearTextMeasureCache } from "../render/text";
 import { ClipboardController } from "./clipboard";
 import { shortcut } from "./commands";
 import { showContextMenu } from "./contextMenu";
+import {
+	alignSelection,
+	applyBlockStyle,
+	applyConnectorStyle,
+	applyFrameStyle,
+	applyRouting,
+	applyShape,
+	applyTheme,
+	deleteSelection,
+	distributeSelection,
+	duplicateSelection,
+	nudge,
+	reorderSelection,
+	reverseConnector,
+	toggle3D,
+} from "./edits";
 import { el, svgEl } from "./dom";
 import type { EditorHost } from "./host";
 import { blockAt, hitTest, sideNear } from "./hitTest";
@@ -521,40 +526,12 @@ export class Editor {
 	 * one undo step, and makes it the style for new elements.
 	 */
 	applyTheme(id: DrawingThemeId): void {
-		const theme = drawingThemeById(id);
-		if (!theme || this.options.readOnly) return;
-		const scope = this.selection.size ? new Set(this.selection) : undefined;
-		this.commit(applyDrawingTheme(this.elements, theme, scope));
-		this.current.block = {
-			...this.current.block,
-			fill: theme.fills[0],
-			stroke: theme.strokes[0],
-			strokeWidth: theme.strokeWidth,
-			textColor: "auto",
-			threeD: theme.threeD,
-		};
-		this.current.connector = {
-			...this.current.connector,
-			stroke: theme.connector === "source" ? theme.strokes[0] : theme.connector,
-			strokeWidth: theme.connectorWidth,
-			threeD: theme.threeD,
-		};
-		this.current.frame = { fill: theme.frameFill, stroke: theme.frameStroke };
-		this.palette = id === "futuristic" ? "futuristic" : id === "classic" ? "classic" : id === "minimal" ? "minimal" : "3d";
-		this.props.refresh();
-		this.host.notice(`Applied the ${theme.name} theme to ${scope ? "the selection" : "the drawing"}. Undo with ${shortcut("undo")}.`);
+		applyTheme(this, id);
 	}
 
 	/** Turns the 3D effect on or off for the selected blocks and connectors (all when none). */
 	toggle3D(): void {
-		if (this.options.readOnly) return;
-		const targets = this.selection.size ? this.selectedElements() : this.elements;
-		const items = targets.filter((e): e is BlockElement | ConnectorElement => isBlock(e) || isConnector(e));
-		if (!items.length) return;
-		const on = !items.every((e) => e.style.threeD);
-		const patches = new Map<string, ElementPatch>();
-		for (const e of items) patches.set(e.id, { style: { ...e.style, threeD: on } } as ElementPatch);
-		this.commit(updateElements(this.elements, patches));
+		toggle3D(this);
 	}
 
 	/* ========================================================= selection */
@@ -759,38 +736,19 @@ export class Editor {
 	/* ============================================================ edits */
 
 	deleteSelection(): void {
-		if (!this.selection.size) return;
-		this.commit(deleteElements(this.elements, this.selection), { selection: [] });
+		deleteSelection(this);
 	}
 
 	duplicateSelection(): void {
-		if (!this.selection.size) return;
-		const picked = collectForCopy(this.elements, this.selection);
-		if (!picked.length) return;
-		const offset = this.options.gridSize || 20;
-		const { elements, idMap } = cloneElements(picked, offset, offset);
-		const next = insertClones(this.elements, elements, new Set(elements.map((e) => e.id)));
-		const newSel = [...this.selection].map((id) => idMap.get(id)).filter((id): id is string => !!id);
-		this.commit(next, { selection: newSel });
+		duplicateSelection(this);
 	}
 
 	nudge(dx: number, dy: number): void {
-		const ids = [...this.selection];
-		if (!ids.length) return;
-		const moveSet = expandMoveSet(this.elements, ids);
-		if (!moveSet.size) return;
-		let next = translateElements(this.elements, moveSet, dx, dy);
-		const direct = ids.filter((id) => {
-			const e = this.byId.get(id);
-			return isBlock(e) && !(e.frameId && moveSet.has(e.frameId) && this.selection.has(e.frameId));
-		});
-		next = assignFrames(next, direct);
-		this.commit(next);
+		nudge(this, dx, dy);
 	}
 
 	reorderSelection(mode: ZOrderMode): void {
-		if (!this.selection.size) return;
-		this.commit(reorderElements(this.elements, this.selection, mode));
+		reorderSelection(this, mode);
 	}
 
 	updateElement(id: string, patch: ElementPatch, opts: CommitOptions = {}): void {
@@ -799,53 +757,27 @@ export class Editor {
 
 	/** Applies a block style change to the selected blocks and remembers it for new blocks. */
 	applyBlockStyle(patch: Partial<BlockStyle>): void {
-		this.current.block = { ...this.current.block, ...patch };
-		const patches = new Map<string, ElementPatch>();
-		for (const b of this.selectedBlocks()) patches.set(b.id, { style: { ...b.style, ...patch } });
-		if (patches.size) this.commit(updateElements(this.elements, patches));
-		else this.requestRender();
+		applyBlockStyle(this, patch);
 	}
 
 	applyShape(shape: BlockShape): void {
-		this.current.shape = shape;
-		if (this.tool === "block") this.toolShape = shape;
-		const patches = new Map<string, ElementPatch>();
-		for (const b of this.selectedBlocks()) patches.set(b.id, { shape });
-		if (patches.size) this.commit(updateElements(this.elements, patches));
-		else this.requestRender();
+		applyShape(this, shape);
 	}
 
 	applyConnectorStyle(patch: Partial<ConnectorStyle>): void {
-		this.current.connector = { ...this.current.connector, ...patch };
-		const patches = new Map<string, ElementPatch>();
-		for (const c of this.selectedConnectors()) patches.set(c.id, { style: { ...c.style, ...patch } });
-		if (patches.size) this.commit(updateElements(this.elements, patches));
-		else this.requestRender();
+		applyConnectorStyle(this, patch);
 	}
 
 	applyRouting(routing: Routing): void {
-		this.current.routing = routing;
-		const patches = new Map<string, ElementPatch>();
-		for (const c of this.selectedConnectors()) patches.set(c.id, { routing });
-		if (patches.size) this.commit(updateElements(this.elements, patches));
-		else this.requestRender();
+		applyRouting(this, routing);
 	}
 
 	applyFrameStyle(patch: Partial<FrameStyle>): void {
-		this.current.frame = { ...this.current.frame, ...patch };
-		const patches = new Map<string, ElementPatch>();
-		for (const f of this.selectedFrames()) patches.set(f.id, { style: { ...f.style, ...patch } });
-		if (patches.size) this.commit(updateElements(this.elements, patches));
+		applyFrameStyle(this, patch);
 	}
 
 	reverseConnector(id: string): void {
-		const c = this.byId.get(id);
-		if (!isConnector(c)) return;
-		this.updateElement(id, {
-			from: c.to,
-			to: c.from,
-			style: { ...c.style, startArrow: c.style.endArrow, endArrow: c.style.startArrow },
-		});
+		reverseConnector(this, id);
 	}
 
 	/** Opens the link picker for a block. */
@@ -880,42 +812,11 @@ export class Editor {
 
 	/** Aligns selected boxes (blocks and frames). */
 	alignSelection(mode: "left" | "center" | "right" | "top" | "middle" | "bottom"): void {
-		const boxes = this.elements.filter((e): e is BlockElement | FrameElement => isBox(e) && this.selection.has(e.id));
-		if (boxes.length < 2) return;
-		const ub = unionBounds(boxes) as Bounds;
-		let next = this.elements;
-		for (const b of boxes) {
-			let dx = 0;
-			let dy = 0;
-			if (mode === "left") dx = ub.x - b.x;
-			if (mode === "right") dx = ub.x + ub.width - (b.x + b.width);
-			if (mode === "center") dx = ub.x + ub.width / 2 - (b.x + b.width / 2);
-			if (mode === "top") dy = ub.y - b.y;
-			if (mode === "bottom") dy = ub.y + ub.height - (b.y + b.height);
-			if (mode === "middle") dy = ub.y + ub.height / 2 - (b.y + b.height / 2);
-			if (dx || dy) next = translateElements(next, expandMoveSet(next, [b.id]), dx, dy);
-		}
-		next = assignFrames(next, boxes.filter(isBlock).map((b) => b.id));
-		this.commit(next);
+		alignSelection(this, mode);
 	}
 
 	distributeSelection(axis: "h" | "v"): void {
-		const boxes = this.elements.filter((e): e is BlockElement | FrameElement => isBox(e) && this.selection.has(e.id));
-		if (boxes.length < 3) return;
-		const sorted = [...boxes].sort((a, b) => (axis === "h" ? a.x - b.x : a.y - b.y));
-		const first = sorted[0];
-		const last = sorted[sorted.length - 1];
-		const total = sorted.reduce((s, b) => s + (axis === "h" ? b.width : b.height), 0);
-		const span = axis === "h" ? last.x + last.width - first.x : last.y + last.height - first.y;
-		const gap = (span - total) / (sorted.length - 1);
-		let cursor = axis === "h" ? first.x : first.y;
-		let next = this.elements;
-		for (const b of sorted) {
-			const delta = cursor - (axis === "h" ? b.x : b.y);
-			if (delta) next = translateElements(next, expandMoveSet(next, [b.id]), axis === "h" ? delta : 0, axis === "v" ? delta : 0);
-			cursor += (axis === "h" ? b.width : b.height) + gap;
-		}
-		this.commit(assignFrames(next, sorted.filter(isBlock).map((b) => b.id)));
+		distributeSelection(this, axis);
 	}
 
 	/* ======================================================= context menu */
