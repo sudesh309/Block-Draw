@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1
+
+- **The show/hide eyes are visible on dark themes again.** With a dark accent color on a dark theme, or a dark theme whose secondary text is very dim, the eyes next to Description and Comment in the side panel could not be seen (light themes were fine). The same went for the active tool, the selected option in a row of options, and the shortcut keys in the help panel. On dark themes these now use a lightened accent, and the hidden eye follows the theme's normal text color. Light themes look as before.
+
 ## 0.6.0
 
 - **Bend a link.** Select a link and drag one of the small dots on it: the link now passes through the point where you drop it. Add as many bends as you need, drag a filled dot to move a bend, double-click it to remove it, or press **Reset route** (in the panel or the right-click menu) to let the line find its own way again. Elbow links keep their right angles, curved links stay smooth, and the bends move and copy together with the blocks. Each change is one undo step. Double-clicking the middle of a link still edits its label.
