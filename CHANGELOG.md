@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+Tablet mode gets the pen features from issue #11. Nothing changes on a computer or with tablet mode off, apart from the new Eraser tool.
+
+- **The pen's button erases.** In tablet mode, hold the pen's button (or use the eraser end of a pen that has one) and draw over blocks and links: they turn red, and are deleted together when you lift the pen, in one undo step. A block takes its links with it, as with the Delete key; frames are never erased this way. The button no longer opens the context menu; a long press still does.
+- **Test your pen** in **Settings → Block Draw → Touch and pen** shows what your device reports for a pen, a finger or the mouse, so you can check that holding the button says “erases”.
+- **A hand resting on the screen is ignored** while the pen draws, and for a moment after it lifts. If the hand touched down first and moved something, that is undone as soon as the pen touches the screen.
+- **One finger: draws or moves the drawing.** A new setting for tablet mode. **Draws** works as before. **Moves the drawing** lets a finger drag pan the drawing, so you draw with the pen; taps and double taps work as before.
+- **Hide the properties panel.** In tablet mode the toolbar has a button that hides the panel, which otherwise opens with every selection, and shows it again.
+- **Eraser tool (E)**, on every device: drag over blocks and links with the mouse, a finger or a pen to erase them. Frames stay, and Esc during a stroke keeps everything.
+
 ## 0.6.2
 
 - **Tablet mode: drawing with a finger or pen no longer opens Obsidian's menus.** On a phone or tablet, Obsidian opens the left sidebar when a finger moves quickly to the right, the right sidebar when it moves to the left, and the quick switcher when it moves down. Inside a drawing that movement is drawing, so moving a block or drawing a frame kept opening them, with a finger and with a pen. Tablet mode keeps these gestures out of the drawing; swipe in from the very edge of the screen to open a sidebar. It is a new setting under **Settings → Block Draw → Touch and pen**: **Automatic** (the default) turns it on for phones and tablets and leaves computers as they were, and **On** and **Off** choose for yourself. Long-press menus, double-tap and pinch to zoom work as before.
