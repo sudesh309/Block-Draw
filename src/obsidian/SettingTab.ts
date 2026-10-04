@@ -14,8 +14,9 @@ import { getPath, setPath, type SettingDef } from "../kernel/settings";
 import { GOOGLE_SCOPE } from "./googleAuth";
 import { confirmAppsScriptUrl } from "./exports";
 import { obsidianHttp } from "./net";
+import { penTestPad } from "./penTest";
 import type { BlockDrawHost } from "./plugin";
-import { settingDef, type BlockDrawSettings, type SettingKey } from "./settings";
+import { settingDef, tabletModeOn, type BlockDrawSettings, type SettingKey } from "./settings";
 
 const DECLARATIVE_SETTINGS = "1.13.0";
 
@@ -209,7 +210,17 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 	}
 
 	private touchRows(): Row[] {
-		return [this.row("tabletMode")];
+		const tablet = () => tabletModeOn(this.s.tabletMode, Platform.isMobile);
+		return [
+			this.row("tabletMode", { changed: () => this.refresh() }),
+			this.row("fingerAction", { visible: tablet }),
+			{
+				name: "Test your pen",
+				desc: "Touch the box with your pen, a finger or the mouse to see what this device reports. With the pen's button held down, it should say “erases”.",
+				visible: tablet,
+				render: (st) => penTestPad(st.controlEl),
+			},
+		];
 	}
 
 	private exportRows(): Row[] {

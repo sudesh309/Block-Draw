@@ -50,6 +50,7 @@ function changedSettings(): BlockDrawSettings {
 	s.snapToGrid = false;
 	s.webFonts = true;
 	s.tabletMode = "on";
+	s.fingerAction = "pan";
 	s.jsonFormat = "raw";
 	s.sheets.method = "oauth";
 	s.sheets.appsScriptSecret = "s3cret";

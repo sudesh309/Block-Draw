@@ -830,6 +830,31 @@ test("tablet mode keeps Obsidian's swipe gestures out of a drawing on a phone or
 		assert.equal(await swipe(...down), "nothing", "a stroke down draws instead of pulling down the quick switcher");
 		assert.equal(await swipe(...fromLeftEdge), "left sidebar", "a swipe from the edge of the screen still opens the sidebar");
 		await shot("e2e-14-tablet-mode");
+		await page.evaluate(() => window.app.workspace.leftSplit.collapse());
+		await sleep(500);
+
+		// The pen's button erases what the pen draws over, and opens no menu.
+		const ids = await editorEval((ed) => {
+			const a = ed.makeBlock({ x: 0, y: 0, width: 140, height: 70 }, { title: "Erase me" });
+			const b = ed.makeBlock({ x: 300, y: 0, width: 140, height: 70 }, { title: "Keep me" });
+			ed.insertBlocks([a, b]);
+			ed.setSelection([]);
+			ed.zoomToFit({ animate: false });
+			return { a: a.id, b: b.id };
+		});
+		await frame();
+		const from = await toPage({ x: 20, y: 35 });
+		const to = await toPage({ x: 120, y: 35 });
+		const pen = (type, p, buttons) => cdp.send("Input.dispatchMouseEvent", { type, x: p.x, y: p.y, button: "right", buttons, pointerType: "pen", clickCount: type === "mouseMoved" ? 0 : 1 });
+		await pen("mousePressed", from, 2);
+		for (let i = 1; i <= 6; i++) await pen("mouseMoved", { x: from.x + ((to.x - from.x) * i) / 6, y: from.y }, 2);
+		await pen("mouseReleased", to, 0);
+		await frame();
+		const left = (await elements()).map((e) => e.id);
+		assert.ok(!left.includes(ids.a), "the pen's button erased the block it drew over");
+		assert.ok(left.includes(ids.b), "the other block stays");
+		assert.equal(await page.isVisible(".menu"), false, "no context menu");
+		assert.equal(await page.locator('.bd-toolbar .bd-btn[aria-label="Properties panel"]:visible').count(), 1, "the toolbar has the properties button");
 
 		// Off: Obsidian gets the strokes again, as before tablet mode.
 		await setTabletMode("off");

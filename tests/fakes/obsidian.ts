@@ -62,6 +62,8 @@ export class Setting {
 		empty: () => {
 			this.controls.length = 0;
 		},
+		/** Custom controls (the pen test box) are built from a div. */
+		createDiv: () => ({ addEventListener: () => {}, setText: () => {}, toggleClass: () => {} }),
 	};
 
 	constructor(containerEl?: FakeContainer) {

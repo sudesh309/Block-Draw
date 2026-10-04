@@ -1,3 +1,4 @@
+import type { EditorOptions } from "../editor/types";
 import type { JsonExportFormat } from "../export/json";
 import { settingDefaults, type SettingDef } from "../kernel/settings";
 
@@ -40,6 +41,8 @@ export interface BlockDrawSettings {
 	webFonts: boolean;
 	/** Touch and pen behavior for drawing on a tablet or phone. */
 	tabletMode: TabletMode;
+	/** In tablet mode, what dragging one finger does. */
+	fingerAction: EditorOptions["fingerAction"];
 	sheets: SheetsSettings;
 }
 
@@ -96,12 +99,23 @@ export const SETTINGS: readonly (SettingDef & { key: SettingKey })[] = [
 		key: "tabletMode",
 		type: "choice",
 		name: "Tablet mode",
-		desc: "On: moving a finger or pen across a drawing draws, and no longer opens Obsidian's sidebars or pull-down menu. To open a sidebar from a drawing, swipe in from the very edge of the screen. Automatic: on for phones and tablets.",
+		desc: "On: moving a finger or pen across a drawing draws, and no longer opens Obsidian's sidebars or pull-down menu (to open a sidebar from a drawing, swipe in from the very edge of the screen). The pen's button or eraser end erases, a hand resting on the screen while the pen draws is ignored, and the toolbar gets a button that hides the properties panel. Automatic: on for phones and tablets.",
 		default: "auto",
 		options: [
 			{ value: "auto", label: "Automatic" },
 			{ value: "on", label: "On" },
 			{ value: "off", label: "Off" },
+		],
+	},
+	{
+		key: "fingerAction",
+		type: "choice",
+		name: "One finger",
+		desc: "In tablet mode, what dragging one finger does. Draws: the same as the pen or a mouse. Moves the drawing: a finger drag pans, so you draw with the pen; taps and double taps work as before.",
+		default: "draw",
+		options: [
+			{ value: "draw", label: "Draws" },
+			{ value: "pan", label: "Moves the drawing" },
 		],
 	},
 	{

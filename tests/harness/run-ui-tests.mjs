@@ -1469,6 +1469,261 @@ test("tablet mode's touch guard keeps a stroke's touchmove events in the drawing
 	}
 });
 
+/** Three blocks in a row, A linked to C; nothing selected. The link crosses B's middle, where it wins over B. */
+async function threeInARow() {
+	return page.evaluate(() => {
+		const ed = window.bd.editor;
+		const make = (x, title) => ed.makeBlock({ x, y: 200, width: 120, height: 60 }, { title });
+		const [a, b, c] = [make(100, "A"), make(300, "B"), make(500, "C")];
+		ed.insertBlocks([a, b, c]);
+		const link = ed.connect(a.id, c.id);
+		ed.setSelection([]);
+		return { a: a.id, b: b.id, c: c.id, link: link.id };
+	});
+}
+
+/** Below the middle of a block, away from the link that crosses it. */
+const lowerHalf = async (id) => {
+	const c = await centerOf(id);
+	return { x: c.x, y: c.y + 20 };
+};
+
+/** A pen stroke through CDP: `button` "left" is the tip, "right" the barrel button held down. */
+async function penStroke(cdp, from, to, button, opts = {}) {
+	const buttons = button === "right" ? 2 : 1;
+	const send = (type, p, b) => cdp.send("Input.dispatchMouseEvent", { type, x: p.x, y: p.y, button, buttons: b, pointerType: "pen", clickCount: type === "mouseMoved" ? 0 : 1 });
+	await send("mousePressed", from, buttons);
+	for (let i = 1; i <= 8; i++) await send("mouseMoved", { x: from.x + ((to.x - from.x) * i) / 8, y: from.y + ((to.y - from.y) * i) / 8 }, buttons);
+	if (opts.beforeLift) await opts.beforeLift();
+	await send("mouseReleased", to, 0);
+	await frame();
+}
+
+test("tablet mode: holding the pen's button erases what the pen draws over, in one undo step, without a menu", async () => {
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: true }));
+	const ids = await threeInARow();
+	const cdp = await page.context().newCDPSession(page);
+	const menus = await page.evaluate(() => window.bd.menus.length);
+	await penStroke(cdp, await lowerHalf(ids.a), await lowerHalf(ids.b), "right", {
+		beforeLift: async () => {
+			await frame();
+			assert.equal((await els()).length, 4, "nothing is deleted before the pen lifts");
+			// A and B are marked, and so is the link, which goes with A
+			assert.equal(await page.locator(".bd-erase-mark").count(), 2);
+			assert.equal(await page.locator(".bd-erase-mark-line").count(), 1);
+			await shot("ui-erase-marks");
+		},
+	});
+	assert.deepEqual((await els()).map((e) => e.id), [ids.c], "A, B and A's link are erased; C stays");
+	assert.equal(await page.evaluate(() => window.bd.menus.length), menus, "the pen's button opened no menu");
+	assert.equal(await page.locator(".bd-erase-mark").count(), 0);
+	await page.keyboard.press("Control+z");
+	await frame();
+	assert.equal((await els()).length, 4, "one undo brings everything back");
+});
+
+test("tablet mode: the pen's tip draws as before, and without tablet mode the pen's button is a right click", async () => {
+	const ids = await threeInARow();
+	const cdp = await page.context().newCDPSession(page);
+	const menus = await page.evaluate(() => window.bd.menus.length);
+	const c = await centerOf(ids.c);
+	// tablet mode off: the barrel button opens the context menu and erases nothing
+	await penStroke(cdp, await lowerHalf(ids.a), await lowerHalf(ids.b), "right");
+	assert.equal((await els()).length, 4, "nothing is erased without tablet mode");
+	assert.equal(await page.evaluate(() => window.bd.menus.length), menus + 1, "the context menu opened, as with a right click");
+	await page.keyboard.press("Escape");
+	await page.evaluate(() => document.querySelector(".harness-menu")?.remove());
+	// tablet mode on: the tip still moves a block
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: true }));
+	await penStroke(cdp, c, { x: c.x, y: c.y + 120 }, "left");
+	const moved = await page.evaluate((id) => window.bd.editor.byId.get(id).y, ids.c);
+	assert.equal(moved, 320, "the pen's tip dragged block C down");
+	assert.equal((await els()).length, 4);
+});
+
+test("tablet mode: the pen's button erases nothing while presenting", async () => {
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: true }));
+	const ids = await threeInARow();
+	const before = await page.evaluate(() => window.bd.serialize());
+	await page.evaluate(() => window.bd.editor.presenter.start());
+	await page.waitForTimeout(300);
+	const cdp = await page.context().newCDPSession(page);
+	await penStroke(cdp, await lowerHalf(ids.a), await lowerHalf(ids.b), "right");
+	assert.equal(await page.evaluate(() => window.bd.serialize()), before, "the drawing is unchanged");
+	await page.keyboard.press("Escape");
+});
+
+test("tablet mode: a pen's eraser end erases too", async () => {
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: true }));
+	const ids = await threeInARow();
+	const b = await lowerHalf(ids.b);
+	// CDP cannot press the eraser button (32), so the events are made in the page.
+	await page.evaluate((p) => {
+		const svg = window.bd.editor.svg;
+		const fire = (type, x, buttons) =>
+			svg.dispatchEvent(new PointerEvent(type, { pointerType: "pen", pointerId: 9, button: type === "pointermove" ? -1 : 5, buttons, clientX: x, clientY: p.y, bubbles: true, cancelable: true }));
+		fire("pointerdown", p.x - 20, 32);
+		fire("pointermove", p.x + 20, 32);
+		fire("pointerup", p.x + 20, 0);
+	}, b);
+	await frame();
+	assert.deepEqual((await els()).map((e) => e.id).sort(), [ids.a, ids.c, ids.link].sort(), "only B is erased");
+});
+
+test("the Eraser tool (E) erases blocks and links a drag passes over, but never frames", async () => {
+	const ids = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const frame = ed.addFrame({ x: 80, y: 80, width: 400, height: 300 });
+		const inside = ed.makeBlock({ x: 120, y: 140, width: 120, height: 60 }, { title: "Inside" });
+		const outside = ed.makeBlock({ x: 600, y: 300, width: 120, height: 60 }, { title: "Outside" });
+		ed.insertBlocks([inside, outside]);
+		ed.setSelection([]);
+		return { frame: frame.id, inside: inside.id, outside: outside.id };
+	});
+	await page.keyboard.press("e");
+	await frame();
+	assert.equal(await page.evaluate(() => window.bd.editor.tool), "erase");
+	assert.equal(await page.locator('.bd-tool[data-tool="erase"].is-active').count(), 1, "the toolbar shows the Eraser as the active tool");
+	// from inside the frame, across its right border, to the block outside it
+	const start = await toScreen({ x: 300, y: 330 });
+	await drag(start, await centerOf(ids.outside));
+	const left = (await els()).map((e) => e.id);
+	assert.ok(!left.includes(ids.outside), "the block the drag reached is erased");
+	assert.ok(left.includes(ids.frame) && left.includes(ids.inside), "the frame it crossed and the block inside it stay");
+	assert.equal(await page.evaluate(() => window.bd.editor.tool), "erase", "the Eraser stays on for the next stroke");
+	// Escape during a stroke keeps everything
+	const inside = await centerOf(ids.inside);
+	await page.mouse.move(inside.x - 40, inside.y);
+	await page.mouse.down();
+	await page.mouse.move(inside.x + 40, inside.y, { steps: 4 });
+	assert.equal(await page.locator(".bd-erase-mark").count(), 1, "the block is marked");
+	await page.keyboard.press("Escape");
+	await page.mouse.up();
+	await frame();
+	assert.ok((await els()).some((e) => e.id === ids.inside), "Escape cancelled the stroke");
+	assert.equal(await page.locator(".bd-erase-mark").count(), 0);
+});
+
+test("tablet mode with fingers that pan: a finger drag moves the drawing, a tap selects, the pen still draws", async () => {
+	const touch = await offline(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
+	const tp = await touch.newPage();
+	try {
+		await tp.goto(url);
+		await tp.waitForFunction(() => !!window.bd);
+		const id = await tp.evaluate(() => {
+			const ed = window.bd.editor;
+			ed.setOptions({ tablet: true, fingerAction: "pan" });
+			const b = ed.makeBlock({ x: 200, y: 200, width: 140, height: 80 }, { title: "Finger" });
+			ed.insertBlocks([b]);
+			ed.setSelection([]);
+			return b.id;
+		});
+		const cdp = await touch.newCDPSession(tp);
+		const touchStroke = async (from, to) => {
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...from, id: 1 }] });
+			for (let i = 1; i <= 8; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: from.x + ((to.x - from.x) * i) / 8, y: from.y + ((to.y - from.y) * i) / 8, id: 1 }] });
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+			await tp.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+		};
+		const state = () => tp.evaluate((id) => ({ vp: { ...window.bd.editor.vp }, block: { ...window.bd.editor.byId.get(id) }, sel: [...window.bd.editor.selection] }), id);
+		const center = () => tp.evaluate((id) => {
+			const b = window.bd.editor.byId.get(id);
+			return window.bd.editor.worldToScreen({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+		}, id);
+		const before = await state();
+		const c = await center();
+		await touchStroke(c, { x: c.x + 150, y: c.y + 60 });
+		const after = await state();
+		assert.equal(after.vp.x - before.vp.x, 150, "the finger moved the drawing");
+		assert.equal(after.vp.y - before.vp.y, 60);
+		assert.equal(after.block.x, before.block.x, "the block under the finger did not move");
+		assert.deepEqual(after.sel, [], "and nothing was selected");
+		const c2 = await center();
+		await touchStroke(c2, c2);
+		assert.deepEqual((await state()).sel, [id], "a tap selects the block");
+		await penStroke(cdp, c2, { x: c2.x, y: c2.y + 100 }, "left");
+		assert.equal((await state()).block.y, before.block.y + 100, "the pen still drags the block");
+	} finally {
+		await touch.close();
+	}
+});
+
+test("tablet mode: a hand resting on the screen while the pen draws is ignored", async () => {
+	const touch = await offline(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
+	const tp = await touch.newPage();
+	try {
+		await tp.goto(url);
+		await tp.waitForFunction(() => !!window.bd);
+		const ids = await tp.evaluate(() => {
+			const ed = window.bd.editor;
+			ed.setOptions({ tablet: true });
+			const palm = ed.makeBlock({ x: 500, y: 400, width: 160, height: 100 }, { title: "Under the hand" });
+			const drawn = ed.makeBlock({ x: 100, y: 100, width: 120, height: 60 }, { title: "Drawn" });
+			ed.insertBlocks([palm, drawn]);
+			ed.setSelection([]);
+			return { palm: palm.id, drawn: drawn.id };
+		});
+		const cdp = await touch.newCDPSession(tp);
+		const pos = (id) => tp.evaluate((id) => ({ x: window.bd.editor.byId.get(id).x, y: window.bd.editor.byId.get(id).y }), id);
+		const screenOf = (id) => tp.evaluate((id) => {
+			const b = window.bd.editor.byId.get(id);
+			return window.bd.editor.worldToScreen({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+		}, id);
+		const palmAt = await screenOf(ids.palm);
+		const palmStart = await pos(ids.palm);
+		// the hand lands first and slides a little, dragging the block under it
+		await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...palmAt, id: 1 }] });
+		for (let i = 1; i <= 4; i++) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: palmAt.x + 10 * i, y: palmAt.y, id: 1 }] });
+		assert.notDeepEqual(await pos(ids.palm), palmStart, "the hand dragged the block (it was not known to be a hand yet)");
+		// then the pen comes down and drags another block, while the hand keeps sliding
+		const drawnAt = await screenOf(ids.drawn);
+		const send = (type, p, buttons) => cdp.send("Input.dispatchMouseEvent", { type, x: p.x, y: p.y, button: "left", buttons, pointerType: "pen", clickCount: type === "mouseMoved" ? 0 : 1 });
+		await send("mousePressed", drawnAt, 1);
+		assert.deepEqual(await pos(ids.palm), palmStart, "when the pen comes down, what the hand did is undone");
+		for (let i = 1; i <= 4; i++) {
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: palmAt.x + 40 + 10 * i, y: palmAt.y + 5 * i, id: 1 }] });
+			await send("mouseMoved", { x: drawnAt.x, y: drawnAt.y + 20 * i }, 1);
+		}
+		// a second finger landing while the pen is down is the hand too: no pinch zoom
+		const zoom = await tp.evaluate(() => window.bd.editor.vp.zoom);
+		await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: palmAt.x + 80, y: palmAt.y + 20, id: 1 }, { x: palmAt.x + 160, y: palmAt.y + 60, id: 2 }] });
+		await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: palmAt.x + 60, y: palmAt.y, id: 1 }, { x: palmAt.x + 220, y: palmAt.y + 120, id: 2 }] });
+		await send("mouseReleased", { x: drawnAt.x, y: drawnAt.y + 80 }, 0);
+		await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+		await tp.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+		assert.deepEqual(await pos(ids.palm), palmStart, "the block under the hand stays where it was");
+		assert.equal((await pos(ids.drawn)).y, 180, "the pen dragged its block");
+		assert.equal(await tp.evaluate(() => window.bd.editor.vp.zoom), zoom, "the hand did not zoom");
+	} finally {
+		await touch.close();
+	}
+});
+
+test("tablet mode: a toolbar button hides and shows the properties panel; without tablet mode it is not there", async () => {
+	const b = await addBlock(300, 250, "Props");
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), b.id);
+	await frame();
+	const btn = page.locator('.bd-toolbar .bd-btn[aria-label="Properties panel"]');
+	assert.equal(await btn.isVisible(), false, "no button without tablet mode");
+	assert.equal(await page.isVisible(".bd-props.is-visible"), true, "the panel opens with the selection, as before");
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: true }));
+	await frame();
+	assert.equal(await btn.isVisible(), true);
+	assert.equal(await page.isVisible(".bd-props.is-visible"), true, "tablet mode alone changes nothing");
+	await btn.click();
+	await frame();
+	assert.equal(await page.isVisible(".bd-props.is-visible"), false, "the button hides the panel");
+	assert.deepEqual(await sel(), [b.id], "the selection stays");
+	await btn.click();
+	await frame();
+	assert.equal(await page.isVisible(".bd-props.is-visible"), true, "and shows it again");
+	await btn.click();
+	await page.evaluate(() => window.bd.editor.setOptions({ tablet: false }));
+	await frame();
+	assert.equal(await page.isVisible(".bd-props.is-visible"), true, "turning tablet mode off shows the panel as before");
+	assert.equal(await btn.isVisible(), false);
+});
+
 test("web fonts are opt-in: the font picker explains it, and nothing is requested", async () => {
 	const b = await addBlock(300, 250, "Fonts");
 	const c = await centerOf(b.id);

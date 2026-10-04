@@ -46,7 +46,7 @@ const DEFAULTS_046 = {
 };
 
 /** Settings added since 0.4.6, with their defaults. */
-const ADDED_SINCE_046 = { tabletMode: "auto" };
+const ADDED_SINCE_046 = { tabletMode: "auto", fingerAction: "draw" };
 
 describe("the SETTINGS table", () => {
 	it("reproduces the 0.4.6 defaults, plus the settings added since", () => {
@@ -95,6 +95,8 @@ describe("reading data.json", () => {
 		expect(load({ tabletMode: "on" }).values.tabletMode).toBe("on");
 		expect(load({ tabletMode: "off" }).values.tabletMode).toBe("off");
 		for (const v of [true, "tablet", 1, null]) expect(load({ tabletMode: v }).values.tabletMode).toBe("auto");
+		expect(load({ fingerAction: "pan" }).values.fingerAction).toBe("pan");
+		expect(load({ fingerAction: "zoom" }).values.fingerAction).toBe("draw");
 	});
 });
 

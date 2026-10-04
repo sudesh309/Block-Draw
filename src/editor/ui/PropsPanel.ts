@@ -89,7 +89,7 @@ export class PropsPanel {
 		else if (ed.tool === "block") mode = "block";
 		else if (ed.tool === "connector") mode = "connector";
 		else if (ed.tool === "frame") mode = "frame";
-		if (ed.options.readOnly || !mode || ed.editingId || ed.pointer.isBusy()) {
+		if (ed.options.readOnly || !mode || ed.editingId || ed.pointer.isBusy() || ed.toolbar.propsHidden()) {
 			this.el.classList.remove("is-visible");
 			if (!ed.pointer.isBusy()) this.key = "";
 			return;

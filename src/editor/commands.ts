@@ -36,6 +36,7 @@ export const COMMANDS: readonly EditorCommand[] = [
 	{ id: "tool-decision", group: "Draw", label: "Decision block tool", keys: ["D", "4"], run: (ed) => ed.setTool("block", "diamond") },
 	{ id: "tool-connector", group: "Draw", label: "Connector tool", keys: ["A", "C", "5"], run: (ed) => ed.setTool("connector") },
 	{ id: "tool-frame", group: "Draw", label: "Frame tool", keys: ["F", "6"], run: (ed) => ed.setTool("frame") },
+	{ id: "tool-erase", group: "Draw", label: "Eraser: drag over blocks and links to erase them (frames stay)", keys: ["E"], run: (ed) => ed.setTool("erase") },
 
 	{
 		id: "edit-text",
@@ -151,6 +152,7 @@ export const GESTURES: readonly { group: (typeof HELP_GROUPS)[number]; keys: str
 	{ group: "Edit", keys: "Ctrl/Cmd+C, X, V", label: "Copy, cut and paste" },
 	{ group: "Edit", keys: "Drag a selected line", label: "Bend it: grab a dot on the line and drop it where the line should pass" },
 	{ group: "Edit", keys: "Double-click a bend", label: "Remove that bend" },
+	{ group: "Edit", keys: "Pen button or eraser end", label: "In tablet mode: hold it and draw over blocks and links to erase them" },
 	{ group: "Edit", keys: "Shift+Enter", label: "New line while editing text" },
 	{ group: "Links and frames", keys: "Ctrl/Cmd+click", label: "Follow a block's link" },
 	{ group: "Present", keys: "In a presentation", label: "← → slides · click a block to spotlight it · ? legend · S stage · L laser · Esc ends" },

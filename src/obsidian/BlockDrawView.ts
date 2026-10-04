@@ -1,7 +1,7 @@
 import { Menu, Notice, Platform, TextFileView, type IconName, type WorkspaceLeaf } from "obsidian";
 import { Editor } from "../editor/Editor";
 import type { EditorHost, LinkPickOptions, MenuItemSpec } from "../editor/host";
-import type { Viewport } from "../editor/types";
+import type { EditorOptions, Viewport } from "../editor/types";
 import { createEmptyDrawing, DrawingParseError, parseDrawing, serializeDrawing } from "../model/file";
 import { parseLink } from "../model/links";
 import { isFrame, type DrawingFile, type DrawingMeta } from "../model/types";
@@ -88,18 +88,26 @@ export class BlockDrawView extends TextFileView {
 
 	private ensureEditor(): Editor {
 		if (this.editor) return this.editor;
+		const options = this.settingsOptions();
+		this.editor = new Editor(this.contentEl, this.makeHost(), options);
+		this.editor.onChange = () => this.requestSave();
+		this.editor.onViewportChange = () => this.rememberViewport();
+		this.touchGuard = new TouchGuard(this.editor.root);
+		this.touchGuard.setEnabled(options.tablet);
+		return this.editor;
+	}
+
+	/** The editor options that come from the plugin settings. */
+	private settingsOptions(): Pick<EditorOptions, "gridSize" | "snapToGrid" | "showGrid" | "webFonts" | "tablet" | "fingerAction"> {
 		const s = this.plugin.settings;
-		this.editor = new Editor(this.contentEl, this.makeHost(), {
+		return {
 			gridSize: s.gridSize,
 			snapToGrid: s.snapToGrid,
 			showGrid: s.showGrid,
 			webFonts: s.webFonts,
-		});
-		this.editor.onChange = () => this.requestSave();
-		this.editor.onViewportChange = () => this.rememberViewport();
-		this.touchGuard = new TouchGuard(this.editor.root);
-		this.touchGuard.setEnabled(tabletModeOn(s.tabletMode, Platform.isMobile));
-		return this.editor;
+			tablet: tabletModeOn(s.tabletMode, Platform.isMobile),
+			fingerAction: s.fingerAction,
+		};
 	}
 
 	private rememberViewport(): void {
@@ -108,9 +116,9 @@ export class BlockDrawView extends TextFileView {
 
 	/** Re-applies plugin settings (grid etc.) after they change. */
 	applySettings(): void {
-		const s = this.plugin.settings;
-		this.editor?.setOptions({ gridSize: s.gridSize, snapToGrid: s.snapToGrid, showGrid: s.showGrid, webFonts: s.webFonts });
-		this.touchGuard?.setEnabled(tabletModeOn(s.tabletMode, Platform.isMobile));
+		const options = this.settingsOptions();
+		this.editor?.setOptions(options);
+		this.touchGuard?.setEnabled(options.tablet);
 	}
 
 	/* --------------------------------------------------------- file data */

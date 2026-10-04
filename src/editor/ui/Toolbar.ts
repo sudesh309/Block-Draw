@@ -20,7 +20,17 @@ const TOOLS: ToolSpec[] = [
 	{ tool: "block", shape: "diamond", icon: "diamond", label: `Decision block — ${shortcut("tool-decision")}` },
 	{ tool: "connector", icon: "connector", label: `Connector — ${shortcut("tool-connector")}` },
 	{ tool: "frame", icon: "frame", label: `Frame — ${shortcut("tool-frame")}` },
+	{ tool: "erase", icon: "eraser", label: `Eraser — ${shortcut("tool-erase")}` },
 ];
+
+/** The hint a tool shows at the bottom of the canvas. */
+export const TOOL_HINTS: Partial<Record<Tool, string>> = {
+	block: "Click or drag to add a block",
+	frame: "Drag to draw a frame — blocks inside it become part of it",
+	connector: "Drag from one block to another to connect them",
+	pan: "Drag to move around",
+	erase: "Drag over blocks and links to erase them — frames stay",
+};
 
 export class Toolbar {
 	readonly el: HTMLDivElement;
@@ -28,6 +38,9 @@ export class Toolbar {
 	private undoBtn: HTMLButtonElement;
 	private redoBtn: HTMLButtonElement;
 	private framesBtn: HTMLButtonElement;
+	/** Tablet mode: shows or hides the properties panel, which otherwise opens with every selection. */
+	private propsBtn: HTMLButtonElement;
+	private propsOff = false;
 
 	constructor(private readonly ed: Editor) {
 		this.el = el("div", "bd-toolbar bd-panel", ed.root);
@@ -45,6 +58,10 @@ export class Toolbar {
 		el("div", "bd-toolbar-sep", this.el);
 		const view = el("div", "bd-toolbar-group", this.el);
 		this.framesBtn = iconButton(view, "frames", "Frames", () => ed.framesPanel.toggle());
+		this.propsBtn = iconButton(view, "sliders", "Properties panel", () => {
+			this.propsOff = !this.propsOff;
+			ed.requestRender();
+		});
 		iconButton(view, "present", `Present — ${shortcut("present")}`, () => ed.presenter.start(), "bd-present-btn");
 		if (ed.host.exportMenu) {
 			iconButton(view, "export", "Export", (e) => {
@@ -72,5 +89,12 @@ export class Toolbar {
 		this.undoBtn.disabled = !ed.history.canUndo;
 		this.redoBtn.disabled = !ed.history.canRedo;
 		this.framesBtn.classList.toggle("is-active", ed.framesPanel.isOpen());
+		this.propsBtn.hidden = !ed.options.tablet || ed.options.readOnly;
+		this.propsBtn.classList.toggle("is-active", !this.propsOff);
+	}
+
+	/** Tablet mode: the properties panel was hidden with the toolbar button. */
+	propsHidden(): boolean {
+		return this.ed.options.tablet && this.propsOff;
 	}
 }

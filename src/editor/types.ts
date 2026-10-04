@@ -1,6 +1,6 @@
 import type { Point, Side } from "../model/types";
 
-export type Tool = "select" | "pan" | "block" | "connector" | "frame";
+export type Tool = "select" | "pan" | "block" | "connector" | "frame" | "erase";
 
 export interface Viewport {
 	/** Screen offset of the world origin, in CSS pixels. */
@@ -21,6 +21,10 @@ export interface EditorOptions {
 	webFonts: boolean;
 	/** Read-only mode (embeds/previews): no editing UI. */
 	readOnly: boolean;
+	/** Tablet mode (the host decides when it applies): the pen's button erases, palm rejection, a properties button. */
+	tablet: boolean;
+	/** In tablet mode, what dragging one finger does: draw like the pen, or pan (a tap still selects). */
+	fingerAction: "draw" | "pan";
 }
 
 export const DEFAULT_EDITOR_OPTIONS: EditorOptions = {
@@ -29,6 +33,8 @@ export const DEFAULT_EDITOR_OPTIONS: EditorOptions = {
 	showGrid: true,
 	webFonts: false,
 	readOnly: false,
+	tablet: false,
+	fingerAction: "draw",
 };
 
 export type Hit =

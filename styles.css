@@ -109,7 +109,8 @@
 /* The tools and panning choose the cursor themselves: one class more than the rules above. */
 .bd-editor[data-tool="block"] .bd-svg,
 .bd-editor[data-tool="frame"] .bd-svg,
-.bd-editor[data-tool="connector"] .bd-svg {
+.bd-editor[data-tool="connector"] .bd-svg,
+.bd-editor[data-tool="erase"] .bd-svg {
 	cursor: crosshair;
 }
 
@@ -221,6 +222,26 @@
 	stroke: var(--bd-accent);
 	stroke-width: 2px;
 	stroke-dasharray: 6 4;
+	vector-effect: non-scaling-stroke;
+}
+
+/* What an eraser stroke has marked: deleted when the stroke ends. */
+.bd-erase-mark {
+	fill: var(--color-red, #e93147);
+	fill-opacity: 0.16;
+	stroke: var(--color-red, #e93147);
+	stroke-width: 2px;
+	stroke-dasharray: 5 4;
+	vector-effect: non-scaling-stroke;
+}
+
+.bd-erase-mark-line {
+	fill: none;
+	stroke: var(--color-red, #e93147);
+	stroke-opacity: 0.55;
+	stroke-width: 7px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 	vector-effect: non-scaling-stroke;
 }
 
@@ -981,6 +1002,26 @@
 .bd-settings-steps {
 	margin: 4px 0 0;
 	padding-left: 20px;
+}
+
+/* "Test your pen": a pad that shows what the device reports for a pen, finger or mouse. */
+.bd-pen-test {
+	box-sizing: border-box;
+	width: 240px;
+	max-width: 100%;
+	min-height: 72px;
+	padding: 8px 10px;
+	border: 1px dashed var(--background-modifier-border);
+	border-radius: 8px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	text-align: left;
+	touch-action: none;
+}
+
+.bd-pen-test.is-erasing {
+	border-color: var(--color-red, #e93147);
+	color: var(--text-normal);
 }
 
 /* small panes and phones */

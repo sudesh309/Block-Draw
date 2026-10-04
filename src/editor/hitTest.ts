@@ -8,13 +8,13 @@ import { bendHit } from "./routeEdit";
 import { CONNECT_HANDLE_OFFSET, CONNECT_HANDLE_RADIUS, handlePosition, RESIZE_HANDLE_SIZE } from "./renderer";
 import { HANDLES, type Hit } from "./types";
 
-/** What is under a world point? Handles first, then blocks, connectors and frames. */
-export function hitTest(ed: Editor, p: Point): Hit | null {
+/** What is under a world point? Handles first (unless `handles` is false), then blocks, connectors and frames. */
+export function hitTest(ed: Editor, p: Point, handles = true): Hit | null {
 	const z = ed.vp.zoom;
 	const selected = ed.selectedElements();
 	const tolerance = 6 / z;
 
-	if (!ed.options.readOnly && ed.tool === "select") {
+	if (handles && !ed.options.readOnly && ed.tool === "select") {
 		if (selected.length === 1) {
 			const only = selected[0];
 			if (isBox(only)) {
@@ -34,7 +34,7 @@ export function hitTest(ed: Editor, p: Point): Hit | null {
 			}
 		}
 	}
-	const handleBlock = ed.connectHandleBlockId();
+	const handleBlock = handles ? ed.connectHandleBlockId() : null;
 	if (handleBlock) {
 		const b = ed.byId.get(handleBlock);
 		if (isBlock(b)) {

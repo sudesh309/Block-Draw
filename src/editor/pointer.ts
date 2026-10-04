@@ -1,6 +1,4 @@
 import { boundsFromPoints, containsPoint, dist, type Point } from "../geometry/geom";
-import { boundaryPoint, sideAnchor } from "../geometry/shapes";
-import type { HistoryEntry } from "../model/history";
 import {
 	assignFrames,
 	cloneElements,
@@ -13,50 +11,15 @@ import {
 	translateElements,
 	updateElements,
 } from "../model/ops";
-import {
-	DEFAULT_BLOCK_SIZE,
-	MIN_BLOCK_SIZE,
-	MIN_FRAME_SIZE,
-	isBlock,
-	isBox,
-	isConnector,
-	isFrame,
-	type AnchorSide,
-	type Bounds,
-	type Side,
-} from "../model/types";
-import { h, type VNode } from "../render/vnode";
+import { DEFAULT_BLOCK_SIZE, MIN_BLOCK_SIZE, MIN_FRAME_SIZE, isBlock, isBox, isConnector, isFrame, type AnchorSide, type Bounds } from "../model/types";
+import type { VNode } from "../render/vnode";
 import type { Editor } from "./Editor";
+import { eraseMarked, markErasable } from "./eraser";
+import { interactionHint, interactionOverlay, type Interaction } from "./interaction";
+import { isEraserPress, PalmRejection } from "./pen";
 import { CONNECT_HANDLE_OFFSET } from "./renderer";
-import { bendHandles, dragBend, removeBend, type BendDrag } from "./routeEdit";
-import type { Handle, Viewport } from "./types";
-
-type Interaction =
-	| { kind: "pan"; startScreen: Point; startVp: Viewport }
-	| { kind: "marquee"; start: Point; current: Point; additive: boolean; base: Set<string>; startScreen: Point; moved: boolean }
-	| {
-			kind: "move";
-			start: Point;
-			startScreen: Point;
-			moved: boolean;
-			before: HistoryEntry;
-			clickedId: string;
-			wasSelected: boolean;
-			shift: boolean;
-			alt: boolean;
-			moveSet: Set<string>;
-			origin: Map<string, { x: number; y: number }>;
-			/** Waypoints, as they were, of the links that move along with their blocks. */
-			links: Map<string, Point[]>;
-			anchorId: string | null;
-			dropFrameId: string | null;
-	  }
-	| { kind: "resize"; id: string; handle: Handle; orig: Bounds; before: HistoryEntry; startScreen: Point; moved: boolean }
-	| { kind: "create"; type: "block" | "frame"; start: Point; current: Point; startScreen: Point; moved: boolean }
-	| { kind: "connect"; fromId: string; side: Side | null; startScreen: Point; current: Point; targetId: string | null; moved: boolean }
-	| { kind: "reconnect"; connId: string; end: "from" | "to"; startScreen: Point; current: Point; targetId: string | null; moved: boolean }
-	| ({ kind: "bend" } & BendDrag)
-	| { kind: "pinch"; startDist: number; startMid: Point; startVp: Viewport };
+import { dragBend, removeBend } from "./routeEdit";
+import type { Handle } from "./types";
 
 const DRAG_THRESHOLD = 4;
 
@@ -78,6 +41,8 @@ export class PointerController {
 	/** Double-tap detection for touch screens (iOS does not reliably fire dblclick). */
 	private lastTap: { time: number; x: number; y: number } | null = null;
 	private lastSyntheticDouble = -Infinity;
+	/** Tablet mode: a hand resting on the screen while the pen draws. */
+	private readonly palm = new PalmRejection();
 
 	constructor(private readonly ed: Editor) {
 		const svg = ed.svg;
@@ -142,7 +107,16 @@ export class PointerController {
 
 	private onDown(e: PointerEvent): void {
 		const ed = this.ed;
-		if (e.button !== 0 && e.button !== 1) return;
+		// Read-only also covers presenting, so the pen's button never erases in a presentation.
+		const tablet = ed.options.tablet && !ed.options.readOnly;
+		const penErases = tablet && isEraserPress(e);
+		if (e.button !== 0 && e.button !== 1 && !penErases) return;
+		if (tablet && e.pointerType === "pen") {
+			this.palm.penDown(e.pointerId);
+			this.dropRestingHand();
+		} else if (tablet && e.pointerType === "touch" && this.palm.rejectsTouch(e.pointerId, performance.now())) {
+			return;
+		}
 		ed.root.focus({ preventScroll: true });
 		if (ed.editingId) ed.textEditor.commit();
 		const screen = ed.clientToScreen(e.clientX, e.clientY);
@@ -156,9 +130,15 @@ export class PointerController {
 			}
 		}
 
-		if (e.button === 1 || ed.tool === "pan" || ed.keyboard.spaceDown) {
+		if (penErases) {
+			this.startErase(e, world);
+			return;
+		}
+
+		const fingerPans = tablet && ed.options.fingerAction === "pan" && e.pointerType === "touch";
+		if (e.button === 1 || ed.tool === "pan" || ed.keyboard.spaceDown || fingerPans) {
 			e.preventDefault();
-			this.state = { kind: "pan", startScreen: screen, startVp: { ...ed.vp } };
+			this.state = { kind: "pan", startScreen: screen, startVp: { ...ed.vp }, tap: fingerPans && ed.tool !== "pan" };
 			ed.root.classList.add("is-panning");
 			this.capture(e);
 			return;
@@ -175,6 +155,11 @@ export class PointerController {
 			}
 			this.state = { kind: "pan", startScreen: screen, startVp: { ...ed.vp } };
 			this.capture(e);
+			return;
+		}
+
+		if (ed.tool === "erase") {
+			this.startErase(e, world);
 			return;
 		}
 
@@ -300,9 +285,38 @@ export class PointerController {
 		ed.requestRender();
 	}
 
+	private startErase(e: PointerEvent, world: Point): void {
+		const marked = new Set<string>();
+		this.state = { kind: "erase", marked, last: world };
+		markErasable(this.ed, marked, world, world);
+		this.capture(e);
+		this.ed.requestRender();
+	}
+
+	/** Tablet mode: the pen came down while fingers were on the screen, so they were the hand resting on it. */
+	private dropRestingHand(): void {
+		if (!this.touches.size) return;
+		const st = this.state;
+		if (st?.kind === "pan" || st?.kind === "pinch") this.ed.setViewport(st.startVp);
+		this.cancel();
+		for (const id of this.touches.keys()) this.palm.ignore(id);
+		this.touches.clear();
+	}
+
+	/** Tablet mode, with fingers that pan: a tap selects what is under it, as a click would. */
+	private tapSelect(e: PointerEvent, world: Point): void {
+		const ed = this.ed;
+		const hit = ed.hitTest(world);
+		if (hit?.kind === "link-badge") ed.followLink(hit.id, false);
+		else if (hit?.kind === "comment-badge") ed.toggleComment(hit.id);
+		else ed.setSelection(hit ? [hit.id] : []);
+		this.registerTap(e);
+	}
+
 	/* ------------------------------------------------------------- move */
 
 	private onMove(e: PointerEvent): void {
+		if (this.palm.isIgnored(e.pointerId)) return;
 		const ed = this.ed;
 		const screen = ed.clientToScreen(e.clientX, e.clientY);
 		const world = ed.screenToWorld(screen);
@@ -362,6 +376,10 @@ export class PointerController {
 			}
 			case "bend":
 				dragBend(ed, st, world, beyond(st.startScreen));
+				return;
+			case "erase":
+				if (markErasable(ed, st.marked, st.last, world)) ed.requestRender();
+				st.last = world;
 				return;
 			case "reconnect": {
 				st.current = world;
@@ -503,6 +521,8 @@ export class PointerController {
 
 	private onUp(e: PointerEvent): void {
 		const ed = this.ed;
+		if (e.pointerType === "pen") this.palm.penUp(e.pointerId, performance.now());
+		if (this.palm.isIgnored(e.pointerId, true)) return;
 		if (e.pointerType === "touch") {
 			this.touches.delete(e.pointerId);
 			if (this.state?.kind === "pinch") {
@@ -523,6 +543,10 @@ export class PointerController {
 
 		switch (st.kind) {
 			case "pan":
+				if (st.tap && dist(ed.clientToScreen(e.clientX, e.clientY), st.startScreen) < DRAG_THRESHOLD) this.tapSelect(e, world);
+				break;
+			case "erase":
+				eraseMarked(ed, st.marked);
 				break;
 			case "marquee":
 				break;
@@ -609,6 +633,8 @@ export class PointerController {
 	}
 
 	private onCancel(e: PointerEvent): void {
+		if (e.pointerType === "pen") this.palm.penUp(e.pointerId, performance.now());
+		if (this.palm.isIgnored(e.pointerId, true)) return;
 		this.touches.delete(e.pointerId);
 		if (this.state?.kind === "pinch" && this.touches.size >= 2) return;
 		this.cancel();
@@ -705,7 +731,8 @@ export class PointerController {
 	private onContextMenu(e: MouseEvent): void {
 		const ed = this.ed;
 		e.preventDefault();
-		if (this.state) return;
+		// In tablet mode the pen's button erases; it does not open the menu too.
+		if (this.state || (ed.options.tablet && isEraserPress(e as PointerEvent))) return;
 		const world = ed.clientToWorld(e.clientX, e.clientY);
 		const hit = ed.hitTest(world);
 		if (hit && hit.kind !== "conn-handle") {
@@ -720,82 +747,10 @@ export class PointerController {
 	/* ---------------------------------------------------------- overlay */
 
 	overlayNodes(z: number): VNode[] {
-		const st = this.state;
-		const ed = this.ed;
-		if (!st) return [];
-		const nodes: VNode[] = [];
-		if (st.kind === "marquee" && st.moved) {
-			const r = boundsFromPoints(st.start, st.current);
-			nodes.push(h("rect", { class: "bd-marquee", x: r.x, y: r.y, width: r.width, height: r.height }));
-		} else if (st.kind === "create" && st.moved) {
-			const r = boundsFromPoints(ed.snapPoint(st.start), ed.snapPoint(st.current));
-			nodes.push(
-				h("rect", {
-					class: st.type === "frame" ? "bd-create-preview bd-create-frame" : "bd-create-preview",
-					x: r.x,
-					y: r.y,
-					width: r.width,
-					height: r.height,
-					rx: st.type === "frame" ? 8 : 6,
-				}),
-			);
-		} else if (st.kind === "connect" || st.kind === "reconnect") {
-			let fromPoint: Point | null = null;
-			if (st.kind === "connect") {
-				const from = ed.byId.get(st.fromId);
-				if (isBlock(from)) fromPoint = st.side ? sideAnchor(from.shape, from, st.side) : boundaryPoint(from.shape, from, st.current);
-			} else {
-				const conn = ed.byId.get(st.connId);
-				const fixedId = isConnector(conn) ? (st.end === "from" ? conn.to.id : conn.from.id) : null;
-				const fixed = fixedId ? ed.byId.get(fixedId) : null;
-				if (isBlock(fixed)) fromPoint = boundaryPoint(fixed.shape, fixed, st.current);
-			}
-			const target = st.targetId ? ed.byId.get(st.targetId) : null;
-			if (isBlock(target)) {
-				nodes.push(
-					h("rect", {
-						class: "bd-drop-target",
-						x: target.x - 4 / z,
-						y: target.y - 4 / z,
-						width: target.width + 8 / z,
-						height: target.height + 8 / z,
-						rx: 6 / z,
-					}),
-				);
-				for (const side of ["top", "right", "bottom", "left"] as Side[]) {
-					const p = sideAnchor(target.shape, target, side);
-					nodes.push(h("circle", { class: "bd-drop-anchor", cx: p.x, cy: p.y, r: 4 / z }));
-				}
-			}
-			if (fromPoint && (st.moved || st.kind === "reconnect")) {
-				nodes.push(h("line", { class: "bd-connect-preview", x1: fromPoint.x, y1: fromPoint.y, x2: st.current.x, y2: st.current.y }));
-			}
-		} else if (st.kind === "bend" && st.moved) {
-			const conn = ed.byId.get(st.connId);
-			if (isConnector(conn)) nodes.push(...bendHandles(ed, conn, z, false));
-		} else if (st.kind === "move" && st.dropFrameId) {
-			const f = ed.byId.get(st.dropFrameId);
-			if (isFrame(f)) {
-				nodes.push(h("rect", { class: "bd-drop-frame", x: f.x, y: f.y, width: f.width, height: f.height, rx: 8 }));
-			}
-		}
-		return nodes;
+		return this.state ? interactionOverlay(this.ed, this.state, z) : [];
 	}
 
 	hint(): string | null {
-		const st = this.state;
-		if (!st) return null;
-		if (st.kind === "connect") {
-			return st.targetId
-				? "Release to connect"
-				: "Release on a block to connect it, or on empty space to create a connected block";
-		}
-		if (st.kind === "reconnect") return "Release on a block to re-attach this end";
-		if (st.kind === "move" && st.dropFrameId) {
-			const f = this.ed.byId.get(st.dropFrameId);
-			return isFrame(f) ? `Release to move into “${f.title}”` : null;
-		}
-		if (st.kind === "create" && st.type === "frame") return "Blocks inside the frame become part of it";
-		return null;
+		return this.state ? interactionHint(this.ed, this.state) : null;
 	}
 }

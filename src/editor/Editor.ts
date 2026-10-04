@@ -58,7 +58,7 @@ import { FramesPanel } from "./ui/FramesPanel";
 import { HelpPanel } from "./ui/HelpPanel";
 import { PropsPanel } from "./ui/PropsPanel";
 import { TextEditor } from "./ui/TextEditor";
-import { Toolbar } from "./ui/Toolbar";
+import { TOOL_HINTS, Toolbar } from "./ui/Toolbar";
 import { ZoomControls } from "./ui/ZoomControls";
 import { ViewportController } from "./viewport";
 import {
@@ -704,10 +704,7 @@ export class Editor {
 			const busy = this.pointer.hint();
 			if (busy) text = busy;
 			else if (this.editingId) text = "Enter to finish · Shift+Enter for a new line";
-			else if (this.tool === "block") text = "Click or drag to add a block";
-			else if (this.tool === "frame") text = "Drag to draw a frame — blocks inside it become part of it";
-			else if (this.tool === "connector") text = "Drag from one block to another to connect them";
-			else if (this.tool === "pan") text = "Drag to move around";
+			else if (TOOL_HINTS[this.tool]) text = TOOL_HINTS[this.tool] ?? "";
 			else if (this.selection.size === 1) {
 				const only = this.byId.get([...this.selection][0]);
 				if (isBlock(only)) text = only.link ? "Ctrl/Cmd+click or the corner badge follows the link" : "Drag a side dot to connect · double-click to edit";

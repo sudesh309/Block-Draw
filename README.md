@@ -6,14 +6,14 @@ Draw block diagrams in Obsidian: titled blocks, links and frames. Then present t
 
 ## Features
 
-- **Draw fast**: infinite canvas, grid and snapping, undo/redo, single-key shortcuts. Eight shapes; elbow, straight or curved links you can bend by dragging; bring to front and send to back across blocks and links; frames that group blocks; blocks that contain other blocks.
+- **Draw fast**: infinite canvas, grid and snapping, undo/redo, an eraser, single-key shortcuts. Eight shapes; elbow, straight or curved links you can bend by dragging; bring to front and send to back across blocks and links; frames that group blocks; blocks that contain other blocks.
 - **Link everything**: link a block to a frame, a note, another drawing or a URL, and jump with Ctrl/Cmd+click. Show a drawing in a note with a `blockdraw` code block or a `[[Drawing.blockdraw#Frame]]` link.
 - **Look sharp**: one-click themes (3D, Minimal, Futuristic, Classic), palettes, a 3D effect, ten business fonts, and text aligned left, center or right, top, middle or bottom.
 - **Explain**: tags (“Service · Java”), plus comments and descriptions that you can show or hide, also while presenting.
 - **Present**: press **P** for a full-screen slideshow, one slide per frame, with a laser pointer. Click a block to spotlight what it depends on.
 - **Show data flow**: animated flow along links, running both ways on two-way links.
 - **Export**: Google Sheets (one tab per frame), Excel, JSON, SVG and PNG.
-- Works offline, follows your light or dark theme, and runs on desktop and mobile. On a tablet or phone, **tablet mode** lets a finger or pen draw without opening Obsidian's sidebars or pull-down menu.
+- Works offline, follows your light or dark theme, and runs on desktop and mobile. On a tablet or phone, **tablet mode** lets a finger or pen draw without opening Obsidian's sidebars or pull-down menu, and the pen's button erases.
 
 ![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
 

@@ -3,8 +3,8 @@
 	"maxNewFileLines": 400,
 	"slack": 50,
 	"fileLines": {
-		"src/editor/Editor.ts": 727,
-		"src/editor/pointer.ts": 801,
+		"src/editor/Editor.ts": 724,
+		"src/editor/pointer.ts": 756,
 		"src/editor/ui/PropsPanel.ts": 608,
 		"src/export/workbook/layout.ts": 783,
 		"src/export/workbook/xlsx.ts": 476,
