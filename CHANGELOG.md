@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.2
+
+- **Tablet mode: drawing with a finger or pen no longer opens Obsidian's menus.** On a phone or tablet, Obsidian opens the left sidebar when a finger moves quickly to the right, the right sidebar when it moves to the left, and the quick switcher when it moves down. Inside a drawing that movement is drawing, so moving a block or drawing a frame kept opening them, with a finger and with a pen. Tablet mode keeps these gestures out of the drawing; swipe in from the very edge of the screen to open a sidebar. It is a new setting under **Settings → Block Draw → Touch and pen**: **Automatic** (the default) turns it on for phones and tablets and leaves computers as they were, and **On** and **Off** choose for yourself. Long-press menus, double-tap and pinch to zoom work as before.
+
 ## 0.6.1
 
 - **The show/hide eyes are visible on dark themes again.** With a dark accent color on a dark theme, or a dark theme whose secondary text is very dim, the eyes next to Description and Comment in the side panel could not be seen (light themes were fine). The same went for the active tool, the selected option in a row of options, and the shortcut keys in the help panel. On dark themes these now use a lightened accent, and the hidden eye follows the theme's normal text color. Light themes look as before.
