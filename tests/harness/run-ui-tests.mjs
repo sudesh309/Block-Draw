@@ -733,6 +733,82 @@ test("a link can be bent by dragging it, and its bends move, copy, reset and und
 	assert.deepEqual(errors, []);
 });
 
+test("icons and active controls stay readable on dark themes, whatever the accent color", async () => {
+	await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const b = ed.makeBlock({ x: 100, y: 100, width: 160, height: 80 }, { title: "A", description: "d", comment: "c" });
+		ed.insertBlocks([b]);
+		ed.setSelection([b.id]);
+	});
+	await frame();
+	/** The colors a control really shows: its text over its own background over the panel's. */
+	const shown = (selector) =>
+		page.evaluate((selector) => {
+			const px = (css, under) => {
+				const c = document.createElement("canvas");
+				c.width = c.height = 1;
+				const g = c.getContext("2d");
+				g.fillStyle = under;
+				g.fillRect(0, 0, 1, 1);
+				g.fillStyle = css;
+				g.fillRect(0, 0, 1, 1);
+				const d = g.getImageData(0, 0, 1, 1).data;
+				return [d[0], d[1], d[2]];
+			};
+			const rgb = (a) => `rgb(${a.join(",")})`;
+			const panel = px(getComputedStyle(document.querySelector(".bd-props")).backgroundColor, "#000");
+			return [...document.querySelectorAll(selector)]
+				.filter((e) => e.offsetParent !== null)
+				.map((e) => {
+					const cs = getComputedStyle(e);
+					const bg = px(cs.backgroundColor, rgb(panel));
+					return { name: e.title || e.textContent, bg, fg: px(cs.color, rgb(bg)) };
+				});
+		}, selector);
+	const lum = (c) => {
+		const [r, g, b] = c.map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+	const contrast = (a, b) => {
+		const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+		return (hi + 0.05) / (lo + 0.05);
+	};
+	const themes = [
+		["light", false, {}],
+		["dark", true, {}],
+		["dark with a black accent", true, { "--interactive-accent": "#000000" }],
+		["dark with a navy accent", true, { "--interactive-accent": "#1a237e" }],
+		["dark, black panel, dull text", true, { "--background-primary": "#000000", "--text-muted": "#4a4a4a", "--interactive-accent": "#2b2b2b" }],
+	];
+	try {
+		for (const [name, dark, vars] of themes) {
+			await page.evaluate(
+				([dark, vars]) => {
+					document.body.classList.toggle("theme-dark", dark);
+					document.body.removeAttribute("style");
+					for (const [k, v] of Object.entries(vars)) document.body.style.setProperty(k, v);
+				},
+				[dark, vars],
+			);
+			await frame();
+			const controls = [
+				...(await shown(".bd-visibility-btn")),
+				...(await shown(".bd-btn.is-active")),
+				...(await shown(".bd-seg-btn.is-active")),
+			];
+			assert.ok(controls.length >= 4, `${name}: the eyes and the active controls are on screen`);
+			for (const c of controls) {
+				assert.ok(contrast(c.fg, c.bg) >= 3, `${name}: “${c.name}” is ${contrast(c.fg, c.bg).toFixed(2)}:1 against its background, below the 3:1 icons need`);
+			}
+		}
+	} finally {
+		await page.evaluate(() => {
+			document.body.classList.remove("theme-dark");
+			document.body.removeAttribute("style");
+		});
+	}
+});
+
 test("arrow keys nudge, Escape clears the selection", async () => {
 	const b = await addBlock(400, 300, "Nudge");
 	await page.keyboard.press("ArrowRight");

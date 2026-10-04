@@ -688,6 +688,65 @@ test("a link can be bent by dragging it, and a block can be brought in front of 
 	assert.equal((await linkOf()).waypoints, undefined, "reset route takes the bends out");
 });
 
+test("the show/hide eyes stay readable on a dark theme, even with a dark accent color", async () => {
+	await editorEval((ed) => {
+		const b = ed.makeBlock({ x: 700, y: 700, width: 160, height: 80 }, { title: "Dark", description: "shown", comment: "hidden" });
+		ed.insertBlocks([b]);
+		ed.setSelection([b.id]);
+	});
+	await frame();
+	const wasDark = await page.evaluate(() => document.body.classList.contains("theme-dark"));
+	const eyes = () =>
+		page.evaluate(() => {
+			const px = (css, under) => {
+				const c = document.createElement("canvas");
+				c.width = c.height = 1;
+				const g = c.getContext("2d");
+				g.fillStyle = under;
+				g.fillRect(0, 0, 1, 1);
+				g.fillStyle = css;
+				g.fillRect(0, 0, 1, 1);
+				const d = g.getImageData(0, 0, 1, 1).data;
+				return [d[0], d[1], d[2]];
+			};
+			const lum = (c) => {
+				const [r, g, b] = c.map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+				return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+			};
+			const panelEl = [...document.querySelectorAll(".bd-props")].find((e) => e.offsetParent !== null);
+			const panel = px(getComputedStyle(panelEl).backgroundColor, "#000");
+			return [...panelEl.querySelectorAll(".bd-visibility-btn")].map((b) => {
+				const fg = px(getComputedStyle(b).color, `rgb(${panel.join(",")})`);
+				const [hi, lo] = [lum(fg), lum(panel)].sort((x, y) => y - x);
+				return { name: b.title, ratio: (hi + 0.05) / (lo + 0.05) };
+			});
+		});
+	try {
+		for (const [name, accent] of [["the default accent", null], ["a black accent", "#000000"], ["a navy accent", "#1a237e"]]) {
+			await page.evaluate(
+				(accent) => {
+					document.body.classList.replace("theme-light", "theme-dark");
+					document.body.classList.add("theme-dark");
+					document.body.style.removeProperty("--interactive-accent");
+					if (accent) document.body.style.setProperty("--interactive-accent", accent);
+				},
+				accent,
+			);
+			await sleep(300);
+			await frame();
+			const found = await eyes();
+			assert.equal(found.length, 2, "the Description and Comment eyes are shown");
+			for (const e of found) assert.ok(e.ratio >= 3, `dark theme with ${name}: “${e.name}” is ${e.ratio.toFixed(2)}:1 against the panel, below the 3:1 icons need`);
+		}
+		await shot("e2e-13-eyes-dark");
+	} finally {
+		await page.evaluate((wasDark) => {
+			document.body.style.removeProperty("--interactive-accent");
+			if (!wasDark) document.body.classList.replace("theme-dark", "theme-light");
+		}, wasDark);
+	}
+});
+
 test("code block embeds render a live preview", async () => {
 	const linktext = state.path.replace(/\.blockdraw$/, ".blockdraw");
 	await page.evaluate(async (lt) => {

@@ -15,12 +15,24 @@
 	--bd-frame-title: var(--text-muted, #495057);
 	--bd-accent: var(--interactive-accent, #6965db);
 	--bd-accent-soft: color-mix(in srgb, var(--bd-accent) 16%, transparent);
+	/* The accent as a text or icon color; see the dark theme rule below. */
+	--bd-accent-ink: var(--bd-accent);
 	--bd-panel-bg: var(--background-primary, #ffffff);
 	--bd-panel-border: var(--background-modifier-border, #dee2e6);
 	--bd-muted: var(--text-muted, #6c757d);
 	--bd-hover: var(--background-modifier-hover, rgba(0, 0, 0, 0.06));
 	--bd-grid-dot: color-mix(in srgb, var(--bd-ink) 22%, transparent);
 	--bd-radius: 10px;
+}
+
+/*
+ * On a dark theme the accent is lightened where it colors text or an icon on the panel's background:
+ * a dark accent color (or a dull one) would otherwise make the icon vanish, while the same accent
+ * is fine on a light theme. Fills and outlines keep the accent as chosen.
+ */
+.theme-dark .bd-editor,
+.theme-dark .bd-embed {
+	--bd-accent-ink: color-mix(in srgb, var(--bd-accent) 50%, white);
 }
 
 .bd-editor {
@@ -261,7 +273,7 @@
 
 .bd-editor .bd-btn.is-active {
 	background: var(--bd-accent-soft);
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 }
 
 .bd-editor .bd-btn:disabled {
@@ -351,7 +363,7 @@
 	cursor: pointer;
 	font-size: 12px;
 	font-weight: 600;
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 }
 
 .bd-back-btn.is-visible {
@@ -493,17 +505,18 @@
 	border-radius: 6px;
 	background: transparent;
 	box-shadow: none;
-	color: var(--bd-muted);
+	/* From the theme's text color rather than its muted one, which some dark themes make very dim. */
+	color: color-mix(in srgb, var(--bd-ink) 65%, transparent);
 	cursor: pointer;
 }
 
 .bd-editor .bd-visibility-btn:hover {
 	background: var(--bd-hover);
-	color: var(--text-normal, #1e1e1e);
+	color: var(--bd-ink);
 }
 
 .bd-editor .bd-visibility-btn.is-on {
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 }
 
 .bd-editor .bd-visibility-btn:focus-visible {
@@ -555,7 +568,7 @@
 .bd-editor .bd-seg-btn.is-active {
 	border-color: var(--bd-accent);
 	background: var(--bd-accent-soft);
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 }
 
 /* A few options as one joined control instead of separate boxes. */
@@ -848,7 +861,7 @@
 .bd-help-keys {
 	font-family: var(--font-monospace, monospace);
 	white-space: nowrap;
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 }
 
 .bd-help-what {
@@ -1326,7 +1339,7 @@
 
 .bd-guide-keys {
 	font-family: var(--font-monospace, monospace);
-	color: var(--bd-accent);
+	color: var(--bd-accent-ink);
 	white-space: nowrap;
 }
 
