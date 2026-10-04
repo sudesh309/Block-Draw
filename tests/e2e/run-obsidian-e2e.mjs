@@ -493,7 +493,14 @@ test("settings tab renders and tests the bridge connection", async () => {
 			for (const p of page.context().pages()) if ((await headingsOf(p)).length) return p;
 			return null;
 		}, "settings window");
-		assert.deepEqual(await headingsOf(settingsPage), ["Drawings", "Export", "Google Sheets"]);
+		assert.deepEqual(await headingsOf(settingsPage), ["Drawings", "Touch and pen", "Export", "Google Sheets"]);
+		const tabletRow = await settingsPage.evaluate(() => {
+			const row = [...document.querySelectorAll(".setting-item")].find((r) => r.querySelector(".setting-item-name")?.textContent === "Tablet mode");
+			return row ? { value: row.querySelector("select")?.value ?? null, desc: row.querySelector(".setting-item-description")?.textContent ?? "" } : null;
+		});
+		assert.ok(tabletRow, "the tablet mode setting is listed");
+		assert.equal(tabletRow.value, "auto", "tablet mode is automatic by default");
+		assert.match(tabletRow.desc, /no longer opens Obsidian's sidebars/);
 		const fontsRow = await settingsPage.evaluate(() => {
 			const row = [...document.querySelectorAll(".setting-item")].find((r) => r.querySelector(".setting-item-name")?.textContent === "Load web fonts from Google Fonts");
 			return row ? { on: row.querySelector(".checkbox-container")?.classList.contains("is-enabled") ?? null, desc: row.querySelector(".setting-item-description")?.textContent ?? "" } : null;
@@ -769,6 +776,74 @@ test("files that cannot be parsed are shown as an error and left untouched", asy
 	await page.waitForSelector(".bd-load-error", { timeout: 10000 });
 	await sleep(2600);
 	assert.equal(await readFile("Broken.blockdraw"), "{ this is not json");
+});
+
+test("tablet mode keeps Obsidian's swipe gestures out of a drawing on a phone or tablet", async () => {
+	/** Obsidian's phone and tablet layout, with its swipe gestures. Switching it reloads the app. */
+	const emulateMobile = async (on) => {
+		await page.evaluate((on) => window.app.emulateMobile(on), on);
+		await sleep(3000);
+		await page.waitForFunction((on) => window.app?.workspace?.layoutReady === true && window.app.isMobile === on, on, { timeout: 60000 });
+		await waitFor(() => page.evaluate(() => !!window.app.plugins.plugins["block-draw"]), "the plugin to load again");
+	};
+	const setTabletMode = (mode) =>
+		page.evaluate(async (mode) => {
+			const p = window.app.plugins.plugins["block-draw"];
+			p.settings.tabletMode = mode;
+			await p.saveSettings();
+		}, mode);
+	await emulateMobile(true);
+	try {
+		await command("block-draw:create-drawing");
+		await page.waitForSelector(".bd-editor:visible", { timeout: 15000 });
+		await frame();
+		const r = await canvasRect();
+		const width = await page.evaluate(() => innerWidth);
+		const cdp = await page.context().newCDPSession(page);
+		/** A quick one-finger stroke, the way Obsidian tells a swipe; returns what it opened. */
+		const swipe = async (from, to) => {
+			await page.evaluate(() => {
+				window.app.workspace.leftSplit.collapse();
+				window.app.workspace.rightSplit.collapse();
+			});
+			if (await page.isVisible(".prompt")) await page.keyboard.press("Escape");
+			await sleep(500);
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: from.x, y: from.y, id: 1 }] });
+			for (let i = 1; i <= 8; i++) {
+				const p = { x: from.x + ((to.x - from.x) * i) / 8, y: from.y + ((to.y - from.y) * i) / 8 };
+				await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...p, id: 1 }] });
+				await sleep(10);
+			}
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+			await sleep(700);
+			const s = await page.evaluate(() => ({ left: !window.app.workspace.leftSplit.collapsed, right: !window.app.workspace.rightSplit.collapsed, prompt: !!document.querySelector(".prompt") }));
+			return s.left ? "left sidebar" : s.right ? "right sidebar" : s.prompt ? "pull-down menu" : "nothing";
+		};
+		const midRight = [{ x: r.left + 300, y: r.top + 400 }, { x: r.left + 750, y: r.top + 400 }];
+		const midLeft = [{ x: r.right - 300, y: r.top + 400 }, { x: r.right - 750, y: r.top + 400 }];
+		const down = [{ x: r.left + 700, y: r.top + 40 }, { x: r.left + 700, y: r.top + 520 }];
+		const fromLeftEdge = [{ x: 6, y: r.top + 400 }, { x: 420, y: r.top + 400 }];
+
+		// Automatic, the default, is on here.
+		assert.equal(await swipe(...midRight), "nothing", "a stroke to the right draws instead of opening the left sidebar");
+		assert.equal(await swipe(...midLeft), "nothing", "a stroke to the left draws instead of opening the right sidebar");
+		assert.equal(await swipe(...down), "nothing", "a stroke down draws instead of pulling down the quick switcher");
+		assert.equal(await swipe(...fromLeftEdge), "left sidebar", "a swipe from the edge of the screen still opens the sidebar");
+		await shot("e2e-14-tablet-mode");
+
+		// Off: Obsidian gets the strokes again, as before tablet mode.
+		await setTabletMode("off");
+		assert.equal(await swipe(...midRight), "left sidebar");
+		await setTabletMode("on");
+		assert.equal(await swipe(...midRight), "nothing");
+	} finally {
+		await setTabletMode("auto");
+		await page.evaluate(() => {
+			window.app.workspace.leftSplit.collapse();
+			window.app.workspace.rightSplit.collapse();
+		});
+		await emulateMobile(false);
+	}
 });
 
 test("no errors were logged", async () => {

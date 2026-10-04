@@ -1,6 +1,6 @@
 // End-to-end UI tests for the editor, driven with real pointer/keyboard input in Chromium.
 // Run: npm run test:ui   (set CHROMIUM_PATH if Chromium is not at /opt/pw-browsers/chromium,
-// and SHOTS=<dir> to save screenshots).
+// SHOTS=<dir> to save screenshots, and ONLY=<text> to run just the tests whose name contains it).
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -1418,6 +1418,57 @@ test("double-tap on a touch screen adds a block", async () => {
 	}
 });
 
+test("tablet mode's touch guard keeps a stroke's touchmove events in the drawing, except from the screen edge", async () => {
+	const touch = await offline(await browser.newContext({ viewport: { width: 900, height: 700 }, hasTouch: true, isMobile: true }));
+	const tp = await touch.newPage();
+	try {
+		await tp.goto(url);
+		await tp.waitForFunction(() => !!window.bd);
+		const id = await tp.evaluate(() => {
+			const ed = window.bd.editor;
+			const b = ed.makeBlock({ x: 200, y: 200, width: 140, height: 80 }, { title: "Touch" });
+			ed.insertBlocks([b]);
+			ed.setSelection([]);
+			// What reaches the window, where Obsidian listens for its swipe gestures.
+			window.seen = [];
+			for (const type of ["touchstart", "touchmove", "touchend"]) window.addEventListener(type, (e) => window.seen.push(e.type));
+			return b.id;
+		});
+		const cdp = await touch.newCDPSession(tp);
+		const stroke = async (from, to) => {
+			await tp.evaluate(() => (window.seen.length = 0));
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: from.x, y: from.y, id: 1 }] });
+			for (let i = 1; i <= 8; i++) {
+				const p = { x: from.x + ((to.x - from.x) * i) / 8, y: from.y + ((to.y - from.y) * i) / 8 };
+				await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ ...p, id: 1 }] });
+			}
+			await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+			await tp.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+			return tp.evaluate(() => [...new Set(window.seen)].sort().join(" "));
+		};
+		const blockAt = () => tp.evaluate((id) => {
+			const b = window.bd.editor.byId.get(id);
+			return window.bd.editor.worldToScreen({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
+		}, id);
+
+		await tp.evaluate(() => window.bd.setTouchGuard(true));
+		// On empty canvas (a stroke that starts on a block's text loses its touchend anyway: the text is redrawn while it moves).
+		assert.equal(await stroke({ x: 450, y: 600 }, { x: 700, y: 600 }), "touchend touchstart", "touchstart and touchend still reach the page, touchmove does not");
+		const before = await blockAt();
+		assert.ok(!(await stroke(before, { x: before.x + 200, y: before.y })).includes("touchmove"), "moving a block keeps its touchmove events in the drawing too");
+		const after = await blockAt();
+		assert.ok(after.x - before.x >= 180, `the drawing still gets the stroke: the block moved by ${after.x - before.x}px`);
+
+		assert.equal(await stroke({ x: 5, y: 600 }, { x: 300, y: 600 }), "touchend touchmove touchstart", "a stroke from the left edge reaches the page");
+		assert.equal(await stroke({ x: 895, y: 600 }, { x: 600, y: 600 }), "touchend touchmove touchstart", "so does one from the right edge");
+
+		await tp.evaluate(() => window.bd.setTouchGuard(false));
+		assert.equal(await stroke({ x: 450, y: 600 }, { x: 700, y: 600 }), "touchend touchmove touchstart", "without the guard everything reaches the page");
+	} finally {
+		await touch.close();
+	}
+});
+
 test("web fonts are opt-in: the font picker explains it, and nothing is requested", async () => {
 	const b = await addBlock(300, 250, "Fonts");
 	const c = await centerOf(b.id);
@@ -1466,6 +1517,7 @@ test("the editor never requests anything from the network", async () => {
 /* ------------------------------------------------------------------ runner */
 
 let failed = 0;
+if (process.env.ONLY) tests.splice(0, tests.length, ...tests.filter((t) => t.name.includes(process.env.ONLY)));
 for (const t of tests) {
 	await fresh();
 	try {

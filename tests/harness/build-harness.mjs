@@ -25,6 +25,7 @@ writeFileSync(
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Block Draw harness</title>
 <link rel="stylesheet" href="styles.css">
 <style>

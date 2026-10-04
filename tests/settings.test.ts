@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getPath, loadSettings, reachesNetwork, settingsToSave, type SecretStore } from "../src/kernel/settings";
-import { DEFAULT_SETTINGS, SETTINGS, type BlockDrawSettings } from "../src/obsidian/settings";
+import { DEFAULT_SETTINGS, SETTINGS, tabletModeOn, type BlockDrawSettings } from "../src/obsidian/settings";
 
 /** A secret store in memory; `broken` makes it refuse every write, like a device without storage. */
 function memoryStore(initial: Record<string, string> = {}, broken = false): SecretStore & { data: Record<string, string> } {
@@ -45,10 +45,13 @@ const DEFAULTS_046 = {
 	},
 };
 
+/** Settings added since 0.4.6, with their defaults. */
+const ADDED_SINCE_046 = { tabletMode: "auto" };
+
 describe("the SETTINGS table", () => {
-	it("reproduces the 0.4.6 defaults", () => {
-		expect(DEFAULT_SETTINGS).toEqual(DEFAULTS_046);
-		expect(load(undefined).values).toEqual(DEFAULTS_046);
+	it("reproduces the 0.4.6 defaults, plus the settings added since", () => {
+		expect(DEFAULT_SETTINGS).toEqual({ ...DEFAULTS_046, ...ADDED_SINCE_046 });
+		expect(load(undefined).values).toEqual({ ...DEFAULTS_046, ...ADDED_SINCE_046 });
 	});
 
 	it("has one row per key, each named", () => {
@@ -86,6 +89,21 @@ describe("reading data.json", () => {
 	it("turns on a setting that reaches the network only for a literal true", () => {
 		expect(load({ webFonts: true }).values.webFonts).toBe(true);
 		for (const v of ["true", 1, "yes", {}, null]) expect(load({ webFonts: v }).values.webFonts).toBe(false);
+	});
+
+	it("reads tablet mode, falling back to automatic", () => {
+		expect(load({ tabletMode: "on" }).values.tabletMode).toBe("on");
+		expect(load({ tabletMode: "off" }).values.tabletMode).toBe("off");
+		for (const v of [true, "tablet", 1, null]) expect(load({ tabletMode: v }).values.tabletMode).toBe("auto");
+	});
+});
+
+describe("tablet mode", () => {
+	it("is on for phones and tablets when automatic, and wherever it is switched on", () => {
+		expect(tabletModeOn("auto", true)).toBe(true);
+		expect(tabletModeOn("auto", false)).toBe(false);
+		expect(tabletModeOn("on", false)).toBe(true);
+		expect(tabletModeOn("off", true)).toBe(false);
 	});
 });
 

@@ -9,6 +9,8 @@ import { LinkPickerModal } from "./LinkPickerModal";
 import { exporterRows } from "./exporters";
 import { openExternal } from "./links";
 import type { BlockDrawHost } from "./plugin";
+import { tabletModeOn } from "./settings";
+import { TouchGuard } from "./touchGuard";
 
 export const VIEW_TYPE = "block-draw-view";
 export const VIEW_ICON = "workflow";
@@ -43,6 +45,8 @@ const viewportCache = new Map<string, Viewport>();
 
 export class BlockDrawView extends TextFileView {
 	editor: Editor | null = null;
+	/** Tablet mode: keeps Obsidian's swipe gestures out of the drawing. */
+	private touchGuard: TouchGuard | null = null;
 	/** Everything in the file except the elements (kept on save). */
 	private meta: DrawingMeta = createEmptyDrawing();
 	private loadError: string | null = null;
@@ -76,6 +80,8 @@ export class BlockDrawView extends TextFileView {
 
 	async onClose(): Promise<void> {
 		this.rememberViewport();
+		this.touchGuard?.setEnabled(false);
+		this.touchGuard = null;
 		this.editor?.destroy();
 		this.editor = null;
 	}
@@ -91,6 +97,8 @@ export class BlockDrawView extends TextFileView {
 		});
 		this.editor.onChange = () => this.requestSave();
 		this.editor.onViewportChange = () => this.rememberViewport();
+		this.touchGuard = new TouchGuard(this.editor.root);
+		this.touchGuard.setEnabled(tabletModeOn(s.tabletMode, Platform.isMobile));
 		return this.editor;
 	}
 
@@ -102,6 +110,7 @@ export class BlockDrawView extends TextFileView {
 	applySettings(): void {
 		const s = this.plugin.settings;
 		this.editor?.setOptions({ gridSize: s.gridSize, snapToGrid: s.snapToGrid, showGrid: s.showGrid, webFonts: s.webFonts });
+		this.touchGuard?.setEnabled(tabletModeOn(s.tabletMode, Platform.isMobile));
 	}
 
 	/* --------------------------------------------------------- file data */

@@ -9,6 +9,7 @@ import { exportStructuredJson } from "../../src/export/json";
 import { sceneToSvg } from "../../src/render/scene";
 import { LIGHT_THEME } from "../../src/render/colors";
 import { setTextMeasure } from "../../src/render/text";
+import { TouchGuard } from "../../src/obsidian/touchGuard";
 
 interface HarnessState {
 	editor: Editor;
@@ -25,6 +26,8 @@ interface HarnessState {
 	svg(frameId?: string): string;
 	/** Replaces how wide text is measured (what loading a different font does). */
 	setTextMeasure(fn: ((text: string, size: number) => number) | null): void;
+	/** Turns tablet mode's touch guard (what the Obsidian view adds) on or off. */
+	setTouchGuard(on: boolean): void;
 }
 
 declare global {
@@ -124,6 +127,7 @@ editor.onChange = () => {
 	state.changes++;
 };
 editor.focus();
+const touchGuard = new TouchGuard(editor.root);
 
 window.bd = Object.assign(state, {
 	editor,
@@ -148,5 +152,8 @@ window.bd = Object.assign(state, {
 	},
 	setTextMeasure(fn: ((text: string, size: number) => number) | null) {
 		setTextMeasure(fn);
+	},
+	setTouchGuard(on: boolean) {
+		touchGuard.setEnabled(on);
 	},
 });

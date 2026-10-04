@@ -3,6 +3,9 @@ import { settingDefaults, type SettingDef } from "../kernel/settings";
 
 export type SheetsMethod = "apps-script" | "oauth";
 
+/** "auto" is on for phones and tablets, off on computers. */
+export type TabletMode = "auto" | "on" | "off";
+
 export interface SheetsSettings {
 	method: SheetsMethod;
 	appsScriptUrl: string;
@@ -35,6 +38,8 @@ export interface BlockDrawSettings {
 	jsonFormat: JsonExportFormat;
 	/** Download Inter, Roboto, Open Sans, Montserrat and Lato from Google Fonts. Off by default: nothing is requested. */
 	webFonts: boolean;
+	/** Touch and pen behavior for drawing on a tablet or phone. */
+	tabletMode: TabletMode;
 	sheets: SheetsSettings;
 }
 
@@ -86,6 +91,18 @@ export const SETTINGS: readonly (SettingDef & { key: SettingKey })[] = [
 		desc: "Off: Block Draw never contacts Google for fonts, and uses the fonts installed on your device. On: Inter, Roboto, Open Sans, Montserrat and Lato are downloaded so they show everywhere, and exported SVG files load them too (PNG images always use installed fonts).",
 		default: false,
 		needs: ["net:fonts.googleapis.com", "net:fonts.gstatic.com"],
+	},
+	{
+		key: "tabletMode",
+		type: "choice",
+		name: "Tablet mode",
+		desc: "On: moving a finger or pen across a drawing draws, and no longer opens Obsidian's sidebars or pull-down menu. To open a sidebar from a drawing, swipe in from the very edge of the screen. Automatic: on for phones and tablets.",
+		default: "auto",
+		options: [
+			{ value: "auto", label: "Automatic" },
+			{ value: "on", label: "On" },
+			{ value: "off", label: "Off" },
+		],
 	},
 	{
 		key: "exportFolder",
@@ -192,4 +209,9 @@ export function settingDef(key: SettingKey): SettingDef {
 	const def = SETTINGS.find((d) => d.key === key);
 	if (!def) throw new Error(`No setting "${key}"`);
 	return def;
+}
+
+/** Whether tablet mode applies on this device (`isMobile`: a phone or tablet). */
+export function tabletModeOn(mode: TabletMode, isMobile: boolean): boolean {
+	return mode === "on" || (mode === "auto" && isMobile);
 }

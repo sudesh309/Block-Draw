@@ -13,7 +13,7 @@ Draw block diagrams in Obsidian: titled blocks, links and frames. Then present t
 - **Present**: press **P** for a full-screen slideshow, one slide per frame, with a laser pointer. Click a block to spotlight what it depends on.
 - **Show data flow**: animated flow along links, running both ways on two-way links.
 - **Export**: Google Sheets (one tab per frame), Excel, JSON, SVG and PNG.
-- Works offline, follows your light or dark theme, and runs on desktop and mobile.
+- Works offline, follows your light or dark theme, and runs on desktop and mobile. On a tablet or phone, **tablet mode** lets a finger or pen draw without opening Obsidian's sidebars or pull-down menu.
 
 ![The 3D theme: soft colors, raised tiles and links, technology tags](docs/images/theme-executive.png)
 

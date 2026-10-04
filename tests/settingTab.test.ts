@@ -49,6 +49,7 @@ function changedSettings(): BlockDrawSettings {
 	s.gridSize = 30;
 	s.snapToGrid = false;
 	s.webFonts = true;
+	s.tabletMode = "on";
 	s.jsonFormat = "raw";
 	s.sheets.method = "oauth";
 	s.sheets.appsScriptSecret = "s3cret";
@@ -97,7 +98,7 @@ describe("the settings tab", () => {
 		const tab = settingTab(settings);
 		tab.display();
 		const rows = (tab.containerEl as unknown as FakeContainer).settings;
-		expect(rows.filter((r) => r.heading).map((r) => r.name)).toEqual(["Drawings", "Export", "Google Sheets"]);
+		expect(rows.filter((r) => r.heading).map((r) => r.name)).toEqual(["Drawings", "Touch and pen", "Export", "Google Sheets"]);
 		const otherMethod = method === "oauth" ? "sheets.appsScript" : "sheets.oauth";
 		for (const def of SETTINGS) {
 			const row = rows.find((r) => r.name === def.name);

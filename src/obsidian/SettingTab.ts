@@ -130,6 +130,7 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 	private groups(): Group[] {
 		return [
 			{ heading: "Drawings", rows: this.drawingRows() },
+			{ heading: "Touch and pen", rows: this.touchRows() },
 			{ heading: "Export", rows: this.exportRows() },
 			{ heading: "Google Sheets", rows: this.sheetsRows() },
 		];
@@ -205,6 +206,10 @@ export class BlockDrawSettingTab extends PluginSettingTab {
 
 	private drawingRows(): Row[] {
 		return [this.row("newFileFolder"), this.row("newFilePrefix"), this.row("gridSize"), this.row("snapToGrid"), this.row("showGrid"), this.row("webFonts")];
+	}
+
+	private touchRows(): Row[] {
+		return [this.row("tabletMode")];
 	}
 
 	private exportRows(): Row[] {
