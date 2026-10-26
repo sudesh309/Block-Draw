@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0
+
+- **Paste pictures and tables.** Paste a picture (a screenshot, an image copied from a web page) and it appears in the middle of the view as a block: move it, resize it (a corner keeps its proportions), connect it, put it in a frame, copy it, present it, export it to SVG and PNG. Paste a table copied from a spreadsheet, a web page, a note or a Markdown table and you get a table block with a header row. **Paste** in the right-click menu does the same where there is no keyboard. Large pictures are scaled down (to at most 1600 px) so a drawing file stays small, and pictures are saved inside the drawing. Pasting text or Block Draw's own copies works as before. Tables are included in the structured JSON export.
+- A drawing with pictures or tables opens in older versions of Block Draw as plain blocks, and saving it there removes the pictures and tables. See [docs/FORMAT.md](docs/FORMAT.md).
+
 ## 0.7.0
 
 Tablet mode gets the pen features from issue #11. Nothing changes on a computer or with tablet mode off, apart from the new Eraser tool.
