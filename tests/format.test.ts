@@ -85,6 +85,8 @@ function normalizeOne(raw: Record<string, unknown>): DrawElement {
 /** A value to set on each field that a file only contains when it is set (its default cell says "absent"). */
 const OPTIONAL_SAMPLES: Record<string, unknown> = {
 	"block.inFront": true,
+	"block.image": "data:image/png;base64,iVBORw0KGgo=",
+	"block.table": [["h1", "h2"], ["a", "b"]],
 	"connector.behind": true,
 	"connector.waypoints": [{ x: 10, y: -20.5 }],
 };

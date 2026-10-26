@@ -37,6 +37,8 @@ export interface ExportBlock {
 	tag: string;
 	description: string;
 	comment: string;
+	/** Rows of cell text, when the block holds a pasted table (the first row is the header). */
+	table?: string[][];
 	shape: string;
 	link: ExportLink | null;
 	/** Ids of connections leaving / entering this block. */
@@ -125,6 +127,7 @@ export function exportStructuredJson(file: DrawingFile): StructuredExport {
 			tag: b.tag,
 			description: b.description,
 			comment: b.comment,
+			...(b.table ? { table: b.table } : {}),
 			shape: b.shape,
 			link,
 			outgoing: outgoing.get(b.id) ?? [],

@@ -1,5 +1,6 @@
 import { newId } from "./ids";
 import { FONT_IDS } from "./fonts";
+import { readImage, readTable } from "./media";
 import {
 	BLOCK_SHAPES,
 	DEFAULT_BLOCK_STYLE,
@@ -46,6 +47,8 @@ const ANCHORS: AnchorSide[] = ["auto", "top", "right", "bottom", "left"];
 
 function normalizeBlock(raw: Raw): BlockElement {
 	const s = isObj(raw.style) ? raw.style : {};
+	const image = readImage(raw.image);
+	const table = readTable(raw.table);
 	return {
 		id: str(raw.id) || newId(),
 		type: "block",
@@ -76,6 +79,8 @@ function normalizeBlock(raw: Raw): BlockElement {
 		},
 		// Optional fields come last, in the order the edit operations write them, so a file does not
 		// change its line order when it is saved again.
+		...(image ? { image } : {}),
+		...(table ? { table } : {}),
 		...(raw.inFront === true ? { inFront: true } : {}),
 	};
 }

@@ -3,6 +3,7 @@ import { cloneElements, collectForCopy, insertClones, makeClipboardPayload, read
 import { DEFAULT_BLOCK_SIZE, isBox } from "../model/types";
 import { fitBlockHeight } from "./blocks";
 import type { Editor } from "./Editor";
+import { pasteRich } from "./pasteMedia";
 
 /** Copy, cut and paste: through the system clipboard, with an in-editor copy as a fallback. */
 export class ClipboardController {
@@ -71,8 +72,14 @@ export class ClipboardController {
 		if (this.ed.destroyed || this.ed.options.readOnly) return;
 		if (this.ed.doc.activeElement !== this.ed.root) return;
 		if (kind === "paste") {
-			const text = e.clipboardData?.getData("text/plain") ?? "";
+			const data = e.clipboardData;
+			const text = data?.getData("text/plain") ?? "";
 			e.preventDefault();
+			// Our own copies first; then a table or a picture; then plain text becomes a block.
+			if (!readClipboardPayload(text)) {
+				const images = Array.from(data?.files ?? []);
+				if (pasteRich(this.ed, { text, html: data?.getData("text/html") ?? "", images })) return;
+			}
 			if (text) this.pasteText(text);
 			else this.pasteInternal();
 			return;
@@ -85,6 +92,20 @@ export class ClipboardController {
 	}
 
 	async pasteFromSystem(at?: Point): Promise<void> {
+		try {
+			const items = await navigator.clipboard.read();
+			const content = { text: "", html: "", images: [] as Blob[] };
+			for (const item of items) {
+				for (const type of item.types) {
+					if (type === "text/plain") content.text = await (await item.getType(type)).text();
+					else if (type === "text/html") content.html = await (await item.getType(type)).text();
+					else if (type.startsWith("image/")) content.images.push(await item.getType(type));
+				}
+			}
+			if (!readClipboardPayload(content.text) && pasteRich(this.ed, content, at)) return;
+		} catch {
+			// no permission to read everything: text only, below
+		}
 		try {
 			const text = await navigator.clipboard.readText();
 			if (text) {

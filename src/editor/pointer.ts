@@ -456,7 +456,7 @@ export class PointerController {
 		if (hnd.includes("e")) x1 = Math.max(ed.snapValue(world.x), x0 + min);
 		if (hnd.includes("n")) y0 = Math.min(ed.snapValue(world.y), y1 - min);
 		if (hnd.includes("s")) y1 = Math.max(ed.snapValue(world.y), y0 + min);
-		if (keepRatio && hnd.length === 2 && o.width > 0 && o.height > 0) {
+		if ((keepRatio || (isBlock(el) && !!el.image)) && hnd.length === 2 && o.width > 0 && o.height > 0) {
 			const ratio = o.width / o.height;
 			const w = x1 - x0;
 			const hgt = y1 - y0;

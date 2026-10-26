@@ -88,6 +88,10 @@ export interface BlockElement extends Bounds {
 	comment: string;
 	/** Whether the comment callout is currently shown on the canvas (and in exports). */
 	commentOpen: boolean;
+	/** A picture filling the block: a `data:image/…;base64,…` address. Written only when there is one. */
+	image?: string;
+	/** A table drawn in the block, as rows of cell text; the first row is the header. Written only when there is one. */
+	table?: string[][];
 	/** Drawn above the links instead of below them. Written only when true. */
 	inFront?: boolean;
 }

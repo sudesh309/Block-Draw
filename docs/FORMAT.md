@@ -54,6 +54,8 @@ The file format is Block Draw's public interface (see [ADR 0001](adr/0001-the-fi
 | `tag` | string | `""` | 0.4.0 | Stereotype or technology shown above the title. |
 | `comment` | string | `""` | 0.2.0 | |
 | `commentOpen` | boolean | `false` | 0.2.0 | Whether the comment callout is shown. |
+| `image` | string | absent | 0.8.0 | A picture shown in the block: a `data:image/png`, `jpeg`, `gif` or `webp` address with base64 data, at most 3,000,000 characters. Anything else (a web address, an SVG) is dropped, so a drawing never loads anything from the network. Written only when there is one. |
+| `table` | array of rows | absent | 0.8.0 | A table shown in the block: rows of cell text, the first row being the header. At most 200 rows, 30 columns and 500 characters per cell; short rows are padded. The columns and rows share the block's width and height. Written only when there is one. |
 | `inFront` | boolean | absent | 0.6.0 | `true` draws the block above the links instead of below them (see [stacking](#stacking)). Written only when true. |
 | `style.fill` | color | `"#a5d8ff"` | 0.1.0 | See [colors](#colors). |
 | `style.stroke` | color | `"default"` | 0.1.0 | |

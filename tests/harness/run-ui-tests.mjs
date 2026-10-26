@@ -1724,6 +1724,95 @@ test("tablet mode: a toolbar button hides and shows the properties panel; withou
 	assert.equal(await btn.isVisible(), false);
 });
 
+/** A paste event with the given clipboard parts, the way the browser sends one. */
+async function pasteEvent(parts) {
+	await page.evaluate((parts) => {
+		const ed = window.bd.editor;
+		ed.root.focus();
+		const data = new DataTransfer();
+		if (parts.text) data.setData("text/plain", parts.text);
+		if (parts.html) data.setData("text/html", parts.html);
+		if (parts.png) {
+			const bytes = Uint8Array.from(atob(parts.png), (c) => c.charCodeAt(0));
+			data.items.add(new File([bytes], "shot.png", { type: "image/png" }));
+		}
+		ed.root.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+	}, parts);
+	await page.waitForTimeout(150);
+	await frame();
+}
+
+const PNG_2X2 = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVQIW2P8z8Dwn4GBgYGJAQoAHhgCAh6X4CYAAAAASUVORK5CYII=";
+
+test("pasting a spreadsheet's table, tab-separated text or a Markdown table makes a table block", async () => {
+	await pasteEvent({
+		text: "Item\tQty\nApple\t3\nPear\t12",
+		html: "<table><tr><th>Item</th><th>Qty</th></tr><tr><td>Apple</td><td>3</td></tr><tr><td>Pear</td><td colspan=1>12</td></tr></table>",
+		png: PNG_2X2,
+	});
+	let list = await els();
+	assert.equal(list.length, 1, "one block, though the clipboard also holds a picture of the cells");
+	assert.deepEqual(list[0].table, [["Item", "Qty"], ["Apple", "3"], ["Pear", "12"]]);
+	assert.equal(list[0].image, undefined);
+	assert.equal(await page.locator(".bd-table").count(), 1);
+	assert.ok((await page.locator(".bd-table-text tspan").allTextContents()).includes("Pear"));
+	assert.deepEqual(await sel(), [list[0].id], "the new table is selected");
+	await pasteEvent({ text: "a\tb\nc\td" });
+	await pasteEvent({ text: "| H1 | H2 |\n| --- | --- |\n| x | y |" });
+	list = await els();
+	assert.deepEqual(list.map((e) => e.table?.[0]), [["Item", "Qty"], ["a", "b"], ["H1", "H2"]]);
+	await page.keyboard.press("Control+z");
+	assert.equal((await els()).length, 2, "one undo removes the last paste");
+	// survives a save and load
+	const text = await page.evaluate(() => window.bd.serialize());
+	await page.evaluate((t) => window.bd.load(t), text);
+	await frame();
+	assert.equal(await page.locator(".bd-table").count(), 2);
+});
+
+test("pasting a picture makes a picture block that keeps its proportions; plain text and our own copies paste as before", async () => {
+	await pasteEvent({ png: PNG_2X2 });
+	await page.waitForFunction(() => window.bd.editor.getElements().length === 1);
+	let list = await els();
+	assert.match(list[0].image, /^data:image\/png;base64,/);
+	assert.equal(list[0].width, list[0].height, "a square picture stays square");
+	assert.equal(await page.locator(".bd-image").count(), 1);
+	// resizing a corner keeps the ratio
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), list[0].id);
+	await frame();
+	const corner = await page.evaluate((id) => {
+		const ed = window.bd.editor;
+		const b = ed.byId.get(id);
+		return ed.worldToScreen({ x: b.x + b.width + 4, y: b.y + b.height + 4 });
+	}, list[0].id);
+	await drag(corner, { x: corner.x + 60, y: corner.y + 10 });
+	list = await els();
+	assert.equal(list[0].width, list[0].height, "the ratio is kept");
+	// plain text still becomes a block with that title
+	await pasteEvent({ text: "Hello there" });
+	list = await els();
+	assert.equal(list.length, 2);
+	assert.equal(list[1].title, "Hello there");
+	assert.equal(list[1].table, undefined);
+	// copy and paste of the picture block carries the picture
+	await page.evaluate((id) => window.bd.editor.setSelection([id]), list[0].id);
+	const payload = await page.evaluate((id) => window.bd.editor.clipboard.copySelectionText(), list[0].id);
+	await pasteEvent({ text: payload });
+	list = await els();
+	assert.equal(list.length, 3);
+	assert.equal(list[2].image, list[0].image);
+	// a bad picture is refused with a notice
+	const notices = await page.evaluate(() => window.bd.notices.length);
+	await page.evaluate(() => {
+		const data = new DataTransfer();
+		data.items.add(new File([new Uint8Array([1, 2, 3])], "x.png", { type: "image/png" }));
+		window.bd.editor.root.dispatchEvent(new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }));
+	});
+	await page.waitForTimeout(200);
+	assert.equal((await els()).length, 3);
+	assert.equal(await page.evaluate(() => window.bd.notices.length), notices + 1);
+});
+
 test("web fonts are opt-in: the font picker explains it, and nothing is requested", async () => {
 	const b = await addBlock(300, 250, "Fonts");
 	const c = await centerOf(b.id);

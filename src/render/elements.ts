@@ -14,6 +14,7 @@ import type {
 } from "../model/types";
 import { isTransparent, parseColor, relativeLuminance, resolveFill, resolveStroke, resolveTextColor, shadeColor, toHex6, type RenderTheme } from "./colors";
 import { fontStack } from "./fonts";
+import { renderMedia } from "./media";
 import { FONT_FAMILY, LINE_HEIGHT, layoutBlockText, measureText, wrapText } from "./text";
 import { h, type VChild, type VNode } from "./vnode";
 
@@ -333,6 +334,7 @@ export function renderBlock(block: BlockElement, o: RenderOptions): VNode {
 			"pointer-events": o.interactive ? "all" : null,
 		}),
 	);
+	children.push(...renderMedia(block, o.theme));
 	const deco = shapeDecorationPath(block.shape, w, h0);
 	if (deco && stroke && sw > 0) {
 		children.push(
