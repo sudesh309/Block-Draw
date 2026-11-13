@@ -1047,6 +1047,109 @@
 	}
 }
 
+/* ------------------------------------------- find, table editing, guides */
+
+.bd-find {
+	top: 60px;
+	right: 10px;
+	display: none;
+	align-items: center;
+	gap: 2px;
+	padding: 4px 4px 4px 8px;
+	z-index: 5;
+}
+
+.bd-find.is-open {
+	display: flex;
+}
+
+.bd-editor .bd-find-input {
+	width: 180px;
+	height: 28px;
+	padding: 0 6px;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+	color: var(--bd-ink);
+	font-size: 13px;
+}
+
+.bd-editor .bd-find-input:focus {
+	outline: none;
+	box-shadow: none;
+}
+
+.bd-find-count {
+	padding: 0 6px;
+	color: var(--bd-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.bd-find.is-empty .bd-find-count {
+	color: var(--color-red, #e93147);
+}
+
+.bd-table-editor {
+	position: absolute;
+	display: none;
+	z-index: 4;
+}
+
+.bd-table-editor.is-active {
+	display: block;
+}
+
+.bd-table-editor-bar {
+	position: absolute;
+	left: 0;
+	bottom: calc(100% + 8px);
+	display: flex;
+	gap: 2px;
+	padding: 3px;
+}
+
+.bd-table-editor-grid {
+	display: grid;
+	grid-auto-rows: 1fr;
+	gap: 1px;
+	background: var(--bd-accent);
+	outline: 2px solid var(--bd-accent);
+}
+
+.bd-editor .bd-table-editor-grid .bd-table-cell {
+	min-width: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0 0.55em;
+	border: none;
+	border-radius: 0;
+	background: var(--bd-canvas-bg);
+	box-shadow: none;
+	color: var(--bd-ink);
+	font: inherit;
+}
+
+.bd-editor .bd-table-editor-grid .bd-table-cell.is-header {
+	font-weight: 600;
+}
+
+.bd-editor .bd-table-editor-grid .bd-table-cell:focus {
+	outline: 2px solid var(--bd-accent);
+	outline-offset: -2px;
+	box-shadow: none;
+}
+
+.bd-align-guide {
+	stroke: var(--color-pink, #e64980);
+	stroke-width: 1px;
+	stroke-dasharray: 4 3;
+	vector-effect: non-scaling-stroke;
+	pointer-events: none;
+}
+
 /* ---------------------------------------------------------- flow & tracing */
 
 .bd-flow .bd-connector-line,
@@ -1187,6 +1290,46 @@
 	font-size: 11px;
 	color: var(--bd-muted);
 	font-variant-numeric: tabular-nums;
+}
+
+/* Speaker notes: the description of the frame being shown. */
+.bd-present-notes {
+	position: absolute;
+	left: 50%;
+	bottom: 84px;
+	transform: translateX(-50%);
+	z-index: 6;
+	display: none;
+	max-width: min(720px, calc(100% - 48px));
+	padding: 8px 14px;
+	border: 1px solid var(--bd-panel-border);
+	border-radius: 10px;
+	background: var(--bd-panel-bg);
+	color: var(--bd-ink);
+	font-size: 14px;
+	line-height: 1.45;
+	text-align: center;
+	white-space: pre-wrap;
+	pointer-events: none;
+}
+
+.bd-present-notes.is-visible {
+	display: block;
+}
+
+.bd-notes-off .bd-present-notes.is-visible {
+	display: none;
+}
+
+/* B blanks the screen while the presenter talks. */
+.bd-blank .bd-canvas,
+.bd-blank .bd-present-notes.is-visible,
+.bd-blank .bd-present-legend {
+	visibility: hidden;
+}
+
+.bd-editor.bd-blank {
+	background: #000000;
 }
 
 .bd-present-progress {

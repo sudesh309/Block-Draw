@@ -9,6 +9,8 @@ import type { Viewport } from "./types";
 
 interface Slide {
 	title: string;
+	/** The frame's description: speaker notes shown under the slide's title. */
+	notes: string;
 	frameId: string | null;
 	bounds: Bounds;
 }
@@ -27,6 +29,8 @@ export class Presenter {
 	private titleEl: HTMLDivElement | null = null;
 	private counterEl: HTMLDivElement | null = null;
 	private progressEl: HTMLDivElement | null = null;
+	private notesEl: HTMLDivElement | null = null;
+	private startedAt = 0;
 	private laser: HTMLDivElement | null = null;
 	private legendEl: HTMLDivElement | null = null;
 	private guideEl: HTMLDivElement | null = null;
@@ -87,6 +91,9 @@ export class Presenter {
 			else this.refit();
 		});
 		this.listen(ed.win, "resize", () => this.refit());
+		this.startedAt = Date.now();
+		const clock = ed.win.setInterval(() => this.showCounter(), 1000);
+		this.off.push(() => ed.win.clearInterval(clock));
 		const req = ed.root.requestFullscreen?.bind(ed.root);
 		if (req) {
 			req()
@@ -104,13 +111,10 @@ export class Presenter {
 		if (!this.active) return;
 		this.active = false;
 		for (const fn of this.off.splice(0)) fn();
-		this.bar?.remove();
-		this.laser?.remove();
-		this.legendEl?.remove();
-		this.guideEl?.remove();
-		this.bar = this.laser = this.legendEl = this.guideEl = this.titleEl = this.counterEl = this.progressEl = null;
+		for (const node of [this.bar, this.laser, this.legendEl, this.guideEl, this.notesEl]) node?.remove();
+		this.bar = this.laser = this.legendEl = this.guideEl = this.titleEl = this.counterEl = this.progressEl = this.notesEl = null;
 		this.commentOverrides.clear();
-		ed.root.classList.remove("bd-presenting", "bd-laser-on", "bd-stage-dark");
+		ed.root.classList.remove("bd-presenting", "bd-laser-on", "bd-stage-dark", "bd-blank", "bd-notes-off");
 		ed.clearTrace();
 		if (this.enteredFullscreen && ed.doc.fullscreenElement === ed.root) void ed.doc.exitFullscreen().catch(() => undefined);
 		this.enteredFullscreen = false;
@@ -140,7 +144,6 @@ export class Presenter {
 			case "PageDown":
 			case " ":
 			case "Enter":
-			case "n":
 				this.next();
 				return true;
 			case "ArrowLeft":
@@ -172,6 +175,12 @@ export class Presenter {
 			case "t":
 				this.ed.clearTrace();
 				return true;
+			case "n":
+				this.ed.root.classList.toggle("bd-notes-off");
+				return true;
+			case "b":
+				this.ed.root.classList.toggle("bd-blank");
+				return true;
 			case "?":
 				this.toggleGuide();
 				return true;
@@ -193,13 +202,14 @@ export class Presenter {
 		const all = contentBounds(ed.elements);
 		const frames = ed.frames();
 		if (all && (frames.length !== 1 || ed.elements.some((e) => isBlock(e) && !e.frameId))) {
-			slides.push({ title: frames.length ? "Overview" : "Drawing", frameId: null, bounds: all });
+			slides.push({ title: frames.length ? "Overview" : "Drawing", notes: "", frameId: null, bounds: all });
 		}
 		for (const f of frames) {
 			const t = frameTitleMetrics(f, 1);
 			const top = t.y - t.size;
 			slides.push({
 				title: f.title || "Frame",
+				notes: f.description.trim(),
 				frameId: f.id,
 				bounds: { x: f.x, y: top, width: f.width, height: f.y + f.height - top },
 			});
@@ -222,6 +232,7 @@ export class Presenter {
 		this.progressEl = el("div", "bd-present-progress-fill", track);
 		this.laser = el("div", "bd-laser", ed.root);
 		this.legendEl = el("div", "bd-present-legend", ed.root);
+		this.notesEl = el("div", "bd-present-notes", ed.root);
 		this.buildGuide();
 	}
 
@@ -262,6 +273,8 @@ export class Presenter {
 			["Click a block", "Toggle spotlight on its flow"],
 			["Click a comment badge", "Show / hide that comment (the drawing is not changed)"],
 			["Click canvas / Esc", "Clear spotlight"],
+			["N", "Show / hide the notes (a frame's description)"],
+			["B", "Blank the screen"],
 			["S", "Toggle light / dark stage"],
 			["L", "Toggle laser pointer"],
 			["Esc", "Exit presentation"],
@@ -322,8 +335,19 @@ export class Presenter {
 		this.ed.clearTrace();
 		this.ed.zoomToBounds(slide.bounds, { animate, padding: 64, maxZoom: 3 });
 		if (this.titleEl) this.titleEl.textContent = slide.title;
-		if (this.counterEl) this.counterEl.textContent = `${i + 1} / ${this.slides.length}`;
+		this.showCounter();
+		if (this.notesEl) {
+			this.notesEl.textContent = slide.notes;
+			this.notesEl.classList.toggle("is-visible", !!slide.notes);
+		}
 		if (this.progressEl) this.progressEl.style.width = `${((i + 1) / this.slides.length) * 100}%`;
+	}
+
+	/** Slide number and the time since the presentation started. */
+	private showCounter(): void {
+		const s = Math.floor((Date.now() - this.startedAt) / 1000);
+		const time = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+		if (this.counterEl) this.counterEl.textContent = `${this.index + 1} / ${this.slides.length} · ${time}`;
 	}
 
 	private refit(): void {

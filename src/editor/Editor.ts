@@ -703,7 +703,7 @@ export class Editor {
 		} else if (!this.options.readOnly) {
 			const busy = this.pointer.hint();
 			if (busy) text = busy;
-			else if (this.editingId) text = "Enter to finish · Shift+Enter for a new line";
+			else if (this.editingId) text = this.textEditor.table.isActive() ? "Tab: next cell · Enter: next row · Esc: done" : "Enter to finish · Shift+Enter for a new line";
 			else if (TOOL_HINTS[this.tool]) text = TOOL_HINTS[this.tool] ?? "";
 			else if (this.selection.size === 1) {
 				const only = this.byId.get([...this.selection][0]);

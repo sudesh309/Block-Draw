@@ -3,7 +3,7 @@ import { cloneElements, collectForCopy, insertClones, makeClipboardPayload, read
 import { DEFAULT_BLOCK_SIZE, isBox } from "../model/types";
 import { fitBlockHeight } from "./blocks";
 import type { Editor } from "./Editor";
-import { pasteRich } from "./pasteMedia";
+import { installImageDrop, pasteRich } from "./pasteMedia";
 
 /** Copy, cut and paste: through the system clipboard, with an in-editor copy as a fallback. */
 export class ClipboardController {
@@ -15,6 +15,7 @@ export class ClipboardController {
 		ed.listen(ed.doc, "copy", (e) => this.onClipboardEvent(e as ClipboardEvent, "copy"));
 		ed.listen(ed.doc, "cut", (e) => this.onClipboardEvent(e as ClipboardEvent, "cut"));
 		ed.listen(ed.doc, "paste", (e) => this.onClipboardEvent(e as ClipboardEvent, "paste"));
+		installImageDrop(ed);
 	}
 
 	copySelectionText(): string | null {

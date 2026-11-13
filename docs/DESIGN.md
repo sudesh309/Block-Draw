@@ -28,6 +28,10 @@ The [README](../README.md) is the short version. This document holds the detail:
 - **Deep links and embeds**: `[[Checkout.blockdraw#Payment details]]` opens a drawing at a frame, and a `blockdraw` code block shows a live preview of a drawing or of one frame inside a note.
 - **Theme and devices**: follows Obsidian's light and dark theme, and works on desktop and mobile (tap, double-tap, pinch to zoom).
 - **Pictures and tables**: paste (Ctrl/Cmd+V, or **Paste** in the right-click menu) a picture, or a table copied from a spreadsheet, a web page or a note (tab-separated text and Markdown tables work too), and it lands in the middle of the view as a block you can move, resize, connect, put in a frame, copy and layer like any other. A picture keeps its proportions when you resize a corner; large pictures are scaled down to fit a drawing file (at most 1600 px). A table's first row is its header; its text is cut with an ellipsis when a column gets narrower than it. When a spreadsheet copies both a table and a picture of it, the table is pasted. Pictures are saved inside the drawing file, so they travel with it; tables are included in the structured JSON export.
+- **Editing a table**: double-click a table to edit its cells. Tab moves to the next cell and Enter to the next row; the small bar above the table adds a row below or a column to the right of the cursor, or removes the cursor's row or column. Esc, or a click outside, saves everything as one undo step, and the block grows or shrinks with its rows and columns.
+- **Dropping pictures**: drop PNG, JPEG, GIF or WebP files from your computer on the canvas and each becomes a picture where you dropped it.
+- **Find**: Ctrl/Cmd+F (or the magnifier in the toolbar) searches titles, tags, descriptions, comments, table cells, frame titles and link labels. Enter and Shift+Enter walk through the matches; each one is selected and brought into view.
+- **Alignment guides**: while you drag blocks, a dashed line shows wherever their edges or centers line up with another block's. The guides only show alignment; the grid still decides where a block lands.
 - **Tablet mode**: on a phone or tablet, Obsidian opens a sidebar when a finger or pen moves quickly to the left or right, and the quick switcher when it moves down. In a drawing, that movement is drawing, so tablet mode (**Settings → Block Draw → Touch and pen**) keeps these gestures out of the drawing. To open a sidebar from a drawing, swipe in from the very edge of the screen. **Automatic** (the default) turns it on for phones and tablets; **On** and **Off** choose for yourself. In tablet mode:
   - **The pen's button erases.** Hold the button (or turn the pen to its eraser end, if it has one) and draw over blocks and links: they turn red, and are deleted when you lift the pen, in one undo step. A block takes its links with it, as with the Delete key. Frames are never erased this way; select a frame and press Delete. The button no longer opens the context menu (a long press still does). **Test your pen** in the settings shows what your device reports, and says “erases” when the button is held.
   - **A hand resting on the screen is ignored** while the pen draws and for a moment after. If the hand came down first and moved something, that is undone when the pen touches down.
@@ -79,6 +83,8 @@ Press **?** in the editor for this list.
 | Double-click a bend | Remove that bend |
 | Pen button or eraser end | In tablet mode: hold it and draw over blocks and links to erase them |
 | Shift+Enter | New line while editing text |
+| Double-click a table | Edit its cells; add or remove rows and columns |
+| Drop an image file | Add it as a picture where you drop it |
 
 **Links and frames**
 
@@ -100,6 +106,7 @@ Press **?** in the editor for this list.
 | Shift+0 | Zoom to 100% |
 | + or = | Zoom in |
 | − or _ | Zoom out |
+| Ctrl/Cmd+F | Find a block, frame or link by its text |
 | G | Grid on or off |
 
 **Present**
@@ -110,7 +117,7 @@ Press **?** in the editor for this list.
 | T | Trace the selected block's upstream and downstream dependencies |
 | ? | Show or hide these shortcuts |
 | Esc | Cancel what you are doing, close this list, clear a trace, or deselect |
-| In a presentation | ← → slides · click a block to spotlight it · ? legend · S stage · L laser · Esc ends |
+| In a presentation | ← → slides · click a block to spotlight it · N notes · B blank screen · ? legend · S stage · L laser · Esc ends |
 <!-- shortcuts:end -->
 
 ### Frames and links
@@ -199,12 +206,14 @@ Press **P** (or the toolbar's screen icon, or *Present drawing* in the command p
 | Click a block | Spotlight it and its dependencies with live legend; click empty space to clear |
 | Click a comment badge | Show or hide that comment (the drawing is not changed) |
 | Click a link badge | Jump to the linked frame's slide |
+| N | Show or hide the notes: the description of the frame on screen (select the frame and write it under Description) |
+| B | Blank the screen, and bring it back |
 | S | Switch between your theme and a dark stage |
 | L | Laser pointer on / off |
 | ? | Toggle presentation guide & shortcut cheat sheet |
 | Esc | Clear the spotlight, then end the presentation |
 
-Nothing can be edited while presenting, and your view is restored afterwards.
+The bar at the bottom shows the slide number and the time since you started. Nothing can be edited while presenting, and your view is restored afterwards.
 
 ## For architects and engineers
 

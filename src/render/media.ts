@@ -19,7 +19,7 @@ function rowHeight(fontSize: number): number {
 	return Math.ceil(fontSize * LINE_HEIGHT + 12);
 }
 
-function columnWidths(table: string[][], fontSize: number): number[] {
+export function columnWidths(table: string[][], fontSize: number): number[] {
 	return table[0].map((_, c) => {
 		const widest = Math.max(...table.map((row, r) => measureText(row[c] ?? "", fontSize, r === 0 ? 600 : 400)));
 		return Math.min(MAX_COLUMN, Math.max(MIN_COLUMN, Math.ceil(widest + 2 * CELL_PAD_X)));

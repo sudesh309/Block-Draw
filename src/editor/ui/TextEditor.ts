@@ -9,6 +9,7 @@ import { FONT_FAMILY, LINE_HEIGHT, measureText, titleWeight } from "../../render
 import { activeElementOf, el } from "../dom";
 import type { Editor } from "../Editor";
 import { fitBlockHeight } from "../blocks";
+import { TableEditor } from "./TableEditor";
 
 /** In-place text editing (block titles, connector labels, frame titles) with a textarea overlay. */
 export class TextEditor {
@@ -16,6 +17,8 @@ export class TextEditor {
 	private targetId: string | null = null;
 	private before: HistoryEntry | null = null;
 	private committing = false;
+	/** Table blocks are edited cell by cell instead. */
+	readonly table: TableEditor;
 
 	constructor(private readonly ed: Editor) {
 		this.area = el("textarea", "bd-text-editor", ed.root);
@@ -26,10 +29,11 @@ export class TextEditor {
 		ed.listen(this.area, "input", () => this.onInput());
 		ed.listen(this.area, "blur", () => this.commit());
 		ed.listen(this.area, "pointerdown", (e) => e.stopPropagation());
+		this.table = new TableEditor(ed);
 	}
 
 	isActive(): boolean {
-		return this.targetId !== null;
+		return this.targetId !== null || this.table.isActive();
 	}
 
 	start(id: string): void {
@@ -38,6 +42,7 @@ export class TextEditor {
 		this.commit();
 		const target = ed.byId.get(id);
 		if (!target) return;
+		if (isBlock(target) && target.table) return this.table.start(id);
 		const text = isBlock(target) ? target.title : isConnector(target) ? target.label : target.title;
 		this.targetId = id;
 		this.before = ed.snapshot();
@@ -87,6 +92,7 @@ export class TextEditor {
 	/** Positions the textarea over the element being edited (also called on pan/zoom). */
 	reposition(): void {
 		const ed = this.ed;
+		this.table.reposition();
 		const id = this.targetId;
 		if (!id) return;
 		const target = ed.byId.get(id);
@@ -147,6 +153,7 @@ export class TextEditor {
 	/** Saves the edited text (one undo step) and closes the editor. */
 	commit(): void {
 		const ed = this.ed;
+		this.table.commit();
 		const id = this.targetId;
 		if (!id || this.committing) return;
 		this.committing = true;
@@ -177,6 +184,7 @@ export class TextEditor {
 
 	/** Closes without saving. */
 	cancel(): void {
+		this.table.cancel();
 		if (!this.targetId) return;
 		const before = this.before;
 		this.close();

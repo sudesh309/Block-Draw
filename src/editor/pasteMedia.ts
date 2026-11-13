@@ -125,6 +125,26 @@ export async function pastePicture(ed: Editor, blob: Blob, at?: Point): Promise<
 	return true;
 }
 
+/** Image files dropped on the canvas become pictures where they are dropped. */
+export function installImageDrop(ed: Editor): void {
+	const images = (e: DragEvent) => Array.from(e.dataTransfer?.files ?? []).filter((f) => ACCEPTED.includes(f.type));
+	ed.listen(ed.root, "dragover", (e) => {
+		const types = (e as DragEvent).dataTransfer?.types ?? [];
+		if (!ed.options.readOnly && Array.from(types).includes("Files")) e.preventDefault();
+	});
+	ed.listen(ed.root, "drop", (e) => {
+		const files = images(e as DragEvent);
+		if (ed.options.readOnly || !files.length) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const at = ed.clientToWorld((e as DragEvent).clientX, (e as DragEvent).clientY);
+		const step = (ed.options.gridSize || 20) * 2;
+		void (async () => {
+			for (const [i, file] of files.slice(0, 10).entries()) await pastePicture(ed, file, { x: at.x + i * step, y: at.y + i * step });
+		})();
+	});
+}
+
 /**
  * Pastes a table or a picture when the clipboard holds one. A table wins over a picture, because a
  * spreadsheet copies both (its picture is a snapshot of the cells). False when there is neither.

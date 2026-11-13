@@ -20,6 +20,7 @@ export const COMMANDS: readonly EditorCommand[] = [
 	{ id: "zoom-reset", group: "View", label: "Zoom to 100%", keys: ["Shift+Digit0"], run: (ed) => ed.zoomTo(1) },
 	{ id: "zoom-in", group: "View", label: "Zoom in", keys: ["Plus", "="], run: (ed) => ed.zoomAt(1.2) },
 	{ id: "zoom-out", group: "View", label: "Zoom out", keys: ["Minus", "_"], run: (ed) => ed.zoomAt(1 / 1.2) },
+	{ id: "find", group: "View", label: "Find a block, frame or link by its text", keys: ["Mod+F"], run: (ed) => ed.toolbar.find.toggle(true) },
 	{ id: "toggle-grid", group: "View", label: "Grid on or off", keys: ["G"], run: (ed) => ed.setOptions({ showGrid: !ed.options.showGrid }) },
 
 	{ id: "tool-select", group: "Draw", label: "Select tool", keys: ["V", "1"], run: (ed) => ed.setTool("select") },
@@ -154,8 +155,10 @@ export const GESTURES: readonly { group: (typeof HELP_GROUPS)[number]; keys: str
 	{ group: "Edit", keys: "Double-click a bend", label: "Remove that bend" },
 	{ group: "Edit", keys: "Pen button or eraser end", label: "In tablet mode: hold it and draw over blocks and links to erase them" },
 	{ group: "Edit", keys: "Shift+Enter", label: "New line while editing text" },
+	{ group: "Edit", keys: "Double-click a table", label: "Edit its cells; add or remove rows and columns" },
+	{ group: "Edit", keys: "Drop an image file", label: "Add it as a picture where you drop it" },
 	{ group: "Links and frames", keys: "Ctrl/Cmd+click", label: "Follow a block's link" },
-	{ group: "Present", keys: "In a presentation", label: "← → slides · click a block to spotlight it · ? legend · S stage · L laser · Esc ends" },
+	{ group: "Present", keys: "In a presentation", label: "← → slides · click a block to spotlight it · N notes · B blank screen · ? legend · S stage · L laser · Esc ends" },
 ];
 
 export const EDITOR_KEYMAP = compileKeymap(COMMANDS);

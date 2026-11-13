@@ -4,6 +4,7 @@ import { el } from "../dom";
 import type { Editor } from "../Editor";
 import type { Tool } from "../types";
 import { iconButton } from "./controls";
+import { FindPanel } from "./FindPanel";
 
 interface ToolSpec {
 	tool: Tool;
@@ -41,6 +42,8 @@ export class Toolbar {
 	/** Tablet mode: shows or hides the properties panel, which otherwise opens with every selection. */
 	private propsBtn: HTMLButtonElement;
 	private propsOff = false;
+	readonly find: FindPanel;
+	private findBtn: HTMLButtonElement;
 
 	constructor(private readonly ed: Editor) {
 		this.el = el("div", "bd-toolbar bd-panel", ed.root);
@@ -57,6 +60,8 @@ export class Toolbar {
 		this.redoBtn = iconButton(actions, "redo", `Redo — ${shortcut("redo")}`, () => ed.redo());
 		el("div", "bd-toolbar-sep", this.el);
 		const view = el("div", "bd-toolbar-group", this.el);
+		this.find = new FindPanel(ed);
+		this.findBtn = iconButton(view, "search", `Find — ${shortcut("find")}`, () => this.find.toggle());
 		this.framesBtn = iconButton(view, "frames", "Frames", () => ed.framesPanel.toggle());
 		this.propsBtn = iconButton(view, "sliders", "Properties panel", () => {
 			this.propsOff = !this.propsOff;
@@ -89,6 +94,7 @@ export class Toolbar {
 		this.undoBtn.disabled = !ed.history.canUndo;
 		this.redoBtn.disabled = !ed.history.canRedo;
 		this.framesBtn.classList.toggle("is-active", ed.framesPanel.isOpen());
+		this.findBtn.classList.toggle("is-active", this.find.isOpen());
 		this.propsBtn.hidden = !ed.options.tablet || ed.options.readOnly;
 		this.propsBtn.classList.toggle("is-active", !this.propsOff);
 	}

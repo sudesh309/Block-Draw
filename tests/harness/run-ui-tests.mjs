@@ -1006,7 +1006,7 @@ test("presentation: overview then frames, spotlight on click, Esc restores the e
 	await page.keyboard.press("p");
 	await page.waitForTimeout(400);
 	assert.equal(await page.locator(".bd-editor.bd-presenting").count(), 1);
-	assert.equal(await page.textContent(".bd-present-counter"), "1 / 3");
+	assert.match(await page.textContent(".bd-present-counter"), /^1 \/ 3 · /);
 	assert.equal(await page.textContent(".bd-present-title"), "Overview");
 	assert.equal(await page.isVisible(".bd-toolbar"), false);
 	await page.keyboard.press("ArrowRight");
@@ -1014,7 +1014,7 @@ test("presentation: overview then frames, spotlight on click, Esc restores the e
 	assert.equal(await page.textContent(".bd-present-title"), "Front end");
 	await page.keyboard.press("ArrowRight");
 	await page.waitForTimeout(450);
-	assert.equal(await page.textContent(".bd-present-counter"), "3 / 3");
+	assert.match(await page.textContent(".bd-present-counter"), /^3 \/ 3 · /);
 	await page.keyboard.press("s");
 	await page.mouse.move(600, 380);
 	const c = await centerOf(ids.c);
@@ -1811,6 +1811,148 @@ test("pasting a picture makes a picture block that keeps its proportions; plain 
 	await page.waitForTimeout(200);
 	assert.equal((await els()).length, 3);
 	assert.equal(await page.evaluate(() => window.bd.notices.length), notices + 1);
+});
+
+test("double-clicking a table edits its cells; rows and columns can be added and removed, in one undo step", async () => {
+	await pasteEvent({ text: "Item\tQty\nApple\t3" });
+	const [t] = await els();
+	const c = await centerOf(t.id);
+	await page.mouse.dblclick(c.x, c.y);
+	await frame();
+	assert.equal(await page.locator(".bd-table-editor.is-active .bd-table-cell").count(), 4);
+	assert.equal(await page.evaluate(() => document.activeElement.value), "Item", "the first cell has the cursor");
+	await page.keyboard.type("Fruit");
+	await page.keyboard.press("Tab");
+	await page.keyboard.press("Enter"); // down to "3"
+	await page.keyboard.type("30");
+	await page.click('.bd-table-editor-bar [aria-label="Add a row below"]');
+	await page.keyboard.type("Pear");
+	await page.click('.bd-table-editor-bar [aria-label="Add a column to the right"]');
+	await page.keyboard.type("ripe");
+	assert.equal((await els())[0].table.length, 2, "nothing is saved while editing");
+	await page.keyboard.press("Escape");
+	await frame();
+	let now = (await els())[0];
+	assert.deepEqual(now.table, [["Fruit", "Qty", ""], ["Apple", "30", ""], ["", "Pear", "ripe"]]);
+	assert.ok(now.height > t.height && now.width > t.width, "the block grew with its new row and column");
+	assert.equal(await page.locator(".bd-table-editor.is-active").count(), 0);
+	await page.keyboard.press("Control+z");
+	assert.deepEqual((await els())[0].table, [["Item", "Qty"], ["Apple", "3"]], "one undo takes all of it back");
+	// clicking the canvas saves too; removing works
+	await page.mouse.dblclick(c.x, c.y);
+	await page.click('.bd-table-editor-bar [aria-label="Remove this column"]');
+	await page.mouse.click(900, 600);
+	await page.waitForTimeout(50);
+	await frame();
+	now = (await els())[0];
+	assert.deepEqual(now.table, [["Qty"], ["3"]]);
+	// an ordinary block still edits its title
+	const b = await addBlock(700, 200, "Plain");
+	assert.equal(b.title, "Plain");
+});
+
+test("find (Ctrl+F) walks through blocks, frames and links that match, and brings each into view", async () => {
+	const ids = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const mk = (x, title, extra = {}) => ed.makeBlock({ x, y: 100, width: 140, height: 70 }, { title, ...extra });
+		const a = mk(0, "Orders API", { tag: "Java" });
+		const b = mk(3000, "Billing", { description: "charges orders" });
+		const c = mk(6000, "Cache");
+		ed.insertBlocks([a, b, c]);
+		const link = ed.connect(a.id, c.id);
+		ed.updateElement(link.id, { label: "ORDERS topic" });
+		ed.setSelection([]);
+		return { a: a.id, b: b.id, c: c.id, link: link.id };
+	});
+	await page.keyboard.press("Control+f");
+	assert.equal(await page.locator(".bd-find.is-open").count(), 1);
+	await page.keyboard.type("orders");
+	await frame();
+	assert.equal(await page.textContent(".bd-find-count"), "1 of 3");
+	assert.deepEqual(await sel(), [ids.a]);
+	await page.keyboard.press("Enter");
+	assert.equal(await page.textContent(".bd-find-count"), "2 of 3");
+	assert.deepEqual(await sel(), [ids.b], "a description matches too");
+	await page.waitForTimeout(500);
+	const bScreen = await centerOf(ids.b);
+	assert.ok(bScreen.x > 0 && bScreen.x < 1280 && bScreen.y > 0 && bScreen.y < 800, "the match was brought into view");
+	await page.keyboard.press("Enter");
+	assert.deepEqual(await sel(), [ids.link], "and a link's label");
+	await page.keyboard.press("Shift+Enter");
+	assert.deepEqual(await sel(), [ids.b]);
+	await page.fill(".bd-find-input", "zzz");
+	assert.equal(await page.textContent(".bd-find-count"), "No matches");
+	await page.keyboard.press("Escape");
+	assert.equal(await page.locator(".bd-find.is-open").count(), 0);
+	assert.equal(await page.evaluate(() => document.activeElement === window.bd.editor.root), true, "the keyboard is back on the canvas");
+	assert.equal((await els()).length, 4, "finding changes nothing");
+});
+
+test("alignment guides appear while a dragged block lines up with another, and never move it", async () => {
+	const ids = await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const a = ed.makeBlock({ x: 100, y: 100, width: 160, height: 80 }, { title: "A" });
+		const b = ed.makeBlock({ x: 400, y: 300, width: 160, height: 80 }, { title: "B" });
+		ed.insertBlocks([a, b]);
+		ed.setSelection([]);
+		return { a: a.id, b: b.id };
+	});
+	const from = await centerOf(ids.b);
+	await page.mouse.move(from.x, from.y);
+	await page.mouse.down();
+	await page.mouse.move(from.x + 40, from.y - 100, { steps: 4 });
+	await frame();
+	assert.equal(await page.locator(".bd-align-guide").count(), 0, "no guide while nothing lines up");
+	await page.mouse.move(from.x + 40, from.y - 200, { steps: 4 }); // same top, middle and bottom as A
+	await frame();
+	assert.equal(await page.locator(".bd-align-guide").count(), 3);
+	await page.mouse.up();
+	await frame();
+	assert.equal(await page.locator(".bd-align-guide").count(), 0, "guides go when the drag ends");
+	const b = (await els()).find((e) => e.id === ids.b);
+	assert.deepEqual([b.x, b.y], [440, 100], "the block is where the grid put it");
+});
+
+test("an image file dropped on the canvas becomes a picture there", async () => {
+	await page.evaluate((png) => {
+		const ed = window.bd.editor;
+		const data = new DataTransfer();
+		const bytes = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+		data.items.add(new File([bytes], "logo.png", { type: "image/png" }));
+		data.items.add(new File(["hello"], "notes.txt", { type: "text/plain" }));
+		const r = ed.svg.getBoundingClientRect();
+		ed.root.dispatchEvent(new DragEvent("drop", { dataTransfer: data, clientX: r.left + 600, clientY: r.top + 400, bubbles: true, cancelable: true }));
+	}, PNG_2X2);
+	await page.waitForFunction(() => window.bd.editor.getElements().length === 1);
+	const [pic] = await els();
+	assert.match(pic.image, /^data:image\/png/);
+	const at = await centerOf(pic.id);
+	assert.ok(Math.abs(at.x - 600) <= 20 && Math.abs(at.y - 400) <= 20, "it lands where it was dropped");
+});
+
+test("presenting shows a frame's description as notes, a timer, and B blanks the screen", async () => {
+	await page.evaluate(() => {
+		const ed = window.bd.editor;
+		const f = ed.addFrame({ x: 0, y: 0, width: 500, height: 300 });
+		ed.updateElement(f.id, { description: "Start with the customer's request." });
+		ed.insertBlocks([ed.makeBlock({ x: 60, y: 80, width: 160, height: 80 }, { title: "Shop" })]);
+		ed.presenter.start();
+	});
+	await page.waitForTimeout(400);
+	assert.equal(await page.textContent(".bd-present-notes.is-visible"), "Start with the customer's request.");
+	assert.match(await page.textContent(".bd-present-counter"), /^1 \/ 1 · 0:0\d$/);
+	await page.waitForTimeout(1200);
+	assert.match(await page.textContent(".bd-present-counter"), /· 0:0[1-9]$/, "the clock runs");
+	await page.keyboard.press("n");
+	assert.equal(await page.isVisible(".bd-present-notes"), false, "N hides the notes");
+	await page.keyboard.press("n");
+	assert.equal(await page.isVisible(".bd-present-notes"), true);
+	await page.keyboard.press("b");
+	assert.equal(await page.isVisible(".bd-canvas"), false, "B blanks the screen");
+	await page.keyboard.press("b");
+	assert.equal(await page.isVisible(".bd-canvas"), true);
+	await page.keyboard.press("Escape");
+	assert.equal(await page.locator(".bd-blank, .bd-notes-off, .bd-present-notes").count(), 0, "nothing is left behind");
 });
 
 test("web fonts are opt-in: the font picker explains it, and nothing is requested", async () => {

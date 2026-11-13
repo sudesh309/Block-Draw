@@ -5,6 +5,7 @@ import { isBlock, isConnector, isFrame, type Bounds, type Side } from "../model/
 import { h, type VNode } from "../render/vnode";
 import type { Editor } from "./Editor";
 import { eraseOverlay } from "./eraser";
+import { alignmentGuides } from "./guides";
 import { bendHandles, type BendDrag } from "./routeEdit";
 import type { Handle, Viewport } from "./types";
 
@@ -91,11 +92,12 @@ export function interactionOverlay(ed: Editor, st: Interaction, z: number): VNod
 	} else if (st.kind === "bend" && st.moved) {
 		const conn = ed.byId.get(st.connId);
 		if (isConnector(conn)) nodes.push(...bendHandles(ed, conn, z, false));
-	} else if (st.kind === "move" && st.dropFrameId) {
-		const f = ed.byId.get(st.dropFrameId);
+	} else if (st.kind === "move" && st.moved) {
+		const f = st.dropFrameId ? ed.byId.get(st.dropFrameId) : null;
 		if (isFrame(f)) {
 			nodes.push(h("rect", { class: "bd-drop-frame", x: f.x, y: f.y, width: f.width, height: f.height, rx: 8 }));
 		}
+		nodes.push(...alignmentGuides(ed, st.moveSet, z));
 	} else if (st.kind === "erase") {
 		nodes.push(...eraseOverlay(ed, st.marked, z));
 	}
