@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0
+
+For drawing:
+
+- **Edit a table in place.** Double-click a table: Tab moves to the next cell, Enter to the next row, and the small bar above it adds or removes a row or column at the cursor. Esc or a click outside saves, as one undo step.
+- **Drop image files on the canvas** and they become pictures where you drop them.
+
+For system architects:
+
+- **Find (Ctrl/Cmd+F, or the magnifier in the toolbar).** Search titles, tags, descriptions, comments, table cells, frame titles and link labels. Enter and Shift+Enter walk through the matches; each is selected and brought into view.
+- **Alignment guides.** While you drag blocks, a dashed line shows where their edges or centers line up with another block's. They only show alignment; the grid still decides where a block lands.
+
+For presenters:
+
+- **Speaker notes.** A frame's description is shown under its slide; **N** hides and shows the notes.
+- **A timer** next to the slide number, and **B** to blank the screen while you talk.
+- **N** no longer goes to the next slide (it is the notes key now); →, Space and Enter still do.
+
 ## 0.8.0
 
 - **Paste pictures and tables.** Paste a picture (a screenshot, an image copied from a web page) and it appears in the middle of the view as a block: move it, resize it (a corner keeps its proportions), connect it, put it in a frame, copy it, present it, export it to SVG and PNG. Paste a table copied from a spreadsheet, a web page, a note or a Markdown table and you get a table block with a header row. **Paste** in the right-click menu does the same where there is no keyboard. Large pictures are scaled down (to at most 1600 px) so a drawing file stays small, and pictures are saved inside the drawing. Pasting text or Block Draw's own copies works as before. Tables are included in the structured JSON export.
