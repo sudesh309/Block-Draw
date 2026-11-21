@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.1
+
+- **New block drawing is easy to find when you right-click a folder.** It used to sit near the bottom of the menu, after "Show in system explorer"; it now comes right after New note, New folder and New canvas. It creates the drawing inside that folder.
+- **The New drawing command and ribbon button create the drawing in the folder you selected** in the file explorer (when that is where you are), instead of always using the folder of the open note. On the newest Obsidian, a plain click on a folder does not mark it as selected, so use the folder's right-click menu there.
+
 ## 0.9.0
 
 For drawing:
