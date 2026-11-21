@@ -118,9 +118,23 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 
 	private newDrawingFolder(explicit?: string): string {
 		if (explicit !== undefined) return explicit;
+		// In the file explorer, the folder (or the folder of the file) that is selected there.
+		const selected = this.explorerSelection();
+		if (selected) return selected;
 		if (this.settings.newFileFolder) return normalizePath(this.settings.newFileFolder);
 		const active = this.app.workspace.getActiveFile();
 		return this.app.fileManager.getNewFileParent(active?.path ?? "").path;
+	}
+
+	/** Folder of the item that has the focus in the file explorer, when that is where the command was run from. */
+	private explorerSelection(): string | null {
+		const explorer = activeDocument.querySelector<HTMLElement>('.workspace-leaf.mod-active .workspace-leaf-content[data-type="file-explorer"]');
+		const item = explorer?.querySelector<HTMLElement>(".nav-folder-title.has-focus, .nav-file-title.has-focus");
+		const path = item?.dataset.path;
+		if (path === undefined) return null;
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFolder) return file.path;
+		return file?.parent?.path ?? null;
 	}
 
 	async createDrawing(folderPath?: string, opts: { open?: boolean } = {}): Promise<TFile> {
@@ -250,6 +264,8 @@ export default class BlockDrawPlugin extends Plugin implements BlockDrawHost {
 						item
 							.setTitle("New block drawing")
 							.setIcon(VIEW_ICON)
+							// with New note, New folder and New canvas, not at the bottom of the menu
+							.setSection("action-primary")
 							.onClick(() => void this.createDrawing(file.path)),
 					);
 				} else if (file instanceof TFile && file.extension === FILE_EXTENSION) {

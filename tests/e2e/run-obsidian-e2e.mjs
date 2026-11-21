@@ -871,6 +871,23 @@ test("tablet mode keeps Obsidian's swipe gestures out of a drawing on a phone or
 	}
 });
 
+test("right-clicking a folder offers New block drawing next to New note, and creates it in that folder", async () => {
+	await page.evaluate(async () => {
+		await window.app.vault.createFolder("Projects");
+		await window.app.vault.createFolder("Projects/Sub");
+	});
+	await sleep(800);
+	const title = page.locator('.nav-folder-title[data-path="Projects/Sub"], .nav-folder-title[data-path="Projects"]').first();
+	await page.evaluate(() => window.app.workspace.leftSplit.expand?.());
+	await title.click({ button: "right" });
+	await sleep(500);
+	const items = await page.evaluate(() => [...document.querySelectorAll(".menu .menu-item-title")].map((e) => e.textContent));
+	const at = items.indexOf("New block drawing");
+	assert.ok(at >= 0 && at <= items.indexOf("New canvas") + 2, `the item sits with the New items, not at the bottom: ${items.join(" | ")}`);
+	await page.locator(".menu .menu-item-title", { hasText: "New block drawing" }).click();
+	await waitFor(() => page.evaluate(() => /^Projects\/Drawing .*\.blockdraw$/.test(window.app.workspace.getActiveFile()?.path ?? "")), "a drawing inside the folder");
+});
+
 test("no errors were logged", async () => {
 	assert.deepEqual(errors, []);
 });
